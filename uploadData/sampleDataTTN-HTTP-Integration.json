@@ -1,0 +1,39 @@
+{
+    "app_id": "freecooling-monitor",
+    "dev_id": "t73-monitor",
+    "hardware_serial": "A8610A3335397706",
+    "port": 2,
+    "counter": 0,
+    "confirmed": true,
+    "is_retry": true,
+    "payload_raw": "CKISXAiiEtQ=",
+    "payload_fields": {
+        "room": {
+            "h": 47,
+            "t": 22.1
+        },
+        "water": {
+            "h": 48.2,
+            "t": 22.1
+        }
+    },
+    "metadata": {
+        "time": "2020-02-21T12:48:56.326112585Z",
+        "frequency": 868.5,
+        "modulation": "LORA",
+        "data_rate": "SF12BW125",
+        "coding_rate": "4/5",
+        "gateways": [
+            {
+                "gtw_id": "eui-60c5a8fffe76f73b",
+                "timestamp": 2006920612,
+                "time": "",
+                "channel": 2,
+                "rssi": -69,
+                "snr": 8,
+                "rf_chain": 0
+            }
+        ]
+    },
+    "downlink_url": "https://integrations.thethingsnetwork.org/ttn-eu/api/v2/down/freecooling-monitor/heatpump-monitor?key=ttn-account-v2.WTeOy2kOGeOBQtYbWG7ihhBTMkXPraO0YjEYCZOu3NU"
+}
