@@ -1,0 +1,160 @@
+<html>
+<head>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript" src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script type="text/javascript">
+
+
+        google.charts.load('current', {
+            'packages': ['line','timeline','corechart'], 'language':'de'
+        });
+        google.charts.setOnLoadCallback(drawChart);
+        var diffLastSample = 0;
+        var tempWater = 0;
+        var timelineRows = [];
+        var timelineEntryStarted = false;
+        var timeLineMap = new Map();
+        var currentTimelineName;
+
+        var options = {
+            chart: {
+                title: 'T77: Vorlauftemperatur Heizung/kühlung im Verglich zur Raumtemperatur '
+            },
+            width: 900,
+            height: 500,
+            series: {
+                // Gives each series an axis name that matches the Y-axis below.
+                0: {
+                    axis: 'Temps'
+                },
+                1: {
+                    axis: 'Temps'
+                },
+                2: {
+                    axis: 'Diff'
+                }
+            },
+            axes: {
+                y: {
+                    Temps: {
+                        label: 'Temperatur'
+                    },
+                    Diff: {
+                        label: 'Diff'
+                    }
+                }
+            }
+        };
+
+        function drawChart() {
+            /**
+            var jsonData = $.ajax({
+                url: "https://us-central1-heatpump-monitoring.cloudfunctions.net/printGraphData",
+                crossDomain: true,
+                dataType: "json",
+                async: false
+            }).responseText;
+            **/
+           var jsonData = {"cols":[{"id":"","label":"Day","pattern":"","type":"date"},{"id":"","label":"Water","pattern":"","type":"number"},{"id":"","label":"Air","pattern":"","type":"number"},{"id":"","label":"Diff","pattern":"","type":"number"}],"rows":[{"c":[{"v":"Date(2020,2,8,16,46)"},{"v":23.6},{"v":23.7},{"v":0}]},
+{"c":[{"v":"Date(2020,2,8,16,46)"},{"v":23.6},{"v":23.7},{"v":0}]},
+{"c":[{"v":"Date(2020,2,8,16,46)"},{"v":23.6},{"v":23.7},{"v":0}]},
+{"c":[{"v":"Date(2020,2,8,17,16)"},{"v":23.6},{"v":22.7},{"v":-3}]},
+{"c":[{"v":"Date(2020,2,8,17,46)"},{"v":23.6},{"v":23.7},{"v":-4}]},
+{"c":[{"v":"Date(2020,2,8,18,16)"},{"v":23.6},{"v":21.7},{"v":-5}]},
+{"c":[{"v":"Date(2020,2,8,18,46)"},{"v":24.6},{"v":23.7},{"v":0}]},
+{"c":[{"v":"Date(2020,2,8,19,16)"},{"v":23.6},{"v":23.7},{"v":0}]},
+{"c":[{"v":"Date(2020,2,8,19,46)"},{"v":25.6},{"v":23.7},{"v":3}]},
+{"c":[{"v":"Date(2020,2,8,20,16)"},{"v":23.6},{"v":23.7},{"v":4}]},
+{"c":[{"v":"Date(2020,2,8,20,46)"},{"v":23.6},{"v":23.7},{"v":5}]}]};
+
+            
+            // a row {"c":[{"v":"Date(2020,3,1,8,16)"},{"v":19.3},{"v":23.3},{"v":4}]},
+            // date, waterTemp, roomTemp, diff (room-water)
+            let lastSample = jsonData.rows[jsonData.rows.length-1];
+            diffLastSample = lastSample.c[3].v;
+            tempWater = lastSample.c[1].v;
+            
+            var dateFormatter = new google.visualization.DateFormat({formatType: 'medium'});
+            var data = new google.visualization.DataTable(jsonData);
+            dateFormatter.format(data,0);
+            var chart = new google.charts.Line(document.getElementById('lineChart'));
+            chart.draw(data, options);
+            
+            if (diffLastSample > 2){
+                $("#status").text("Status: Kühlung läuft. Vorlauftemperatur Wasser: "+tempWater);
+            } else if(diffLastSample < -2) {
+                $("#status").text("Status: Heizung läuft. Vorlauftemperatur Wasser: "+tempWater);
+            } else {
+                $("#status").text("Status: Standby");
+            }
+
+            //prepare timeline chart
+            var chart2 = new google.visualization.Timeline(document.getElementById('timelineChart'));
+            var dataTable2 = new google.visualization.DataTable();
+
+            dataTable2.addColumn({ type: 'string', id: 'Status' });
+            dataTable2.addColumn({ type: 'date', id: 'Start' });
+            dataTable2.addColumn({ type: 'date', id: 'End' });
+            
+            // a row {"c":[{"v":"Date(2020,3,1,8,16)"},{"v":19.3},{"v":23.3},{"v":4}]},
+            // date, waterTemp, roomTemp, diff (room-water)
+            jsonData.rows.forEach(row => {
+                let diff = row.c[3].v;
+                let date = row.c[0].v;
+                if (diff > 2){
+                    addToTimeline("Kühlung", date);
+                } else if (diff < -2) {
+                    addToTimeline("Heizung", date);
+                } else {
+                    addToTimeline("Standby", date);
+                }
+            });
+            addToTimeline("End", new Date());
+
+           
+            let wrap = [];
+            wrap.push(timelineRows);
+            dataTable2.addRows(timelineRows);
+
+            chart2.draw(dataTable2);
+        }
+
+        //[ 'Heizung', new Date(1789, 3, 30), new Date(1797, 2, 4) ],
+        function addToTimeline(timelineName, date) {
+            if (currentTimelineName == undefined || currentTimelineName == timelineName){
+                if (!timelineEntryStarted){
+                    //create a new one
+                    timeLineMap.set(timelineName, {startdate:date, enddate:date});
+                    currentTimelineName = timelineName;
+                    timelineEntryStarted = true;
+                } else {
+                    //add new end time
+                    let entry = timeLineMap.get(timelineName);
+                    entry.enddate = date;
+                    timeLineMap.set(timelineName, entry);
+                }
+            } else {
+                //finish current timeline entry and start new one
+                let entry = timeLineMap.get(currentTimelineName);
+                let startdate = entry.startdate;
+                let enddate = entry.enddate;
+                let rowEntry = [currentTimelineName, startdate, enddate];
+                timelineRows.push(rowEntry);
+                timelineEntryStarted = false;
+                timeLineMap.delete(currentTimelineName);
+                currentTimelineName = undefined;
+                addToTimeline(timelineName, date);
+            }
+        }
+
+        
+
+    </script>
+</head>
+
+<body>
+    <div id="status">loading status...</div>
+    <div id="timelineChart" style="height: 180px;">Loading data...</div>
+    <div id="lineChart">Loading data...</div>
+</body>
+</html>
