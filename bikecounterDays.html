@@ -3,6 +3,8 @@
 <head>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <script type="text/javascript" src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/locale/de.js"></script>
     <script type="text/javascript">
 
         google.charts.load('current', { 'packages': ['corechart', 'bar'] });
@@ -20,12 +22,12 @@
 
         function drawChart() {
             var jsonData = $.ajax({
-                url: "https://us-central1-bikecounter.cloudfunctions.net/printGraph",
+                url: "https://europe-west3-bikecounter.cloudfunctions.net/printDailyGraphData",
                 crossDomain: true,
                 dataType: "json",
                 async: false,
                 data: {
-                    q = query
+                    q: query
                 }
             }).responseText;
 
@@ -35,14 +37,20 @@
         }
 
         $( document ).ready(function() {
-            $("#monthly-button").click(function() {
-                query = "monthly";
+            $("#back").click(function name() {
+                query = moment(new Date()).subtract(30, 'days').format("YYYY-MM-DD");
                 drawChart();
             });
-            $("#daily-button").click(function() {
-                query = "daily";
+            $("#forward").click(function name(params) {
+                query = moment(new Date()).add(30, 'days').format("YYYY-MM-DD");
                 drawChart();
             });
+
+            let backButtonText = moment(new Date()).subtract(30, 'days').format("MMMM");
+            $("#back").text(backButtonText);
+            let forwardButtonText = moment(new Date()).add(30, 'days').format("MMMM");
+            $("#forward").text(forwardButtonText);
+
         });
 
     </script>
@@ -50,8 +58,8 @@
 
 <body>
     <div id="chart_div"></div>
-    <div><button id="monthly-button">Summen: pro Monat</button></div>
-    <div><button id="daily-button">Summen: pro Tag</button></div>
+    <button id="back"></button>
+    <button id="forward"></button>
 </body>
 
 </html>

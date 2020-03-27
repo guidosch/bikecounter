@@ -30,7 +30,6 @@ exports.printGraphData = functions.https.onRequest((request, response) => {
             snapshot.forEach(doc => {
                 let data = doc.data();
                 let time = new Date(Date.parse(data.timestamp));
-                time.get
                 let tempWater = data.water.t;
                 let tempRoom = data.room.t;
                 let diff = Math.round(tempRoom - tempWater);
@@ -44,8 +43,8 @@ exports.printGraphData = functions.https.onRequest((request, response) => {
             });
 
             response.statusCode = 200;
-            response.setHeader('Access-Control-Allow-Origin', "*")
-            response.setHeader('Access-Control-Allow-Methods', 'GET')
+            response.setHeader('Access-Control-Allow-Origin', "*");
+            response.setHeader('Access-Control-Allow-Methods', 'GET');
             response.setHeader("Content-Type", "application/json");
             response.send(JSON.stringify(chartData));
         })
