@@ -48,7 +48,7 @@
 
             let backButtonText = moment(new Date()).subtract(1, 'month').format("MMMM");
             $("#back").text(backButtonText);
-            let forwardButtonText = moment(new Date()).add(a, 'month').format("MMMM");
+            let forwardButtonText = moment(new Date()).add(1, 'month').format("MMMM");
             $("#forward").text(forwardButtonText);
 
         });
@@ -58,8 +58,8 @@
 
 <body>
     <div id="chart_div">Loading data...</div>
-    <button style="margin-left: 1em;" id="back"></button>
-    <button style="margin-left: 1em;" id="forward"></button>
+    <button style="margin-left: 2em;" id="back"></button>
+    <button style="margin-left: 2em;" id="forward"></button>
 </body>
 
 </html>
