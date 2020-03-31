@@ -37,7 +37,7 @@ exports.printDailyGraphData = functions.https.onRequest((request, response) => {
     }
     let query = countersRef
         .where('timestamp', '>=', start)
-        .where('timestamp', '<=', end)
+        .where('timestamp', '<=', end+"T23:59:59")
         .orderBy("timestamp", "asc").get()
         .then(snapshot => {
             if (snapshot.empty) {
@@ -59,7 +59,7 @@ exports.printDailyGraphData = functions.https.onRequest((request, response) => {
             for (let i = 1; i <= lastDayOfMonth; i++) {
                 let date = new Date(new Date().setDate(i));
                 let year = moment(date).format("YYYY");
-                let month = moment(date).format("MM");
+                let month = date.getMonth();
                 let day  = moment(date).format("DD");
                 const sum = sums.get(i);
                 let row = `{"c":[{"v":"Date(${year},${month},${day})","f":null},{"v":${sum},"f":null}]}`;

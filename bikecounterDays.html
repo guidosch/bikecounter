@@ -38,17 +38,17 @@
 
         $( document ).ready(function() {
             $("#back").click(function name() {
-                query = moment(new Date()).subtract(30, 'days').format("YYYY-MM-DD");
+                query = moment(new Date()).subtract(1, 'month').format("YYYY-MM-DD");
                 drawChart();
             });
             $("#forward").click(function name(params) {
-                query = moment(new Date()).add(30, 'days').format("YYYY-MM-DD");
+                query = moment(new Date()).add(1, 'month').format("YYYY-MM-DD");
                 drawChart();
             });
 
-            let backButtonText = moment(new Date()).subtract(30, 'days').format("MMMM");
+            let backButtonText = moment(new Date()).subtract(1, 'month').format("MMMM");
             $("#back").text(backButtonText);
-            let forwardButtonText = moment(new Date()).add(30, 'days').format("MMMM");
+            let forwardButtonText = moment(new Date()).add(a, 'month').format("MMMM");
             $("#forward").text(forwardButtonText);
 
         });
@@ -57,9 +57,9 @@
 </head>
 
 <body>
-    <div id="chart_div"></div>
-    <button id="back"></button>
-    <button id="forward"></button>
+    <div id="chart_div">Loading data...</div>
+    <button style="margin-left: 1em;" id="back"></button>
+    <button style="margin-left: 1em;" id="forward"></button>
 </body>
 
 </html>
