@@ -9,6 +9,7 @@ const database = admin.firestore();
 const countersRef = database.collection('bike-couter-test');
 let chartData = {};
 let sums = new Map();
+let currentTimeFromData;
 
 function resetData() {
     chartData.cols = [
@@ -24,7 +25,7 @@ function resetData() {
 exports.printDailyGraphData = functions.https.onRequest((request, response) => {
 
     resetData();
-    //queryTime must be in format 2020-03-22
+    //queryTime must be in format 2020-03-22 for march, 22
     let queryTime = request.query.q;
     let now = new Date();
     let start = moment(now).startOf('month').format("YYYY-MM-DD");
@@ -46,18 +47,17 @@ exports.printDailyGraphData = functions.https.onRequest((request, response) => {
                 response.send("<h1>No matching documents.</h1>");
             }
 
-
             snapshot.forEach(doc => {
                 let data = doc.data();
-                let time = new Date(Date.parse(data.timestamp));
-                let sum = sums.get(time.getDate());
+                currentTimeFromData = new Date(Date.parse(data.timestamp));
+                let sum = sums.get(currentTimeFromData.getDate());
                 sum = sum + parseInt(data.counter);
-                sums.set(time.getDate(), sum);
+                sums.set(currentTimeFromData.getDate(), sum);
             });
 
             // eslint-disable-next-line promise/always-return
             for (let i = 1; i <= lastDayOfMonth; i++) {
-                let date = new Date(new Date().setDate(i));
+                let date = new Date(currentTimeFromData.setDate(i));
                 let year = moment(date).format("YYYY");
                 let month = date.getMonth();
                 let day  = moment(date).format("DD");

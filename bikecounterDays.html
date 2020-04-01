@@ -36,21 +36,40 @@
             chart.draw(data, options);
         }
 
-        $( document ).ready(function() {
+        function setBackButtonText(text) {
+            $("#back").text(text);
+        }
+
+        function setForwardButtonText(text) {
+            $("#forward").text(text);
+
+        }
+
+        $(document).ready(function () {
             $("#back").click(function name() {
-                query = moment(new Date()).subtract(1, 'month').format("YYYY-MM-DD");
+                if (query) {
+                    query = moment(new Date(query)).subtract(1, 'month').format("YYYY-MM-DD");
+                    setBackButtonText(moment(new Date(query)).format("MMMM"));
+                } else {
+                    setBackButtonText(moment(new Date()).subtract(2, 'month').format("MMMM"));
+                    setForwardButtonText(moment(new Date()).add(1, 'month').format("MMMM"));
+                    query = moment(new Date()).subtract(1, 'month').format("YYYY-MM-DD");
+                }
                 drawChart();
             });
+
             $("#forward").click(function name(params) {
-                query = moment(new Date()).add(1, 'month').format("YYYY-MM-DD");
+                query = moment(new Date(query)).add(1, 'month').format("YYYY-MM-DD");
+                setForwardButtonText(moment(new Date(query)).format("MMMM")),
                 drawChart();
             });
-
-            let backButtonText = moment(new Date()).subtract(1, 'month').format("MMMM");
-            $("#back").text(backButtonText);
-            let forwardButtonText = moment(new Date()).add(1, 'month').format("MMMM");
-            $("#forward").text(forwardButtonText);
-
+            $("#recent").click(function name(params) {
+                query = "";
+                setBackButtonText(moment(new Date()).subtract(1, 'month').format("MMMM"))
+                setForwardButtonText(""),
+                drawChart();
+            });
+            setBackButtonText(moment(new Date()).subtract(1, 'month').format("MMMM"));
         });
 
     </script>
@@ -58,8 +77,9 @@
 
 <body>
     <div id="chart_div">Loading data...</div>
-    <button style="margin-left: 2em;" id="back"></button>
-    <button style="margin-left: 2em;" id="forward"></button>
+    <button style="margin-left: 225px;" id="back"></button>
+    <button style="margin-left: 1em;" id="recent">Aktueller Monat</button>
+    <button style="margin-left: 1em;" id="forward"></button>
 </body>
 
 </html>
