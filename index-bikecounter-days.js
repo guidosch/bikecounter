@@ -6,7 +6,6 @@ moment.locale('de');
 
 admin.initializeApp();
 const database = admin.firestore();
-const countersRef = database.collection('bike-couter-test');
 let chartData = {};
 let sums = new Map();
 let currentTimeFromData;
@@ -15,18 +14,23 @@ function resetData() {
     chartData.cols = [
         {"id":"","label":"Tag","pattern":"","type":"date"},
         {"id":"","label":"Abfahrten","pattern":"","type":"number"}];
-    chartData.rows = [];
-    sums = new Map();
-    for (let i = 1; i <= 31; i++) {
-        sums.set(i, 0);
+        chartData.rows = [];
+        sums = new Map();
+        for (let i = 1; i <= 31; i++) {
+            sums.set(i, 0);
+        }
     }
-}
-
-exports.printDailyGraphData = functions.https.onRequest((request, response) => {
-
+    
+    exports.printDailyGraphData = functions.https.onRequest((request, response) => {
+        
     resetData();
     //queryTime must be in format 2020-03-22 for march, 22
     let queryTime = request.query.q;
+    let collection = request.query.collection;
+    if (!collection){
+        collection = "bike-couter-test";
+    }
+    const countersRef = database.collection(collection);
     let now = new Date();
     let start = moment(now).startOf('month').format("YYYY-MM-DD");
     let end = moment(now).endOf('month').format("YYYY-MM-DD");

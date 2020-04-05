@@ -1,6 +1,7 @@
 <html>
 
 <head>
+    <link rel="stylesheet" type="text/css" href="styles.css" />
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <script type="text/javascript" src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
@@ -10,9 +11,10 @@
         google.charts.load('current', { 'packages': ['corechart', 'bar'] });
         google.charts.setOnLoadCallback(drawChart);
         var query = "";
+        var collection = "bike-couter-test";
 
         var options = {
-            title: 'Anzahl Abfahrten auf Adlisbergtrail. Daten seit 22.3.20',
+            title: 'Anzahl Abfahrten auf dem ausgewählten Trail.',
             width: 600,
             height: 340,
             hAxis: {
@@ -27,7 +29,8 @@
                 dataType: "json",
                 async: false,
                 data: {
-                    q: query
+                    q: query,
+                    collection: collection
                 }
             }).responseText;
 
@@ -70,12 +73,27 @@
                 drawChart();
             });
             setBackButtonText(moment(new Date()).subtract(1, 'month').format("MMMM"));
+            $('#collection').change(function() {
+                collection = $(this).val();
+                $('#chart_div').text("Loading data...");
+                drawChart();
+            });
+
         });
 
     </script>
 </head>
 
 <body>
+    <div>
+        <select id="collection">
+            <option value="bike-couter-test" selected> Adlisberg</option>
+            <option value="antennentrail_1">Üetliberg</option>
+            <option value="hoeckler_1">Harakiri</option>
+            <option value="bike_counter_antennentrail">Test: Adlisberg 2</option>
+            <option value="antennentrail_2">Test: Uetliberg 2</option>
+          </select> Trail
+    </div>
     <div id="chart_div">Loading data...</div>
     <button style="margin-left: 225px;" id="back"></button>
     <button style="margin-left: 1em;" id="recent">Aktueller Monat</button>
