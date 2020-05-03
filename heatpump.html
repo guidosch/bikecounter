@@ -10,15 +10,16 @@
         });
         google.charts.setOnLoadCallback(drawChart);
         var diffLastSample = 0;
-        var tempWater = 0;
+        var forwardTemp = 0;
         var timelineRows = [];
         var timelineEntryStarted = false;
         var timeLineMap = new Map();
         var currentTimelineName;
+        var collection = "t77-monitor";
 
         var options = {
             chart: {
-                title: 'T77: Vorlauftemperatur Heizung/kühlung im Verglich zur Raumtemperatur '
+                title: 'T77: Vorlauf- und Rücklauftemperatur Heizung/Kühlung und Differenz.'
             },
             width: 900,
             height: 500,
@@ -47,32 +48,21 @@
         };
 
         function drawChart() {
-            /**
-            var jsonData = $.ajax({
-                url: "https://us-central1-heatpump-monitoring.cloudfunctions.net/printGraphData",
+            var ajax = $.ajax({
+                url: "https://europe-west3-heatpump-monitoring.cloudfunctions.net/doGraphData",
                 crossDomain: true,
                 dataType: "json",
-                async: false
-            }).responseText;
-            **/
-           var jsonData = {"cols":[{"id":"","label":"Day","pattern":"","type":"date"},{"id":"","label":"Water","pattern":"","type":"number"},{"id":"","label":"Air","pattern":"","type":"number"},{"id":"","label":"Diff","pattern":"","type":"number"}],"rows":[{"c":[{"v":"Date(2020,2,8,16,46)"},{"v":23.6},{"v":23.7},{"v":0}]},
-{"c":[{"v":"Date(2020,2,8,16,46)"},{"v":23.6},{"v":23.7},{"v":0}]},
-{"c":[{"v":"Date(2020,2,8,16,46)"},{"v":23.6},{"v":23.7},{"v":0}]},
-{"c":[{"v":"Date(2020,2,8,17,16)"},{"v":23.6},{"v":22.7},{"v":-3}]},
-{"c":[{"v":"Date(2020,2,8,17,46)"},{"v":23.6},{"v":23.7},{"v":-4}]},
-{"c":[{"v":"Date(2020,2,8,18,16)"},{"v":23.6},{"v":21.7},{"v":-5}]},
-{"c":[{"v":"Date(2020,2,8,18,46)"},{"v":24.6},{"v":23.7},{"v":0}]},
-{"c":[{"v":"Date(2020,2,8,19,16)"},{"v":23.6},{"v":23.7},{"v":0}]},
-{"c":[{"v":"Date(2020,2,8,19,46)"},{"v":25.6},{"v":23.7},{"v":3}]},
-{"c":[{"v":"Date(2020,2,8,20,16)"},{"v":23.6},{"v":23.7},{"v":4}]},
-{"c":[{"v":"Date(2020,2,8,20,46)"},{"v":23.6},{"v":23.7},{"v":5}]}]};
+                async: false,
+                data: {
+                    collection: collection
+                }
+            })
+            .done(function (jsonData) {
 
-            
-            // a row {"c":[{"v":"Date(2020,3,1,8,16)"},{"v":19.3},{"v":23.3},{"v":4}]},
-            // date, waterTemp, roomTemp, diff (room-water)
             let lastSample = jsonData.rows[jsonData.rows.length-1];
             diffLastSample = lastSample.c[3].v;
-            tempWater = lastSample.c[1].v;
+            forwardTemp = lastSample.c[1].v;
+            
             
             var dateFormatter = new google.visualization.DateFormat({formatType: 'medium'});
             var data = new google.visualization.DataTable(jsonData);
@@ -81,9 +71,9 @@
             chart.draw(data, options);
             
             if (diffLastSample > 2){
-                $("#status").text("Status: Kühlung läuft. Vorlauftemperatur Wasser: "+tempWater);
+                $("#status").text("Status: Kühlung läuft. Vorlauftemperatur Wasser: "+forwardTemp);
             } else if(diffLastSample < -2) {
-                $("#status").text("Status: Heizung läuft. Vorlauftemperatur Wasser: "+tempWater);
+                $("#status").text("Status: Heizung läuft. Vorlauftemperatur Wasser: "+forwardTemp);
             } else {
                 $("#status").text("Status: Standby");
             }
@@ -117,6 +107,12 @@
             dataTable2.addRows(timelineRows);
 
             chart2.draw(dataTable2);
+                
+            })
+            .fail(function (e) {
+                console.log("Error calling cloud function: "+e);
+            });
+            
         }
 
         //[ 'Heizung', new Date(1789, 3, 30), new Date(1797, 2, 4) ],
@@ -147,13 +143,29 @@
             }
         }
 
-        
+        $(document).ready(function () {
+            $('#collection').change(function() {
+                collection = $(this).val();
+                $('#chart_div').text("Loading data...");
+                drawChart();
+            });
+
+        });
 
     </script>
 </head>
 
 <body>
-    <div id="status">loading status...</div>
+    <div>
+        <select id="collection">
+            <option value="t77-monitor" selected> Haus T77</option>
+            <option value="t75-monitor"> Haus T75</option>
+            <option value="t73-monitor-new"> Haus T73</option>
+            <option value="t71-monitor"> Haus T71</option>
+            
+          </select>&nbsp;Status Wäremepumpe
+    </div>
+    <div id="status">loading data...</div>
     <div id="timelineChart" style="height: 180px;">Loading data...</div>
     <div id="lineChart">Loading data...</div>
 </body>

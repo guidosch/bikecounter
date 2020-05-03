@@ -3,22 +3,23 @@ const admin = require('firebase-admin');
 
 admin.initializeApp();
 const database = admin.firestore();
-const countersRef = database.collection('t73-monitor');
 let chartData = {};
 chartData.cols = [
     { "id": "", "label": "Day", "pattern": "", "type": "date" },
-    { "id": "", "label": "Water", "pattern": "", "type": "number" },
-    { "id": "", "label": "Air", "pattern": "", "type": "number" },
-    { "id": "", "label": "Diff", "pattern": "", "type": "number" }
+    { "id": "", "label": "Vorlauf", "pattern": "", "type": "number" },
+    { "id": "", "label": "Ruecklauf", "pattern": "", "type": "number" },
+    { "id": "", "label": "Differenz", "pattern": "", "type": "number" }
 ];
 
 
 exports.printGraphData = functions.https.onRequest((request, response) => {
 
+    let collection = request.query.collection;
+    const countersRef = database.collection(collection);
     chartData.rows = [];
-    let oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate()-7);
-    let query = countersRef.where('timestamp', '>', oneWeekAgo.toISOString()).orderBy("timestamp", "asc").get()
+    let oneMonthAgo = new Date();
+    oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
+    let query = countersRef.where('timestamp', '>', oneMonthAgo.toISOString()).orderBy("timestamp", "asc").get()
 
         .then(snapshot => {
             if (snapshot.empty) {
@@ -30,13 +31,14 @@ exports.printGraphData = functions.https.onRequest((request, response) => {
             snapshot.forEach(doc => {
                 let data = doc.data();
                 let time = new Date(Date.parse(data.timestamp));
-                let tempWater = data.water.t;
-                let tempRoom = data.room.t;
-                let diff = Math.round(tempRoom - tempWater);
+                correctSensorData(collection, data);
+                let forwardTemp = data.forward;
+                let returnTemp = data.return;
+                let diff = Math.round(returnTemp - forwardTemp);
                 let row = (`
                     {"c":[{"v":"Date(${time.getFullYear()},${time.getMonth()},${time.getDate()},${time.getHours()},${time.getMinutes()})"},
-                    {"v":${tempWater}},
-                    {"v":${tempRoom}},
+                    {"v":${forwardTemp}},
+                    {"v":${returnTemp}},
                     {"v":${diff}}]}
                 `);
                 chartData.rows.push(JSON.parse(row));
@@ -53,5 +55,17 @@ exports.printGraphData = functions.https.onRequest((request, response) => {
             response.statusCode = 500;
             response.send("<h1>Error getting documents</h1>");
         });
-
 });
+
+//some sensors are off - correct values
+function correctSensorData(collection, data) {
+    switch (collection) {
+        case "t75-monitor":
+            data.forward = data.forward + 1;
+            break;
+        case "t77-monitor":
+            data.return = data.return + 2;
+            break;
+    }
+
+}
