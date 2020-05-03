@@ -13,8 +13,8 @@ exports.storeHeatpumpData = (req, res) => {
     let payload = req.body;
     if (payload && payload.app_id == "freecooling-monitor") {
         const deviceId = payload.dev_id;
-        const roomData = payload.payload_fields.room;
-        const waterData = payload.payload_fields.water;
+        const forward_temp = payload.payload_fields.forward_temp;
+        const return_temp = payload.payload_fields.return_temp;
         const timestamp = payload.metadata.time;
         console.log("timestamp form request object: " + timestamp);
 
@@ -22,7 +22,7 @@ exports.storeHeatpumpData = (req, res) => {
         if (!alreadyAdded(deviceId, timestamp, 10)) {
 
             try {
-                firestore.collection(`${deviceId}`).add({ 'room': roomData, 'water': waterData, 'timestamp': timestamp });
+                firestore.collection(`${deviceId}`).add({ 'forward': forward_temp, 'return': return_temp, 'timestamp': timestamp });
                 console.log(`Added data for ${deviceId}`);
             } catch (error) {
                 console.error(`error while trying to store data for: ${deviceId}`, error);
