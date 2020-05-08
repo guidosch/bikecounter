@@ -1,12 +1,16 @@
-<html>
+<!DOCTYPE html>
+
 <head>
+    <title>Status Wäremepumpen T71-T77</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <script type="text/javascript" src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.8.2/css/bulma.min.css">
     <script type="text/javascript">
 
 
         google.charts.load('current', {
-            'packages': ['line','timeline','corechart'], 'language':'de'
+            'packages': ['line', 'timeline', 'corechart'], 'language': 'de'
         });
         google.charts.setOnLoadCallback(drawChart);
         var diffLastSample = 0;
@@ -19,7 +23,7 @@
 
         var options = {
             chart: {
-                title: 'T77: Vorlauf- und Rücklauftemperatur Heizung/Kühlung und Differenz.'
+                title: 'Vorlauf- und Rücklauftemperatur Heizung/Kühlung und Differenz.'
             },
             width: 900,
             height: 500,
@@ -57,70 +61,97 @@
                     collection: collection
                 }
             })
-            .done(function (jsonData) {
+                .done(function (jsonData) {
 
-            let lastSample = jsonData.rows[jsonData.rows.length-1];
-            diffLastSample = lastSample.c[3].v;
-            forwardTemp = lastSample.c[1].v;
-            
-            
-            var dateFormatter = new google.visualization.DateFormat({formatType: 'medium'});
-            var data = new google.visualization.DataTable(jsonData);
-            dateFormatter.format(data,0);
-            var chart = new google.charts.Line(document.getElementById('lineChart'));
-            chart.draw(data, options);
-            
-            if (diffLastSample > 2){
-                $("#status").text("Status: Kühlung läuft. Vorlauftemperatur Wasser: "+forwardTemp);
-            } else if(diffLastSample < -2) {
-                $("#status").text("Status: Heizung läuft. Vorlauftemperatur Wasser: "+forwardTemp);
-            } else {
-                $("#status").text("Status: Standby");
-            }
+                    let lastSample = jsonData.rows[jsonData.rows.length - 1];
+                    diffLastSample = lastSample.c[3].v;
+                    forwardTemp = lastSample.c[1].v;
 
-            //prepare timeline chart
-            var chart2 = new google.visualization.Timeline(document.getElementById('timelineChart'));
-            var dataTable2 = new google.visualization.DataTable();
 
-            dataTable2.addColumn({ type: 'string', id: 'Status' });
-            dataTable2.addColumn({ type: 'date', id: 'Start' });
-            dataTable2.addColumn({ type: 'date', id: 'End' });
-            
-            // a row {"c":[{"v":"Date(2020,3,1,8,16)"},{"v":19.3},{"v":23.3},{"v":4}]},
-            // date, waterTemp, roomTemp, diff (room-water)
-            jsonData.rows.forEach(row => {
-                let diff = row.c[3].v;
-                let date = row.c[0].v;
-                if (diff > 2){
-                    addToTimeline("Kühlung", date);
-                } else if (diff < -2) {
-                    addToTimeline("Heizung", date);
-                } else {
-                    addToTimeline("Standby", date);
-                }
-            });
-            addToTimeline("End", new Date());
+                    var dateFormatter = new google.visualization.DateFormat({ formatType: 'medium' });
+                    var data = new google.visualization.DataTable(jsonData);
+                    dateFormatter.format(data, 0);
+                    var chart = new google.charts.Line(document.getElementById('lineChart'));
+                    chart.draw(data, options);
 
-           
-            let wrap = [];
-            wrap.push(timelineRows);
-            dataTable2.addRows(timelineRows);
+                    if (diffLastSample > 2) {
+                        $("#status").text("Aktueller Status: Kühlung läuft. Vorlauftemperatur Wasser: " + forwardTemp);
+                    } else if (diffLastSample < -2) {
+                        $("#status").text("Aktueller Status: Heizung läuft. Vorlauftemperatur Wasser: " + forwardTemp);
+                    } else {
+                        $("#status").text("Aktueller Status: Standby");
+                    }
 
-            chart2.draw(dataTable2);
-                
-            })
-            .fail(function (e) {
-                console.log("Error calling cloud function: "+e);
-            });
-            
+                    //prepare timeline chart
+                    var timelineChart = new google.visualization.Timeline(document.getElementById('timelineChart'));
+                    var timelineDataTable = new google.visualization.DataTable();
+
+                    timelineDataTable.addColumn({ type: 'string', id: 'Status' });
+                    timelineDataTable.addColumn({ type: 'date', id: 'Start' });
+                    timelineDataTable.addColumn({ type: 'date', id: 'End' });
+
+                    // a row {"c":[{"v":"Date(2020,3,1,8,16)"},{"v":19.3},{"v":23.3},{"v":4}]},
+                    // date, waterTemp, roomTemp, diff (room-water)
+                    jsonData.rows.forEach(row => {
+                        let diff = row.c[3].v;
+                        let date = row.c[0].v;
+                        if (diff > 2) {
+                            addToTimeline("Kühlung", date);
+                        } else if (diff < -2) {
+                            addToTimeline("Heizung", date);
+                        } else {
+                            addToTimeline("Standby", date);
+                        }
+                    });
+                    addToTimeline("End", new Date());
+
+                    var timelineOptions = {
+                        width: 900,
+                        height: 500,
+                        legend: { position: 'none' },
+                        hAxis: {
+                            viewWindow: {
+                                min: new Date(2020, 3, 11),
+                                max: new Date(2020, 4, 11)
+                            },
+                            gridlines: {
+                                count: -1,
+                                units: {
+                                    days: { format: ['dd.MM.yyyy'] },
+                                    hours: { format: ['HH:mm', 'hh'] },
+                                    minutes: { format: ['HH:mm', ':mm'] }
+                                }
+                            },
+                            minorGridlines: {
+                                units: {
+                                    days: { format: ['dd.MM.yyyy'] },
+                                    hours: { format: ['hh:mm:ss', 'hh'] },
+                                    minutes: { format: ['HH:mm', ':mm'] }
+                                }
+                            }
+                        }
+                    };
+
+
+                    let wrap = [];
+                    wrap.push(timelineRows);
+                    timelineDataTable.addRows(timelineRows);
+
+                    timelineChart.draw(timelineDataTable, timelineOptions);
+
+                })
+                .fail(function (e) {
+                    console.log("Error calling cloud function: " + e);
+                });
+
         }
 
         //[ 'Heizung', new Date(1789, 3, 30), new Date(1797, 2, 4) ],
         function addToTimeline(timelineName, date) {
-            if (currentTimelineName == undefined || currentTimelineName == timelineName){
-                if (!timelineEntryStarted){
+            if (currentTimelineName == undefined || currentTimelineName == timelineName) {
+                if (!timelineEntryStarted) {
                     //create a new one
-                    timeLineMap.set(timelineName, {startdate:date, enddate:date});
+                    timeLineMap.set(timelineName, { startdate: date, enddate: date });
                     currentTimelineName = timelineName;
                     timelineEntryStarted = true;
                 } else {
@@ -143,11 +174,25 @@
             }
         }
 
+        function resetData() {
+            diffLastSample = 0;
+            forwardTemp = 0;
+            timelineRows = [];
+            timelineEntryStarted = false;
+            timeLineMap = new Map();
+            currentTimelineName = "";
+        }
+
         $(document).ready(function () {
-            $('#collection').change(function() {
+            $('#collection').change(function () {
+                resetData();
                 collection = $(this).val();
                 $('#chart_div').text("Loading data...");
                 drawChart();
+            });
+
+            $("#raw_data_button").click(function () {
+                $("#rawdata_container").css("display", "block");
             });
 
         });
@@ -156,17 +201,40 @@
 </head>
 
 <body>
-    <div>
-        <select id="collection">
-            <option value="t77-monitor" selected> Haus T77</option>
-            <option value="t75-monitor"> Haus T75</option>
-            <option value="t73-monitor-new"> Haus T73</option>
-            <option value="t71-monitor"> Haus T71</option>
-            
-          </select>&nbsp;Status Wäremepumpe
+    <div class="container">
+        <h1 class="title">Status Wäremepumpen T71-T77</h1>
+        <h2 class="subtitle">
+            Der Status der Wäreepumpe wird anhand der Temperaturdifferenz der <a target="_blank" href="https://de.wikipedia.org/wiki/Vorlauftemperatur">Vor- und Rücklauftemperatur</a>  ermittelt.
+        </h2>
+        <div class="field">
+            <div class="control">
+                <div class="select is-info">
+                    <select id="collection">
+                        <option value="t77-monitor" selected> Haus T77</option>
+                        <option value="t75-monitor"> Haus T75</option>
+                        <option value="t73-monitor-new"> Haus T73</option>
+                        <option value="t71-monitor"> Haus T71</option>
+
+                    </select>
+                </div>
+            </div>
+        </div>
     </div>
-    <div id="status">loading data...</div>
-    <div id="timelineChart" style="height: 180px;">Loading data...</div>
-    <div id="lineChart">Loading data...</div>
+    <div class="container" style="padding-top: 1em;">
+        <div id="status">loading data...</div>
+    </div>
+    <div class="container">
+        <div id="timelineChart" style="height: 180px;">Loading data...</div>
+    </div>
+    <div class="container">
+        <button class="button is-info" id="raw_data_button">Zeige Rohdaten...</button>
+    </div>
+    <div id="rawdata_container" style="display: none;" class="container">
+        <section class="section">
+            <h2 class="subtitle">Rohdaten der gleichen Zeitperiode wie oben.</h2>
+            <div id="lineChart">Loading data...</div>
+        </section>
+    </div>
 </body>
+
 </html>
