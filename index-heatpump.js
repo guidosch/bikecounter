@@ -64,7 +64,7 @@ function correctSensorData(collection, data) {
             data.forward = data.forward + 1;
             break;
         case "t77-monitor":
-            data.return = data.return + 2;
+            data.return = data.return + 1;
             break;
     }
 

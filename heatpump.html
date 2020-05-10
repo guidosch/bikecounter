@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <script type="text/javascript" src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.8.2/css/bulma.min.css">
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/locale/de.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.8.2/css/bulma.min.css" >
     <script type="text/javascript">
 
 
@@ -66,7 +68,10 @@
                     let lastSample = jsonData.rows[jsonData.rows.length - 1];
                     diffLastSample = lastSample.c[3].v;
                     forwardTemp = lastSample.c[1].v;
-
+                    //"Date(2020,4,8,20,8)"
+                    timeLastSample = lastSample.c[0].v;
+                    timeLastSample = timeLastSample.substring(5,timeLastSample.length-1);
+                    let lastMeasurement = moment.utc(timeLastSample.split(",")).format("dddd, MMMM Do YYYY, H:mm");
 
                     var dateFormatter = new google.visualization.DateFormat({ formatType: 'medium' });
                     var data = new google.visualization.DataTable(jsonData);
@@ -75,13 +80,12 @@
                     chart.draw(data, options);
 
                     if (diffLastSample > 2) {
-                        $("#status").text("Aktueller Status: Kühlung läuft. Vorlauftemperatur Wasser: " + forwardTemp);
+                        $("#status").text("Aktueller Status: Kühlung läuft. Vorlauftemperatur Wasser: " + forwardTemp + "(Letzte Messung: "+lastMeasurement+")");
                     } else if (diffLastSample < -2) {
-                        $("#status").text("Aktueller Status: Heizung läuft. Vorlauftemperatur Wasser: " + forwardTemp);
+                        $("#status").text("Aktueller Status: Heizung läuft. Vorlauftemperatur Wasser: " + forwardTemp + "(Letzte Messung: "+lastMeasurement+")");
                     } else {
-                        $("#status").text("Aktueller Status: Standby");
+                        $("#status").text("Aktueller Status: Standby (Letzte Messung: "+lastMeasurement+")");
                     }
-
                     //prepare timeline chart
                     var timelineChart = new google.visualization.Timeline(document.getElementById('timelineChart'));
                     var timelineDataTable = new google.visualization.DataTable();
@@ -148,7 +152,7 @@
 
         //[ 'Heizung', new Date(1789, 3, 30), new Date(1797, 2, 4) ],
         function addToTimeline(timelineName, date) {
-            if (currentTimelineName == undefined || currentTimelineName == timelineName) {
+            if (currentTimelineName == undefined || currentTimelineName == "" || currentTimelineName == timelineName) {
                 if (!timelineEntryStarted) {
                     //create a new one
                     timeLineMap.set(timelineName, { startdate: date, enddate: date });
@@ -172,6 +176,7 @@
                 currentTimelineName = undefined;
                 addToTimeline(timelineName, date);
             }
+            dateTimeLastMeasurement = date;
         }
 
         function resetData() {
@@ -202,9 +207,9 @@
 
 <body>
     <div class="container">
-        <h1 class="title">Status Wäremepumpen T71-T77</h1>
+        <h1 class="title">Status Heizen/Kühlen T71-T77</h1>
         <h2 class="subtitle">
-            Der Status der Wäreepumpe wird anhand der Temperaturdifferenz der <a target="_blank" href="https://de.wikipedia.org/wiki/Vorlauftemperatur">Vor- und Rücklauftemperatur</a>  ermittelt.
+            Der Status der Wäremepumpe/Kühlung wird anhand der Temperaturdifferenz der <a target="_blank" href="https://de.wikipedia.org/wiki/Vorlauftemperatur">Vor- und Rücklauftemperatur</a> ermittelt.
         </h2>
         <div class="field">
             <div class="control">
