@@ -34,7 +34,7 @@ exports.printGraphData = functions.https.onRequest((request, response) => {
                 correctSensorData(collection, data);
                 let forwardTemp = data.forward;
                 let returnTemp = data.return;
-                let diff = Math.round(returnTemp - forwardTemp);
+                let diff = returnTemp - forwardTemp;
                 let row = (`
                     {"c":[{"v":"Date(${time.getFullYear()},${time.getMonth()},${time.getDate()},${time.getHours()},${time.getMinutes()})"},
                     {"v":${forwardTemp}},
@@ -61,10 +61,10 @@ exports.printGraphData = functions.https.onRequest((request, response) => {
 function correctSensorData(collection, data) {
     switch (collection) {
         case "t75-monitor":
-            data.forward = data.forward + 1;
+            data.forward = data.forward + 0.75;
             break;
         case "t77-monitor":
-            data.return = data.return + 1;
+            data.return = data.return + 1.25;
             break;
     }
 

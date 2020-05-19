@@ -7,9 +7,15 @@
     <script type="text/javascript" src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/locale/de.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.8.2/css/bulma.min.css" >
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.8.2/css/bulma.min.css">
     <script type="text/javascript">
 
+        /**
+         * TODO: Zeiten sind noch UTC
+         * Datum ist noch US
+         * Graph verbergen und zeigen verzerrt graph
+         * 
+         **/
 
         google.charts.load('current', {
             'packages': ['line', 'timeline', 'corechart'], 'language': 'de'
@@ -25,21 +31,15 @@
 
         var options = {
             chart: {
-                title: 'Vorlauf- und Rücklauftemperatur Heizung/Kühlung und Differenz.'
+                title: 'Rohdaten der gleichen Zeitperiode wie oben. Vorlauf- und Rücklauftemperatur Heizung/Kühlung und Differenz.'
             },
             width: 900,
             height: 500,
             series: {
                 // Gives each series an axis name that matches the Y-axis below.
-                0: {
-                    axis: 'Temps'
-                },
-                1: {
-                    axis: 'Temps'
-                },
-                2: {
-                    axis: 'Diff'
-                }
+                0: {axis: 'Temps'},
+                1: {axis: 'Temps'},
+                2: {axis: 'Diff'}
             },
             axes: {
                 y: {
@@ -70,7 +70,7 @@
                     forwardTemp = lastSample.c[1].v;
                     //"Date(2020,4,8,20,8)"
                     timeLastSample = lastSample.c[0].v;
-                    timeLastSample = timeLastSample.substring(5,timeLastSample.length-1);
+                    timeLastSample = timeLastSample.substring(5, timeLastSample.length - 1);
                     let lastMeasurement = moment.utc(timeLastSample.split(",")).format("dddd, MMMM Do YYYY, H:mm");
 
                     var dateFormatter = new google.visualization.DateFormat({ formatType: 'medium' });
@@ -80,11 +80,11 @@
                     chart.draw(data, options);
 
                     if (diffLastSample > 2) {
-                        $("#status").text("Aktueller Status: Kühlung läuft. Vorlauftemperatur Wasser: " + forwardTemp + "(Letzte Messung: "+lastMeasurement+")");
+                        $("#status").text("Aktueller Status: Kühlung läuft. Vorlauftemperatur Wasser: " + forwardTemp + "(Letzte Messung: " + lastMeasurement + ")");
                     } else if (diffLastSample < -2) {
-                        $("#status").text("Aktueller Status: Heizung läuft. Vorlauftemperatur Wasser: " + forwardTemp + "(Letzte Messung: "+lastMeasurement+")");
+                        $("#status").text("Aktueller Status: Heizung läuft. Vorlauftemperatur Wasser: " + forwardTemp + "(Letzte Messung: " + lastMeasurement + ")");
                     } else {
-                        $("#status").text("Aktueller Status: Standby (Letzte Messung: "+lastMeasurement+")");
+                        $("#status").text("Aktueller Status: Standby (Letzte Messung: " + lastMeasurement + ")");
                     }
                     //prepare timeline chart
                     var timelineChart = new google.visualization.Timeline(document.getElementById('timelineChart'));
@@ -197,7 +197,7 @@
             });
 
             $("#raw_data_button").click(function () {
-                $("#rawdata_container").css("display", "block");
+                $("#lineChart").css("display", "block");
             });
 
         });
@@ -209,7 +209,8 @@
     <div class="container">
         <h1 class="title">Status Heizen/Kühlen T71-T77</h1>
         <h2 class="subtitle">
-            Der Status der Wäremepumpe/Kühlung wird anhand der Temperaturdifferenz der <a target="_blank" href="https://de.wikipedia.org/wiki/Vorlauftemperatur">Vor- und Rücklauftemperatur</a> ermittelt.
+            Der Status der Wäremepumpe/Kühlung wird anhand der Temperaturdifferenz der <a target="_blank"
+                href="https://de.wikipedia.org/wiki/Vorlauftemperatur">Vor- und Rücklauftemperatur</a> ermittelt.
         </h2>
         <div class="field">
             <div class="control">
@@ -234,12 +235,8 @@
     <div class="container">
         <button class="button is-info" id="raw_data_button">Zeige Rohdaten...</button>
     </div>
-    <div id="rawdata_container" style="display: none;" class="container">
-        <section class="section">
-            <h2 class="subtitle">Rohdaten der gleichen Zeitperiode wie oben.</h2>
-            <div id="lineChart">Loading data...</div>
-        </section>
-    </div>
+
+    <div id="lineChart" style="">Loading data...</div>
 </body>
 
 </html>
