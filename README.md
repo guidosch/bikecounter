@@ -7,9 +7,6 @@ Using Google cloud functions to publish [LORA](https://en.wikipedia.org/wiki/LoR
 3. Google Cloud Function pushes data from TTN to a firestore database
     * https://us-central1-bikecounter.cloudfunctions.net/storeBikeCounterData
 4. Using a second Google Cloud Function to offer an API which can be used with [Google Chart API](https://developers.google.com/chart/interactive/docs).
-    * https://us-central1-bikecounter.cloudfunctions.net/printGraph
 5. Display data in a HTML page with chart served over github pages
-    * https://guidosch.github.io/lora/bikecounter.html
-
 
 The repo contains all the code from the steps above.
