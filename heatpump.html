@@ -7,6 +7,7 @@
     <script type="text/javascript" src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/locale/de.js"></script>
+    <script defer="" src="https://use.fontawesome.com/releases/v5.3.1/js/all.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.8.2/css/bulma.min.css">
     <script type="text/javascript">
 
@@ -28,7 +29,8 @@
         var timeLineMap = new Map();
         var currentTimelineName;
         var collection = "t77-monitor";
-
+        var lineChart;
+        var lineChartData;
         var options = {
             chart: {
                 title: 'Rohdaten der gleichen Zeitperiode wie oben. Vorlauf- und Rücklauftemperatur Heizung/Kühlung und Differenz.'
@@ -37,9 +39,9 @@
             height: 500,
             series: {
                 // Gives each series an axis name that matches the Y-axis below.
-                0: {axis: 'Temps'},
-                1: {axis: 'Temps'},
-                2: {axis: 'Diff'}
+                0: { axis: 'Temps' },
+                1: { axis: 'Temps' },
+                2: { axis: 'Diff' }
             },
             axes: {
                 y: {
@@ -47,8 +49,12 @@
                         label: 'Temperatur'
                     },
                     Diff: {
-                        label: 'Diff'
+                        label: 'Differenz'
                     }
+                },
+                hAxis: {
+                    format: 'dd.M',
+                    //gridlines: { count: 15 }
                 }
             }
         };
@@ -71,21 +77,23 @@
                     //"Date(2020,4,8,20,8)"
                     timeLastSample = lastSample.c[0].v;
                     timeLastSample = timeLastSample.substring(5, timeLastSample.length - 1);
-                    let lastMeasurement = moment.utc(timeLastSample.split(",")).format("dddd, MMMM Do YYYY, H:mm");
+                    let lastMeasurement = moment.utc(timeLastSample.split(",")).utcOffset("+0200").format("dddd, MMMM Do YYYY, H:mm");
 
-                    var dateFormatter = new google.visualization.DateFormat({ formatType: 'medium' });
-                    var data = new google.visualization.DataTable(jsonData);
-                    dateFormatter.format(data, 0);
-                    var chart = new google.charts.Line(document.getElementById('lineChart'));
-                    chart.draw(data, options);
+                    var dateFormatter = new google.visualization.DateFormat({ pattern: 'dd.M HH:mm' });
+                    lineChartData = new google.visualization.DataTable(jsonData);
+                    dateFormatter.format(lineChartData, 0);
+                    lineChart = new google.charts.Line(document.getElementById('lineChart'));
+                    let status = "Standby";
+                    let statusText = `Aktueller Status: <strong>${status}</strong>.<br>
+                                    <span class="content is-small">Vorlauftemperatur Wasser: ${forwardTemp} °C (Letzte Messung: ${lastMeasurement})</span>`;
 
                     if (diffLastSample > 2) {
-                        $("#status").text("Aktueller Status: Kühlung läuft. Vorlauftemperatur Wasser: " + forwardTemp + "(Letzte Messung: " + lastMeasurement + ")");
+                        status = "Kühlung läuft";
                     } else if (diffLastSample < -2) {
-                        $("#status").text("Aktueller Status: Heizung läuft. Vorlauftemperatur Wasser: " + forwardTemp + "(Letzte Messung: " + lastMeasurement + ")");
-                    } else {
-                        $("#status").text("Aktueller Status: Standby (Letzte Messung: " + lastMeasurement + ")");
+                        status = "Heizung läuft";
                     }
+                    $("#status").html(statusText);
+
                     //prepare timeline chart
                     var timelineChart = new google.visualization.Timeline(document.getElementById('timelineChart'));
                     var timelineDataTable = new google.visualization.DataTable();
@@ -114,25 +122,7 @@
                         height: 500,
                         legend: { position: 'none' },
                         hAxis: {
-                            viewWindow: {
-                                min: new Date(2020, 3, 11),
-                                max: new Date(2020, 4, 11)
-                            },
-                            gridlines: {
-                                count: -1,
-                                units: {
-                                    days: { format: ['dd.MM.yyyy'] },
-                                    hours: { format: ['HH:mm', 'hh'] },
-                                    minutes: { format: ['HH:mm', ':mm'] }
-                                }
-                            },
-                            minorGridlines: {
-                                units: {
-                                    days: { format: ['dd.MM.yyyy'] },
-                                    hours: { format: ['hh:mm:ss', 'hh'] },
-                                    minutes: { format: ['HH:mm', ':mm'] }
-                                }
-                            }
+                            format: 'dd.M',
                         }
                     };
 
@@ -140,6 +130,8 @@
                     let wrap = [];
                     wrap.push(timelineRows);
                     timelineDataTable.addRows(timelineRows);
+
+                    dateFormatter.format(timelineDataTable, 0);
 
                     timelineChart.draw(timelineDataTable, timelineOptions);
 
@@ -194,10 +186,14 @@
                 collection = $(this).val();
                 $('#chart_div').text("Loading data...");
                 drawChart();
+                $('#lineChart').hide();
+                $('#raw_data_button').show();
             });
 
             $("#raw_data_button").click(function () {
-                $("#lineChart").css("display", "block");
+                $('#lineChart').show();
+                lineChart.draw(lineChartData, options);
+                $('#raw_data_button').hide();
             });
 
         });
@@ -207,11 +203,11 @@
 
 <body>
     <div class="container">
-        <h1 class="title">Status Heizen/Kühlen T71-T77</h1>
-        <h2 class="subtitle">
+        <h3 class="title">Status heizen/kühlen T71-T77</h3>
+        <p class="content">
             Der Status der Wäremepumpe/Kühlung wird anhand der Temperaturdifferenz der <a target="_blank"
                 href="https://de.wikipedia.org/wiki/Vorlauftemperatur">Vor- und Rücklauftemperatur</a> ermittelt.
-        </h2>
+        </p>
         <div class="field">
             <div class="control">
                 <div class="select is-info">
@@ -235,8 +231,14 @@
     <div class="container">
         <button class="button is-info" id="raw_data_button">Zeige Rohdaten...</button>
     </div>
-
-    <div id="lineChart" style="">Loading data...</div>
+    <div class="container" id="lineChartContainer">
+        <div id="lineChart"></div>
+    </div>
+    <div class="container">
+        <span class="icon has-text-info" style="margin-top: 1em;">
+            <a target="blank" href="https://github.com/guidosch/lora"><i class="fas fa-info-circle"></i></a>
+        </span>
+    </div>
 </body>
 
 </html>
