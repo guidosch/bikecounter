@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 
 <head>
-    <title>Status Wäremepumpen T71-T77</title>
+    <title>Status Heizen/Kühlen T71-T77</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <script type="text/javascript" src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
@@ -12,10 +12,8 @@
     <script type="text/javascript">
 
         /**
-         * TODO: Zeiten sind noch UTC
-         * Datum ist noch US
-         * Graph verbergen und zeigen verzerrt graph
-         * 
+         * TODO: Zeiten sind noch UTC in den Messungen
+         * Datum ist teilweise noch US
          **/
 
         google.charts.load('current', {
@@ -203,7 +201,7 @@
 
 <body>
     <div class="container">
-        <h3 class="title">Status heizen/kühlen T71-T77</h3>
+        <h3 class="title">Status Heizen/Kühlen T71-T77</h3>
         <p class="content">
             Der Status der Wäremepumpe/Kühlung wird anhand der Temperaturdifferenz der <a target="_blank"
                 href="https://de.wikipedia.org/wiki/Vorlauftemperatur">Vor- und Rücklauftemperatur</a> ermittelt.
