@@ -33,7 +33,7 @@
             chart: {
                 title: 'Rohdaten der gleichen Zeitperiode wie oben. Vorlauf- und Rücklauftemperatur Heizung/Kühlung und Differenz.'
             },
-            width: 900,
+            width: 1300,
             height: 500,
             series: {
                 // Gives each series an axis name that matches the Y-axis below.
@@ -75,7 +75,7 @@
                     //"Date(2020,4,8,20,8)"
                     timeLastSample = lastSample.c[0].v;
                     timeLastSample = timeLastSample.substring(5, timeLastSample.length - 1);
-                    let lastMeasurement = moment.utc(timeLastSample.split(",")).utcOffset("+0200").format("dddd, MMMM Do YYYY, H:mm");
+                    let lastMeasurement = moment.utc(timeLastSample.split(",")).utcOffset("+0200").format("dddd, Do MMMM YYYY, H:mm");
 
                     var dateFormatter = new google.visualization.DateFormat({ pattern: 'dd.M HH:mm' });
                     lineChartData = new google.visualization.DataTable(jsonData);
@@ -132,6 +132,26 @@
                     dateFormatter.format(timelineDataTable, 0);
 
                     timelineChart.draw(timelineDataTable, timelineOptions);
+
+                    google.visualization.events.addListener(timelineChart, 'onmouseover', function (obj) {
+
+                        let startDate = timelineDataTable.getValue(obj.row, 1);
+                        let endDate = timelineDataTable.getValue(obj.row, 2);
+                        let timeDiff = Math.abs(startDate.getTime() - endDate.getTime());
+                        let diffHours = (timeDiff / (1000 * 3600));
+
+                        if (diffHours == 0) {
+                            //Measurement is taken every 30min, so rounding up to 30min
+                            diffHours = 0.5;
+                            endDate = moment(endDate).add(30,'minutes');
+                        }
+                        let startDateString = moment.utc(startDate).utcOffset("+0200").format("DD.MM, H:mm");
+                        let endDateString = moment.utc(endDate).utcOffset("+0200").format("DD.MM, H:mm");
+                        $("#duration").html(`Dauer: <strong>${diffHours.toFixed(1)} Stunden</strong> (${startDateString} - ${endDateString})`);
+                    });
+                    google.visualization.events.addListener(timelineChart, 'onmouseout', function (obj) {
+                        $("#duration").html("&nbsp;");
+                    });
 
                 })
                 .fail(function (e) {
@@ -193,7 +213,7 @@
                 lineChart.draw(lineChartData, options);
                 $('#raw_data_button').hide();
             });
-
+            $('#lineChart').hide();
         });
 
     </script>
@@ -221,7 +241,8 @@
         </div>
     </div>
     <div class="container" style="padding-top: 1em;">
-        <div id="status">loading data...</div>
+        <div id="status">Loading data...</div>
+        <div class="content is-small" id="duration">&nbsp;</div>
     </div>
     <div class="container">
         <div id="timelineChart" style="height: 180px;">Loading data...</div>
@@ -230,7 +251,7 @@
         <button class="button is-info" id="raw_data_button">Zeige Rohdaten...</button>
     </div>
     <div class="container" id="lineChartContainer">
-        <div id="lineChart"></div>
+        <div id="lineChart">Loading data...</div>
     </div>
     <div class="container">
         <span class="icon has-text-info" style="margin-top: 1em;">
