@@ -71,7 +71,7 @@
 
                     let lastSample = jsonData.rows[jsonData.rows.length - 1];
                     diffLastSample = lastSample.c[3].v;
-                    forwardTemp = lastSample.c[1].v;
+                    forwardTemp = parseFloat(lastSample.c[1].v);
                     //"Date(2020,4,8,20,8)"
                     timeLastSample = lastSample.c[0].v;
                     timeLastSample = timeLastSample.substring(5, timeLastSample.length - 1);
@@ -85,7 +85,7 @@
                     let statusText = `Aktueller Status: <strong>${status}</strong>.<br>
                                     <span class="content is-small">Vorlauftemperatur Wasser: ${forwardTemp} °C (Letzte Messung: ${lastMeasurement})</span>`;
 
-                    if (diffLastSample > 2) {
+                    if (diffLastSample > 1.5 && forwardTemp < 20) {
                         status = "Kühlung läuft";
                     } else if (diffLastSample < -2) {
                         status = "Heizung läuft";
@@ -105,7 +105,7 @@
                     jsonData.rows.forEach(row => {
                         let diff = row.c[3].v;
                         let date = row.c[0].v;
-                        if (diff > 2) {
+                        if (diff > 1.5 && forwardTemp < 20) {
                             addToTimeline("Kühlung", date);
                         } else if (diff < -2) {
                             addToTimeline("Heizung", date);
