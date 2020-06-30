@@ -100,6 +100,12 @@
                     timelineDataTable.addColumn({ type: 'date', id: 'Start' });
                     timelineDataTable.addColumn({ type: 'date', id: 'End' });
 
+                    //add dummy entries to fix color and ordering
+                    let firstSample = jsonData.rows[0];
+                    addToTimeline("Standby", firstSample.c[0].v);
+                    addToTimeline("Heizung", firstSample.c[0].v);
+                    addToTimeline("Kühlung", firstSample.c[0].v);
+
                     // a row {"c":[{"v":"Date(2020,3,1,8,16)"},{"v":19.3},{"v":23.3},{"v":4}]},
                     // date, forward, return, diff (forward-return)
                     jsonData.rows.forEach(row => {
@@ -122,7 +128,8 @@
                         legend: { position: 'none' },
                         hAxis: {
                             format: 'dd.M',
-                        }
+                        },
+                        colors: ['#039c2e', '#c41c10', '#1d62d1']
                     };
 
 
