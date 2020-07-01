@@ -81,15 +81,16 @@
                     lineChartData = new google.visualization.DataTable(jsonData);
                     dateFormatter.format(lineChartData, 0);
                     lineChart = new google.charts.Line(document.getElementById('lineChart'));
+                    
                     let status = "Standby";
-                    let statusText = `Aktueller Status: <strong>${status}</strong>.<br>
-                                    <span class="content is-small">Vorlauftemperatur Wasser: ${forwardTempLastSample} °C (Letzte Messung: ${lastMeasurement})</span>`;
-
                     if (diffLastSample > 1.5 && forwardTempLastSample < 20) {
                         status = "Kühlung läuft";
                     } else if (diffLastSample < -2) {
                         status = "Heizung läuft";
                     }
+                    let statusText = `Aktueller Status: <strong>${status}</strong>.<br>
+                    <span class="content is-small">Vorlauftemperatur Wasser: ${forwardTempLastSample} °C (Letzte Messung: ${lastMeasurement})</span>`;
+                    
                     $("#status").html(statusText);
 
                     //prepare timeline chart
