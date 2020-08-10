@@ -69,6 +69,7 @@
             })
                 .done(function (jsonData) {
 
+
                     let lastSample = jsonData.rows[jsonData.rows.length - 1];
                     diffLastSample = lastSample.c[3].v;
                     forwardTempLastSample = parseFloat(lastSample.c[1].v);
@@ -81,16 +82,18 @@
                     lineChartData = new google.visualization.DataTable(jsonData);
                     dateFormatter.format(lineChartData, 0);
                     lineChart = new google.charts.Line(document.getElementById('lineChart'));
-                    
+
+                    //is forward temp falling?
+                    let fallingForwardTemp = isForwardTempfalling(jsonData);
+
                     let status = "Standby";
-                    if (diffLastSample > 1.5 && forwardTempLastSample < 20) {
+                    if (diffLastSample > 1 && fallingForwardTemp) {
                         status = "Kühlung läuft";
                     } else if (diffLastSample < -2) {
                         status = "Heizung läuft";
                     }
                     let statusText = `Aktueller Status: <strong>${status}</strong>.<br>
-                    <span class="content is-small">Vorlauftemperatur Wasser: ${forwardTempLastSample} °C (Letzte Messung: ${lastMeasurement})</span>`;
-                    
+                        <span class="content is-small">Vorlauftemperatur Wasser: ${forwardTempLastSample} °C (Letzte Messung: ${lastMeasurement})</span>`;
                     $("#status").html(statusText);
 
                     //prepare timeline chart
@@ -101,25 +104,24 @@
                     timelineDataTable.addColumn({ type: 'date', id: 'Start' });
                     timelineDataTable.addColumn({ type: 'date', id: 'End' });
 
-                    //add dummy entries to fix color and ordering
-                    let firstSample = jsonData.rows[0];
-                    addToTimeline("Standby", firstSample.c[0].v);
-                    addToTimeline("Heizung", firstSample.c[0].v);
-                    addToTimeline("Kühlung", firstSample.c[0].v);
+                    //add dummy entries to fix colors and ordering
+                    addDummyEntries(jsonData)
 
                     // a row {"c":[{"v":"Date(2020,3,1,8,16)"},{"v":19.3},{"v":23.3},{"v":4}]},
                     // date, forward, return, diff (forward-return)
+                    let lastForward = 0;
                     jsonData.rows.forEach(row => {
                         let forwardTemp = row.c[1].v;
                         let diff = row.c[3].v;
                         let date = row.c[0].v;
-                        if (diff > 1.5 && forwardTemp < 20) {
+                        if (diff > 1 && (lastForward - forwardTemp >= 0) && forwardTemp < 20) {
                             addToTimeline("Kühlung", date);
                         } else if (diff < -2) {
                             addToTimeline("Heizung", date);
                         } else {
                             addToTimeline("Standby", date);
                         }
+                        lastForward = forwardTemp;
                     });
                     addToTimeline("End", new Date());
 
@@ -152,7 +154,7 @@
                         if (diffHours == 0) {
                             //Measurement is taken every 30min, so rounding up to 30min
                             diffHours = 0.5;
-                            endDate = moment(endDate).add(30,'minutes');
+                            endDate = moment(endDate).add(30, 'minutes');
                         }
                         let startDateString = moment.utc(startDate).utcOffset("+0200").format("DD.MM, H:mm");
                         let endDateString = moment.utc(endDate).utcOffset("+0200").format("DD.MM, H:mm");
@@ -205,6 +207,21 @@
             timelineEntryStarted = false;
             timeLineMap = new Map();
             currentTimelineName = "";
+        }
+
+        function isForwardTempfalling(data) {
+            let oneBeforelastSample = data.rows[data.rows.length - 2];
+            let oneBeforelastSampleForwardTemp = parseFloat(oneBeforelastSample.c[1].v);
+            let diffLastTwoForwardTemps = oneBeforelastSampleForwardTemp - forwardTempLastSample;
+            return diffLastTwoForwardTemps >= 0 && forwardTempLastSample < 20;
+        }
+
+
+        function addDummyEntries(data) {
+            let firstSample = data.rows[0];
+            addToTimeline("Standby", firstSample.c[0].v);
+            addToTimeline("Heizung", firstSample.c[0].v);
+            addToTimeline("Kühlung", firstSample.c[0].v);
         }
 
         $(document).ready(function () {
