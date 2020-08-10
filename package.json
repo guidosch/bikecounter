@@ -12,7 +12,7 @@
     "eslint": "^6.8.0",
     "firebase-admin": "^8.9.2",
     "firebase-functions": "^3.3.0",
-    "http-server": "^0.12.1",
+    "http-server": "^0.12.3",
     "moment": "^2.24.0"
   }
 }
