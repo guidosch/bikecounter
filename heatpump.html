@@ -115,7 +115,7 @@
                         let returnTemp = row.c[2].v;
                         let diff = row.c[3].v;
                         let date = row.c[0].v;
-                        if (diff > 1.25 && (lastForward - forwardTemp >= 0) && forwardTemp < 20 && returnTemp < 21) {
+                        if (diff >= 2 || (diff > 1.25 && (lastForward - forwardTemp >= 0) && forwardTemp < 20 && returnTemp < 21)) {
                             addToTimeline("Kühlung", date);
                         } else if (diff < -2) {
                             addToTimeline("Heizung", date);
