@@ -50,30 +50,28 @@
 
         $(document).ready(function () {
             $("#back").click(function name() {
-                if (query) {
-                    query = moment(new Date(query)).subtract(1, 'month').format("YYYY-MM-DD");
-                    setBackButtonText(moment(new Date(query)).format("MMMM"));
-                } else {
-                    setBackButtonText(moment(new Date()).subtract(2, 'month').format("MMMM"));
-                    setForwardButtonText(moment(new Date()).add(1, 'month').format("MMMM"));
-                    query = moment(new Date()).subtract(1, 'month').format("YYYY-MM-DD");
-                }
+                setBackButtonText(moment(new Date(query)).subtract(2, 'month').format("MMMM"));
+                setForwardButtonText(moment(new Date(query)).format("MMMM"));
+                query = moment(new Date(query)).subtract(1, 'month').format("YYYY-MM-DD");
                 drawChart();
             });
 
             $("#forward").click(function name(params) {
                 query = moment(new Date(query)).add(1, 'month').format("YYYY-MM-DD");
                 setForwardButtonText(moment(new Date(query)).format("MMMM")),
-                drawChart();
+                    drawChart();
             });
             $("#recent").click(function name(params) {
                 query = "";
                 setBackButtonText(moment(new Date()).subtract(1, 'month').format("MMMM"))
-                setForwardButtonText(""),
-                drawChart();
+                setForwardButtonText("---"),
+                    drawChart();
             });
-            setBackButtonText(moment(new Date()).subtract(1, 'month').format("MMMM"));
-            $('#collection').change(function() {
+
+            //init
+            query = moment(new Date()).format("YYYY-MM-DD");
+            setBackButtonText(moment(new Date(query)).subtract(1, 'month').format("MMMM"));
+            $('#collection').change(function () {
                 collection = $(this).val();
                 $('#chart_div').text("Loading data...");
                 drawChart();
@@ -92,7 +90,7 @@
             <option value="hoeckler_1">Harakiri</option>
             <option value="bike_counter_antennentrail">Test: Adlisberg 2</option>
             <option value="antennentrail_2">Test: Antennentrail 2</option>
-          </select> Trail
+        </select> Trail
     </div>
     <div id="chart_div">Loading data...</div>
     <button style="margin-left: 225px;" id="back"></button>
