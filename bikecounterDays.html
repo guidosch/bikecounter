@@ -11,6 +11,7 @@
         google.charts.load('current', { 'packages': ['corechart', 'bar'] });
         google.charts.setOnLoadCallback(drawChart);
         var query = "";
+        var url = "https://europe-west3-bikecounter.cloudfunctions.net/printDailyGraphData";
         var collection = "bike-couter-test";
 
         var options = {
@@ -24,7 +25,7 @@
 
         function drawChart() {
             var jsonData = $.ajax({
-                url: "https://europe-west3-bikecounter.cloudfunctions.net/printDailyGraphData",
+                url: url,
                 crossDomain: true,
                 dataType: "json",
                 async: false,
@@ -68,6 +69,17 @@
                     drawChart();
             });
 
+            $('input:radio[name=period]').change(function () {
+                if (this.value == 'year') {
+                    url = "https://us-central1-bikecounter.cloudfunctions.net/printGraph";
+                    query = "2020"
+                }
+                else if (this.value == 'month') {
+                    url = "https://europe-west3-bikecounter.cloudfunctions.net/printDailyGraphData";
+                }
+                drawChart();
+            });
+
             //init
             query = moment(new Date()).format("YYYY-MM-DD");
             setBackButtonText(moment(new Date(query)).subtract(1, 'month').format("MMMM"));
@@ -91,6 +103,10 @@
             <option value="bike_counter_antennentrail">Test: Adlisberg 2</option>
             <option value="antennentrail_2">Test: Antennentrail 2</option>
         </select> Trail
+        <input type="radio" id="year" name="period" value="year">
+        <label for="mc"> Jahr</label>
+        <input type="radio" id="month" name="period" value="month" checked>
+        <label for="vi"> Monate</label>
     </div>
     <div id="chart_div">Loading data...</div>
     <button style="margin-left: 225px;" id="back"></button>

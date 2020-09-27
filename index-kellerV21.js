@@ -1,3 +1,7 @@
+/**
+ * Google cloud function for graph data preparation
+ */
+
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const moment = require('moment');
@@ -12,13 +16,13 @@ let currentTimeFromData;
 
 function resetData() {
     chartData.cols = [
-        {"id":"time","label":"Zeit","pattern":"","type":"date"},
-        {"id":"event","label":"Event","pattern":"","type":"number"}];
-        chartData.rows = [];
-    }
-    
-    exports.printGraphData = functions.https.onRequest((request, response) => {
-        
+        { "id": "time", "label": "Zeit", "pattern": "", "type": "date" },
+        { "id": "event", "label": "Event", "pattern": "", "type": "number" }];
+    chartData.rows = [];
+}
+
+exports.printGraphData = functions.https.onRequest((request, response) => {
+
     resetData();
     //queryTime must be in format 2020-03-22 for march, 22
     let queryTime = request.query.q;
@@ -35,7 +39,7 @@ function resetData() {
     }
     let query = countersRef
         .where('timestamp', '>=', start)
-        .where('timestamp', '<=', end+"T23:59:59")
+        .where('timestamp', '<=', end + "T23:59:59")
         .orderBy("timestamp", "asc").get()
         .then(snapshot => {
             if (snapshot.empty) {
@@ -49,12 +53,12 @@ function resetData() {
                 let date = new Date(Date.parse(data.timestamp));
                 let year = moment(date).format("YYYY");
                 let month = date.getMonth();
-                let day  = moment(date).format("DD");
-                let hour  = moment(date).format("H");
-                let minute  = moment(date).format("m");
+                let day = moment(date).format("DD");
+                let hour = moment(date).format("H");
+                let minute = moment(date).format("m");
                 let event = data.event;
                 let row = `{"c":[{"v":"Date(${year},${month},${day},${hour},${minute})","f":null},{"v":${event},"f":null}]}`;
-                if (parseInt(event) > 5 || collection == "relayIsPowered"){ //filter 0 values of temp. and humid. but not relais 
+                if (parseInt(event) > 5 || collection == "relayIsPowered") { //filter 0 values of temp. and humid. but not relais 
                     chartData.rows.push(JSON.parse(row));
                 }
             });

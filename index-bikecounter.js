@@ -1,3 +1,7 @@
+/**
+ * Google cloud function for graph data preparation
+ */
+
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const moment = require('moment');
@@ -12,8 +16,8 @@ let monthlySum = new Map();
 
 function resetData() {
     chartData.cols = [
-        {"id":"","label":"Monat","pattern":"","type":"string"},
-        {"id":"","label":"Abfahrten","pattern":"","type":"number"}];
+        { "id": "", "label": "Monat", "pattern": "", "type": "string" },
+        { "id": "", "label": "Abfahrten", "pattern": "", "type": "number" }];
     chartData.rows = [];
     monthlySum = new Map();
     for (let i = 0; i < 12; i++) {
@@ -24,7 +28,28 @@ function resetData() {
 exports.printGraph = functions.https.onRequest((request, response) => {
 
     resetData();
-    let query = countersRef.where('timestamp', '>', '2020-01-01').get()
+    //queryTime must be in format 2020-03-22 for march, 22
+    let queryTime = request.query.q;
+
+    let collection = request.query.collection;
+    if (!collection) {
+        collection = "bike-couter-test";
+    }
+
+    const countersRef = database.collection(collection);
+
+    let now = new Date();
+    let start = moment(now).startOf('year').format("YYYY-MM-DD");
+    let end = moment(now).endOf('year').format("YYYY-MM-DD");
+    if (queryTime) {
+        start = moment(new Date(queryTime)).startOf('year').format("YYYY-MM-DD");
+        end = moment(new Date(queryTime)).endOf('year').format("YYYY-MM-DD");
+    }
+
+    let query = countersRef
+        .where('timestamp', '>=', start)
+        .where('timestamp', '<=', end + "T23:59:59")
+        .orderBy("timestamp", "asc").get()
         .then(snapshot => {
             if (snapshot.empty) {
                 console.log('No matching documents.');
