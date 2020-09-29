@@ -24,6 +24,7 @@
         }
 
         function drawChart() {
+            //show loading does not work wish async false, as UI thread is blocked.
             var jsonData = $.ajax({
                 url: url,
                 crossDomain: true,
@@ -34,7 +35,6 @@
                     collection: collection
                 }
             }).responseText;
-
             var data = new google.visualization.DataTable(jsonData);
             var chart = new google.visualization.ColumnChart(document.getElementById('chart_div'));
             chart.draw(data, options);
@@ -76,6 +76,7 @@
                 }
                 else if (this.value == 'month') {
                     url = "https://europe-west3-bikecounter.cloudfunctions.net/printDailyGraphData";
+                    query = moment(new Date()).format("YYYY-MM-DD");
                 }
                 drawChart();
             });
@@ -112,6 +113,10 @@
     <button style="margin-left: 225px;" id="back"></button>
     <button style="margin-left: 1em;" id="recent">Aktueller Monat</button>
     <button style="margin-left: 1em;" id="forward"></button>
+
+    <div style="padding-top: 2em;"><span style="font-size: xx-small;">Bikecounter by Guido Schnider for <a
+                href="https://www.zueritrails.ch/">Z&uuml;ritrails.ch</a>. Code
+            hosted on <a href="https://github.com/guidosch/lora">Github</a>.</span></div>
 </body>
 
 </html>
