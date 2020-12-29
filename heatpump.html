@@ -87,7 +87,7 @@
                     let fallingForwardTemp = isForwardTempfalling(jsonData);
 
                     let status = "Standby";
-                    if (diffLastSample > 1 && fallingForwardTemp) {
+                    if (diffLastSample > 1.25 && fallingForwardTemp) {
                         status = "Kühlung läuft";
                     } else if (diffLastSample < -2) {
                         status = "Heizung läuft";
@@ -112,9 +112,10 @@
                     let lastForward = 0;
                     jsonData.rows.forEach(row => {
                         let forwardTemp = row.c[1].v;
+                        let returnTemp = row.c[2].v;
                         let diff = row.c[3].v;
                         let date = row.c[0].v;
-                        if (diff > 1 && (lastForward - forwardTemp >= 0) && forwardTemp < 20) {
+                        if ((diff >= 2 && forwardTemp < 21) || (diff > 1.25 && (lastForward - forwardTemp >= 0) && forwardTemp < 20 && returnTemp < 21)) {
                             addToTimeline("Kühlung", date);
                         } else if (diff < -2) {
                             addToTimeline("Heizung", date);
@@ -212,8 +213,9 @@
         function isForwardTempfalling(data) {
             let oneBeforelastSample = data.rows[data.rows.length - 2];
             let oneBeforelastSampleForwardTemp = parseFloat(oneBeforelastSample.c[1].v);
+            let returnTemp = parseFloat(oneBeforelastSample.c[2].v);
             let diffLastTwoForwardTemps = oneBeforelastSampleForwardTemp - forwardTempLastSample;
-            return diffLastTwoForwardTemps >= 0 && forwardTempLastSample < 20;
+            return diffLastTwoForwardTemps >= 0 && forwardTempLastSample < 20 && returnTemp < 21;
         }
 
 

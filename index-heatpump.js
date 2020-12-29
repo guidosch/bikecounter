@@ -1,3 +1,7 @@
+/**
+ * Google cloud function for graph data preparation
+ */
+
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 
