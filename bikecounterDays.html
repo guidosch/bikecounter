@@ -12,32 +12,36 @@
         google.charts.setOnLoadCallback(drawChart);
         var query = "";
         var url = "https://europe-west3-bikecounter.cloudfunctions.net/printDailyGraphData";
+        //set initial data collection
         var collection = "bike-couter-test";
 
         var options = {
             title: 'Anzahl Abfahrten auf dem ausgewählten Trail.',
-            width: 600,
+            width: 800,
             height: 340,
             hAxis: {
-                title: 'Jahr: 2020'
+                title: 'Jahr: ' + new Date().getFullYear()
             }
         }
 
         function drawChart() {
-            //show loading does not work wish async false, as UI thread is blocked.
+            $("#buttons").hide();
+            $('#chart_div').text("Loading data...");
             var jsonData = $.ajax({
                 url: url,
                 crossDomain: true,
                 dataType: "json",
-                async: false,
                 data: {
                     q: query,
                     collection: collection
+                },
+                success: function (jsonData) {
+                    var data = new google.visualization.DataTable(jsonData);
+                    var chart = new google.visualization.ColumnChart(document.getElementById('chart_div'));
+                    chart.draw(data, options);
+                    $("#buttons").show();
                 }
-            }).responseText;
-            var data = new google.visualization.DataTable(jsonData);
-            var chart = new google.visualization.ColumnChart(document.getElementById('chart_div'));
-            chart.draw(data, options);
+            });
         }
 
         function setBackButtonText(text) {
@@ -47,6 +51,10 @@
         function setForwardButtonText(text) {
             $("#forward").text(text);
 
+        }
+
+        function today() {
+            query = moment(new Date()).format("YYYY-MM-DD");
         }
 
         $(document).ready(function () {
@@ -59,20 +67,26 @@
 
             $("#forward").click(function name(params) {
                 query = moment(new Date(query)).add(1, 'month').format("YYYY-MM-DD");
-                setForwardButtonText(moment(new Date(query)).format("MMMM")),
-                    drawChart();
+                setForwardButtonText(moment(new Date(query)).format("MMMM"));
+                drawChart();
             });
             $("#recent").click(function name(params) {
-                query = "";
-                setBackButtonText(moment(new Date()).subtract(1, 'month').format("MMMM"))
-                setForwardButtonText("---"),
-                    drawChart();
+                today();
+                setBackButtonText(moment(new Date()).subtract(1, 'month').format("MMMM"));
+                setForwardButtonText("---");
+                drawChart();
             });
+
+            $('#collection').change(function () {
+                collection = $(this).val();
+                drawChart();
+            });
+
 
             $('input:radio[name=period]').change(function () {
                 if (this.value == 'year') {
                     url = "https://us-central1-bikecounter.cloudfunctions.net/printGraph";
-                    query = "2020"
+                    query = new Date().getFullYear();
                 }
                 else if (this.value == 'month') {
                     url = "https://europe-west3-bikecounter.cloudfunctions.net/printDailyGraphData";
@@ -81,14 +95,10 @@
                 drawChart();
             });
 
-            //init
-            query = moment(new Date()).format("YYYY-MM-DD");
+            //init state
+            today();
+            setForwardButtonText("---");
             setBackButtonText(moment(new Date(query)).subtract(1, 'month').format("MMMM"));
-            $('#collection').change(function () {
-                collection = $(this).val();
-                $('#chart_div').text("Loading data...");
-                drawChart();
-            });
 
         });
 
@@ -110,9 +120,11 @@
         <label for="vi"> Monate</label>
     </div>
     <div id="chart_div">Loading data...</div>
-    <button style="margin-left: 225px;" id="back"></button>
-    <button style="margin-left: 1em;" id="recent">Aktueller Monat</button>
-    <button style="margin-left: 1em;" id="forward"></button>
+    <div id="buttons">
+        <button style="margin-left: 275px;" id="back"></button>
+        <button style="margin-left: 1em;" id="recent">Aktueller Monat</button>
+        <button style="margin-left: 1em;" id="forward"></button>
+    </div>
 
     <div style="padding-top: 2em;"><span style="font-size: xx-small;">Bikecounter by Guido Schnider for <a
                 href="https://www.zueritrails.ch/">Z&uuml;ritrails.ch</a>. Code
