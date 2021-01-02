@@ -14,14 +14,13 @@
         var url = "https://europe-west3-bikecounter.cloudfunctions.net/printDailyGraphData";
         //set initial data collection
         var collection = "bike-couter-test";
+        var data;
 
         var options = {
             title: 'Anzahl Abfahrten auf dem ausgewählten Trail.',
             width: 800,
             height: 340,
-            hAxis: {
-                title: 'Jahr: ' + new Date().getFullYear()
-            }
+            tooltip: { trigger: 'selection' }
         }
 
         function drawChart() {
@@ -36,10 +35,30 @@
                     collection: collection
                 },
                 success: function (jsonData) {
-                    var data = new google.visualization.DataTable(jsonData);
+                    data = new google.visualization.DataTable(jsonData);
                     var chart = new google.visualization.ColumnChart(document.getElementById('chart_div'));
+                    options.hAxis = { title: 'Jahr: ' + new Date(query).getFullYear() };
+                    /**
+                    chart.setAction({
+                        id: 'sample',
+                        text: 'Click für Wochentag: ',
+                        action: function () {
+                            selection = chart.getSelection();
+                            
+                        }
+                    });
+                    **/
                     chart.draw(data, options);
                     $("#buttons").show();
+                },
+                statusCode: {
+                    404: function () {
+                        $('#chart_div').text("No records found...");
+                    }
+                },
+                fail: function (xhr, textStatus, errorThrown) {
+                    console.log("Request failed: " + textStatus);
+                    $('#chart_div').text("Request failed, try again...");
                 }
             });
         }
@@ -86,12 +105,11 @@
             $('input:radio[name=period]').change(function () {
                 if (this.value == 'year') {
                     url = "https://us-central1-bikecounter.cloudfunctions.net/printGraph";
-                    query = new Date().getFullYear();
                 }
                 else if (this.value == 'month') {
                     url = "https://europe-west3-bikecounter.cloudfunctions.net/printDailyGraphData";
-                    query = moment(new Date()).format("YYYY-MM-DD");
                 }
+                query = moment(new Date()).format("YYYY-MM-DD");
                 drawChart();
             });
 

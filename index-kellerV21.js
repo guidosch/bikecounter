@@ -21,6 +21,18 @@ function resetData() {
     chartData.rows = [];
 }
 
+function doRespond(statusCode, responseString, response, asJson) {
+    response.statusCode = statusCode;
+    response.setHeader('Access-Control-Allow-Origin', "*");
+    response.setHeader('Access-Control-Allow-Methods', 'GET');
+    if (asJson) {
+        response.setHeader("Content-Type", "application/json");
+    } else {
+        response.setHeader("Content-Type", "text/html");
+    }
+    response.send(responseString);
+}
+
 exports.printGraphData = functions.https.onRequest((request, response) => {
 
     resetData();
@@ -43,9 +55,7 @@ exports.printGraphData = functions.https.onRequest((request, response) => {
         .orderBy("timestamp", "asc").get()
         .then(snapshot => {
             if (snapshot.empty) {
-                console.log('No matching documents.');
-                response.statusCode = 404;
-                response.send("<h1>No matching documents.</h1>");
+                doRespond(404, "<h1>No matching documents.</h1>", response);
             }
 
             snapshot.forEach(doc => {
@@ -63,16 +73,10 @@ exports.printGraphData = functions.https.onRequest((request, response) => {
                 }
             });
 
-            response.statusCode = 200;
-            response.setHeader('Access-Control-Allow-Origin', "*");
-            response.setHeader('Access-Control-Allow-Methods', 'GET');
-            response.setHeader("Content-Type", "application/json");
-            response.send(JSON.stringify(chartData));
+            doRespond(200, JSON.stringify(chartData), response, true);
         })
         .catch(err => {
-            console.log('Error getting documents', err);
-            response.statusCode = 500;
-            response.send("<h1>Error getting documents</h1>");
+            doRespond(500, "<h1>Error getting documents</h1>", response);
         });
 
 });

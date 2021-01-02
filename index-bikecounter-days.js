@@ -12,22 +12,34 @@ let currentTimeFromData;
 
 function resetData() {
     chartData.cols = [
-        {"id":"","label":"Tag","pattern":"","type":"date"},
-        {"id":"","label":"Abfahrten","pattern":"","type":"number"}];
-        chartData.rows = [];
-        sums = new Map();
-        for (let i = 1; i <= 31; i++) {
-            sums.set(i, 0);
-        }
+        { "id": "", "label": "Tag", "pattern": "", "type": "date" },
+        { "id": "", "label": "Abfahrten", "pattern": "", "type": "number" }];
+    chartData.rows = [];
+    sums = new Map();
+    for (let i = 1; i <= 31; i++) {
+        sums.set(i, 0);
     }
-    
-    exports.printDailyGraphData = functions.https.onRequest((request, response) => {
-        
+}
+
+function doRespond(statusCode, responseString, response, asJson) {
+    response.statusCode = statusCode;
+    response.setHeader('Access-Control-Allow-Origin', "*");
+    response.setHeader('Access-Control-Allow-Methods', 'GET');
+    if (asJson){
+        response.setHeader("Content-Type", "application/json");
+    } else {
+        response.setHeader("Content-Type", "text/html");
+    }
+    response.send(responseString);
+}
+
+exports.printDailyGraphData = functions.https.onRequest((request, response) => {
+
     resetData();
     //queryTime must be in format 2020-03-22 for march, 22
     let queryTime = request.query.q;
     let collection = request.query.collection;
-    if (!collection){
+    if (!collection) {
         collection = "bike-couter-test";
     }
     const countersRef = database.collection(collection);
@@ -42,13 +54,11 @@ function resetData() {
     }
     let query = countersRef
         .where('timestamp', '>=', start)
-        .where('timestamp', '<=', end+"T23:59:59")
+        .where('timestamp', '<=', end + "T23:59:59")
         .orderBy("timestamp", "asc").get()
         .then(snapshot => {
             if (snapshot.empty) {
-                console.log('No matching documents.');
-                response.statusCode = 404;
-                response.send("<h1>No matching documents.</h1>");
+                doRespond(404, "<h1>No matching documents.</h1>", response);
             }
 
             snapshot.forEach(doc => {
@@ -64,22 +74,17 @@ function resetData() {
                 let date = new Date(currentTimeFromData.setDate(i));
                 let year = moment(date).format("YYYY");
                 let month = date.getMonth();
-                let day  = moment(date).format("DD");
+                let day = moment(date).format("DD");
                 const sum = sums.get(i);
                 let row = `{"c":[{"v":"Date(${year},${month},${day})","f":null},{"v":${sum},"f":null}]}`;
                 chartData.rows.push(JSON.parse(row));
             }
 
-            response.statusCode = 200;
-            response.setHeader('Access-Control-Allow-Origin', "*");
-            response.setHeader('Access-Control-Allow-Methods', 'GET');
-            response.setHeader("Content-Type", "application/json");
-            response.send(JSON.stringify(chartData));
+            doRespond(200, JSON.stringify(chartData), response, true);
+
         })
         .catch(err => {
-            console.log('Error getting documents', err);
-            response.statusCode = 500;
-            response.send("<h1>Error getting documents</h1>");
+            doRespond(500, "<h1>Error getting documents</h1>", response);
         });
 
 });
