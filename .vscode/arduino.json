@@ -1,0 +1,4 @@
+{
+    "board": "arduino:samd:mkrwan1310",
+    "sketch": "arduino\\MotionSensorLora\\MotionSensorLora.ino"
+}
