@@ -1,64 +1,70 @@
 #include "ArduinoLowPower.h"
 #include <MKRWAN.h>
 
+// set this to activate serial debug messages and to disable deepSleep
 bool debugFlag = 1;
-
-LoRaModem modem(Serial1);
-String appEui = "0000000000000000";
-String appKey = "73876F853F8CE2E254F663DAE40FD811";
-
-// Error counter for connection
-int errorCounter = 0;
-//must be volatile as incremented in interrupt
-volatile int counter = 0;
-//
-bool timerCalled = 0;
-//
-bool isSending = 0;
 
 // Interrupt pins
 const int counterInterruptPin = 0;
 const int timerInterruptPin = 1;
 
-// Feedback pin to timer
+// Timer feedback pin
 const int donePin = 4;
 
 // Threshold for non periodic data transmission
 const int sendThreshold = 10;
 
-//
+// lora modem object and application properties
+LoRaModem modem(Serial1);
+String appEui = "0000000000000000";
+String appKey = "73876F853F8CE2E254F663DAE40FD811";
+
+// Motion counter value
+// must be volatile as incremented in interrupt
+volatile int counter = 0;
+// Timer interrupt falg
+bool timerCalled = 0;
+// Lora data transmission flag
+bool isSending = 0;
+// Error counter for connection
+int errorCounter = 0;
+
+// Blink methode prototype
 void blinkLED(int times = 1);
 
 void setup() {
+  // setup onboard LED
   pinMode(LED_BUILTIN, OUTPUT);
 
+  // setup timer feedback
   pinMode(donePin, OUTPUT);
   digitalWrite(donePin, LOW);
 
   if (debugFlag) {
+    // open serial connection and wait
     Serial.begin(9600);
     while (!Serial);
   }
 
+  // connect to lora network
   doConnect();
 
-  //
-  //pinMode(counterInterruptPin, INPUT);
-  pinMode(counterInterruptPin, INPUT_PULLUP);
-  //digitalRead(counterInterruptPin);
+  // setup counter interrupt
+  pinMode(counterInterruptPin, INPUT);
   LowPower.attachInterruptWakeup(counterInterruptPin, onMotionDetected, RISING);
 
-  //
+  // setup timer interrupt
   pinMode(timerInterruptPin, INPUT);
-  //pinMode(timerInterruptPin, INPUT_PULLUP);
   LowPower.attachInterruptWakeup(timerInterruptPin, onTimerInterrupt, RISING);
 
   delay(200);
 
+  // clear timer request if allready occurred
   resetTimer();
 }
 
 void loop() {
+  
   if (((counter >= sendThreshold) || (timerCalled)) && (!isSending)) {
     blinkLED(2);
     sendData();
@@ -147,14 +153,15 @@ void sendData() {
     }
   }
 
-  //
+  // reset the timer
   resetTimer();
 
-  //
+  // wait for all data transmission to finish
   delay(200);
   isSending = 0;
 }
 
+// blinks the on board led
 void blinkLED(int times) {
   for (int i = 0; i <= times; i++) {
     digitalWrite(LED_BUILTIN, HIGH);
@@ -163,8 +170,11 @@ void blinkLED(int times) {
   }
 }
 
+// resets the timer by giving the "done" feedback
+// (Falling edge on done pin)
 void resetTimer () {
   timerCalled = 0;
+  // generate 3 falling edges to be sure the timer catches it
   for (int i = 0; i < 3; ++i) {
     digitalWrite(donePin, HIGH);
     digitalWrite(donePin, LOW);
