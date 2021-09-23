@@ -9,9 +9,12 @@ const bool debugFlag = 1;
 const int timerInterruptPin = 0;
 const int counterInterruptPin = 1;
 const int batteryVoltagePin = A0;
+const int resetButton = 2;
 
 // Threshold for non periodic data transmission
 const int sendThreshold = 10;
+// Threshold to detect a failure of the motion sensor
+const int maxCountBtwTimer = 500;
 
 // lora modem object and application properties
 LoRaModem modem(Serial1);
@@ -26,6 +29,7 @@ TimeSpan timerInterval = TimeSpan(0, 0, 1, 0);
 // Motion counter value
 // must be volatile as incremented in interrupt
 volatile int counter = 0;
+volatile int totalCount = 0;
 // Timer interrupt falg
 volatile bool timerCalled = 0;
 // Lora data transmission flag
@@ -40,6 +44,9 @@ void setup()
 {
   // setup onboard LED
   pinMode(LED_BUILTIN, OUTPUT);
+
+  // set reset button pin
+  pinMode(resetButton, INPUT);
 
   if (debugFlag)
   {
@@ -125,6 +132,18 @@ void loop()
 
   if (((counter >= sendThreshold) || (timerCalled)) && (!isSending))
   {
+    // check if the threshold between two counter calls is exeeded
+    if (totalCount > maxCountBtwTimer)
+    {
+      if (debugFlag)
+      {
+        Serial.println("Counter failure. To much motion between timer calls detected!");
+        while (!digitalRead(resetButton))
+        {
+        }
+      }
+    }
+
     blinkLED(2);
     sendData();
   }
@@ -141,7 +160,8 @@ void onMotionDetected()
 {
   if (!isSending)
   {
-    counter++;
+    ++counter;
+    ++totalCount;
     blinkLED();
     DateTime motionTime = rtc.now();
     if (debugFlag)
@@ -164,6 +184,7 @@ void onTimerInterrupt()
   if (!isSending)
   {
     timerCalled = 1;
+    totalCount = 0;
     if (debugFlag)
     {
       Serial.println("Timer called");
