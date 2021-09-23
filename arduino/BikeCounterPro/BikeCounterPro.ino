@@ -33,11 +33,12 @@ TimeSpan timerInterval = TimeSpan(0, 0, 1, 0);
 // Motion counter value
 // must be volatile as incremented in interrupt
 volatile int counter = 0;
-volatile int totalCount = 0;
+int lastCount = 0;
+int totalCount = 0;
 // time array
-volatile unsigned int timeArray[sendThreshold];
+unsigned int timeArray[sendThreshold];
 // hour of the day for next package
-volatile unsigned int houreOfDay = 0;
+unsigned int houreOfDay = 0;
 // Timer interrupt falg
 volatile bool timerCalled = 0;
 // Lora data transmission flag
@@ -53,6 +54,8 @@ void blinkLED(int times = 1);
 
 void setup()
 {
+  noInterrupts();
+
   // setup onboard LED
   pinMode(LED_BUILTIN, OUTPUT);
 
@@ -102,9 +105,6 @@ void setup()
   // rtc.enableCountdownTimer(PCF8523_FrequencyMinute, 150); // 2.5 hours
   rtc.enableCountdownTimer(PCF8523_FrequencySecond, 30); // 30 seconds
 
-  pinMode(timerInterruptPin, INPUT_PULLUP);
-  LowPower.attachInterruptWakeup(timerInterruptPin, onTimerInterrupt, FALLING);
-
   if (debugFlag)
   {
     Serial.println("RTC setup finished");
@@ -113,10 +113,6 @@ void setup()
 
   // connect to lora network
   doConnect();
-
-  // setup counter interrupt
-  pinMode(counterInterruptPin, INPUT);
-  LowPower.attachInterruptWakeup(counterInterruptPin, onMotionDetected, RISING);
 
   if (debugFlag)
   {
@@ -132,17 +128,40 @@ void setup()
   // The MKR WAN 1310 3.3V reference voltage for battery measurements
   analogReference(AR_DEFAULT);
 
+  // setup timer interrupt
+  pinMode(timerInterruptPin, INPUT_PULLUP);
+  LowPower.attachInterruptWakeup(timerInterruptPin, onTimerInterrupt, FALLING);
+
+  // setup counter interrupt
+  pinMode(counterInterruptPin, INPUT);
+  LowPower.attachInterruptWakeup(counterInterruptPin, onMotionDetected, RISING);
+
   if (debugFlag)
   {
     Serial.println("Setup finished");
   }
+
+  delay(200);
+
+  interrupts();
 }
 
 void loop()
 {
+  noInterrupts();
+  if (counter > lastCount)
+  {
+    motionDetected();
+  }
 
   if (((counter >= sendThreshold) || (timerCalled)) && (!isSending))
   {
+    if (debugFlag)
+    {
+      Serial.println("timer called");
+    }
+    timerCalled = 0;
+
     // check if the threshold between two counter calls is exeeded
     if (totalCount > maxCountBtwTimer)
     {
@@ -156,10 +175,13 @@ void loop()
     }
 
     blinkLED(2);
+
     sendData();
   }
 
   delay(200);
+
+  interrupts();
 
   if (!debugFlag)
   {
@@ -171,30 +193,8 @@ void onMotionDetected()
 {
   if (!isSending)
   {
-    DateTime currentTime = rtc.now();
-    if (counter == 0)
-    {
-      houreOfDay = currentTime.hour();
-    }
-    timeArray[counter] = (currentTime.hour() - houreOfDay) * 60 + currentTime.minute();
-
     ++counter;
     ++totalCount;
-
-    blinkLED();
-
-    if (debugFlag)
-    {
-      Serial.print("Motion detected (current count = ");
-      Serial.print(counter);
-      Serial.print(" / time: ");
-      Serial.print(currentTime.hour(), DEC);
-      Serial.print(':');
-      Serial.print(currentTime.minute(), DEC);
-      Serial.print(':');
-      Serial.print(currentTime.second(), DEC);
-      Serial.println(')');
-    }
   }
 }
 
@@ -204,10 +204,33 @@ void onTimerInterrupt()
   {
     timerCalled = 1;
     totalCount = 0;
-    if (debugFlag)
-    {
-      Serial.println("Timer called");
-    }
+  }
+}
+
+void motionDetected()
+{
+  lastCount = counter;
+
+  DateTime currentTime = rtc.now();
+  if (counter == 1)
+  {
+    houreOfDay = currentTime.hour();
+  }
+  timeArray[counter - 1] = (currentTime.hour() - houreOfDay) * 60 + currentTime.minute();
+
+  blinkLED();
+
+  if (debugFlag)
+  {
+    Serial.print("Motion detected (current count = ");
+    Serial.print(counter);
+    Serial.print(" / time: ");
+    Serial.print(currentTime.hour(), DEC);
+    Serial.print(':');
+    Serial.print(currentTime.minute(), DEC);
+    Serial.print(':');
+    Serial.print(currentTime.second(), DEC);
+    Serial.println(')');
   }
 }
 
@@ -277,7 +300,7 @@ void sendData()
 
   for (int i = 0; i < counter; ++i)
   {
-    payload[i+2] = timeArray[i];
+    payload[i + 2] = timeArray[i];
   }
 
   modem.write(payload, sizeof(payload));
