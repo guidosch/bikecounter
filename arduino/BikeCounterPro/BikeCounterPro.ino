@@ -12,6 +12,10 @@ const int batteryVoltagePin = A0;
 const int resetButton = 2;
 
 // Threshold for non periodic data transmission
+// Dependes on the timer intervall
+// timer <= 1h -> sendThreshold max = 65
+// timer <= 2h -> sendThreshold max = 56
+// timer <= 3h -> sendThreshold max = 49 (selected)
 const int sendThreshold = 10;
 // Threshold to detect a failure of the motion sensor
 const int maxCountBtwTimer = 500;
@@ -30,12 +34,19 @@ TimeSpan timerInterval = TimeSpan(0, 0, 1, 0);
 // must be volatile as incremented in interrupt
 volatile int counter = 0;
 volatile int totalCount = 0;
+// time array
+volatile unsigned int timeArray[sendThreshold];
+// hour of the day for next package
+volatile unsigned int houreOfDay = 0;
 // Timer interrupt falg
 volatile bool timerCalled = 0;
 // Lora data transmission flag
 volatile bool isSending = 0;
 // Error counter for connection
 int errorCounter = 0;
+// LoraPayload size (Count + BatteryLevel + timeArray)
+const int timeValueSize = 8; // 1h = 6bit, 2h = 7bit, 3h = 8bit
+const int payloadSize = 1 + (int)((((float)(3 + 5 + timeValueSize * sendThreshold)) / 8.0f) + 1);
 
 // Blink methode prototype
 void blinkLED(int times = 1);
@@ -160,20 +171,28 @@ void onMotionDetected()
 {
   if (!isSending)
   {
+    DateTime currentTime = rtc.now();
+    if (counter == 0)
+    {
+      houreOfDay = currentTime.hour();
+    }
+    timeArray[counter] = (currentTime.hour() - houreOfDay) * 60 + currentTime.minute();
+
     ++counter;
     ++totalCount;
+
     blinkLED();
-    DateTime motionTime = rtc.now();
+
     if (debugFlag)
     {
       Serial.print("Motion detected (current count = ");
       Serial.print(counter);
       Serial.print(" / time: ");
-      Serial.print(motionTime.hour(), DEC);
+      Serial.print(currentTime.hour(), DEC);
       Serial.print(':');
-      Serial.print(motionTime.minute(), DEC);
+      Serial.print(currentTime.minute(), DEC);
       Serial.print(':');
-      Serial.print(motionTime.second(), DEC);
+      Serial.print(currentTime.second(), DEC);
       Serial.println(')');
     }
   }
@@ -240,8 +259,27 @@ void sendData()
   int err;
   //data is transmitted as Ascii chars
   modem.beginPacket();
-  byte payload[1];
+  byte payload[payloadSize];
+
   payload[0] = lowByte(counter);
+
+  byte batteryLevel = parsBatLevel(getBatteryLevel());
+  byte batAndHour;
+  bitWrite(batAndHour, 0, bitRead(batteryLevel, 0));
+  bitWrite(batAndHour, 1, bitRead(batteryLevel, 1));
+  bitWrite(batAndHour, 2, bitRead(batteryLevel, 2));
+  bitWrite(batAndHour, 3, bitRead(houreOfDay, 0));
+  bitWrite(batAndHour, 4, bitRead(houreOfDay, 1));
+  bitWrite(batAndHour, 5, bitRead(houreOfDay, 2));
+  bitWrite(batAndHour, 6, bitRead(houreOfDay, 3));
+  bitWrite(batAndHour, 7, bitRead(houreOfDay, 4));
+  payload[1] = batAndHour;
+
+  for (int i = 0; i < counter; ++i)
+  {
+    payload[i+2] = timeArray[i];
+  }
+
   modem.write(payload, sizeof(payload));
   err = modem.endPacket(false);
   if (err > 0)
