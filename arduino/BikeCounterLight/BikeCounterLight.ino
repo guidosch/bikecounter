@@ -2,7 +2,10 @@
 #include <MKRWAN.h>
 
 // set this to activate serial debug messages and to disable deepSleep
-bool debugFlag = 1;
+const bool debugFlag = 1;
+
+// Threshold for non periodic data transmission
+const int sendThreshold = 10;
 
 // Interrupt pins
 const int counterInterruptPin = 0;
@@ -10,9 +13,6 @@ const int timerInterruptPin = 1;
 
 // Timer feedback pin
 const int donePin = 4;
-
-// Threshold for non periodic data transmission
-const int sendThreshold = 10;
 
 // lora modem object and application properties
 LoRaModem modem(Serial1);
