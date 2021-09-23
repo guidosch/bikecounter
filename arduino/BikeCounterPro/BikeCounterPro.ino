@@ -18,7 +18,6 @@ RTC_PCF8523 rtc;
 // Alarm interval (days, hours, minutes, seconds)
 TimeSpan timerInterval = TimeSpan(0, 0, 1, 0);
 
-
 // Interrupt pins
 const int timerInterruptPin = 0;
 const int counterInterruptPin = 1;
@@ -36,14 +35,17 @@ int errorCounter = 0;
 // Blink methode prototype
 void blinkLED(int times = 1);
 
-void setup() {
+void setup()
+{
   // setup onboard LED
   pinMode(LED_BUILTIN, OUTPUT);
 
-  if (debugFlag) {
+  if (debugFlag)
+  {
     // open serial connection and wait
     Serial.begin(9600);
-    while (!Serial);
+    while (!Serial)
+      ;
   }
 
   if (debugFlag)
@@ -59,8 +61,10 @@ void setup() {
     Serial.println("NO connection to RTC");
   }
 
-  if (! rtc.initialized() || rtc.lostPower()) {
-    if (debugFlag) {
+  if (!rtc.initialized() || rtc.lostPower())
+  {
+    if (debugFlag)
+    {
       Serial.println("RTC is NOT initialized, let's set the time!");
     }
     // sets the RTC to the date & time this sketch was compiled
@@ -70,6 +74,17 @@ void setup() {
   }
 
   rtc.start();
+
+  // deconfigure old timers
+  rtc.deconfigureAllTimers();
+
+  // set new timer intervall
+  // rtc.enableCountdownTimer(PCF8523_FrequencyHour, 24);    // 1 day
+  // rtc.enableCountdownTimer(PCF8523_FrequencyMinute, 150); // 2.5 hours
+  rtc.enableCountdownTimer(PCF8523_FrequencySecond, 30); // 30 seconds
+
+  pinMode(timerInterruptPin, INPUT_PULLUP);
+  LowPower.attachInterruptWakeup(timerInterruptPin, onTimerInterrupt, FALLING);
 
   if (debugFlag)
   {
@@ -84,7 +99,8 @@ void setup() {
   pinMode(counterInterruptPin, INPUT);
   LowPower.attachInterruptWakeup(counterInterruptPin, onMotionDetected, RISING);
 
-  if (debugFlag)  {
+  if (debugFlag)
+  {
     Serial.println("Lora setup finished");
   }
 
@@ -94,31 +110,38 @@ void setup() {
 
   delay(200);
 
-  if (debugFlag)  {
+  if (debugFlag)
+  {
     Serial.println("Setup finished");
   }
 }
 
-void loop() {
+void loop()
+{
 
-  if (((counter >= sendThreshold) || (timerCalled)) && (!isSending)) {
+  if (((counter >= sendThreshold) || (timerCalled)) && (!isSending))
+  {
     blinkLED(2);
     sendData();
   }
 
   delay(200);
 
-  if (!debugFlag) {
+  if (!debugFlag)
+  {
     LowPower.sleep();
   }
 }
 
-void onMotionDetected() {
-  if (!isSending) {
+void onMotionDetected()
+{
+  if (!isSending)
+  {
     counter++;
     blinkLED();
     DateTime motionTime = rtc.now();
-    if (debugFlag) {
+    if (debugFlag)
+    {
       Serial.print("Motion detected (current count = ");
       Serial.print(counter);
       Serial.print(" / time: ");
@@ -132,25 +155,34 @@ void onMotionDetected() {
   }
 }
 
-void onTimerInterrupt() {
-  if (!isSending) {
+void onTimerInterrupt()
+{
+  if (!isSending)
+  {
     timerCalled = 1;
-    if (debugFlag) {
+    if (debugFlag)
+    {
       Serial.println("Timer called");
     }
   }
 }
 
-void doConnect() {
+void doConnect()
+{
   isSending = 1;
-  if (!modem.begin(EU868)) {
-    if (debugFlag) {
+  if (!modem.begin(EU868))
+  {
+    if (debugFlag)
+    {
       Serial.println("Failed to start module");
     }
     blinkLED(5);
-    while (1) {}
+    while (1)
+    {
+    }
   };
-  if (debugFlag) {
+  if (debugFlag)
+  {
     Serial.print("Your module version is: ");
     Serial.println(modem.version());
     Serial.print("Your device EUI is: ");
@@ -158,11 +190,14 @@ void doConnect() {
   }
   delay(4000); //increase up to 10s if connectio does not work
   int connected = modem.joinOTAA(appEui, appKey);
-  if (!connected) {
-    if (debugFlag) {
+  if (!connected)
+  {
+    if (debugFlag)
+    {
       Serial.println("Something went wrong; are you indoor? Move near a window and retry");
     }
-    while (1) {
+    while (1)
+    {
       blinkLED();
     }
   }
@@ -174,7 +209,8 @@ void doConnect() {
   isSending = 0;
 }
 
-void sendData() {
+void sendData()
+{
   isSending = 1;
   int err;
   //data is transmitted as Ascii chars
@@ -183,19 +219,26 @@ void sendData() {
   payload[0] = lowByte(counter);
   modem.write(payload, sizeof(payload));
   err = modem.endPacket(false);
-  if (err > 0) {
-    if (debugFlag) {
+  if (err > 0)
+  {
+    if (debugFlag)
+    {
       Serial.println("Message sent correctly!");
     }
     counter = 0;
-  } else {
-    if (debugFlag) {
+  }
+  else
+  {
+    if (debugFlag)
+    {
       Serial.println("Error sending message :(");
     }
     errorCounter++;
-    if (errorCounter > 1) {
+    if (errorCounter > 1)
+    {
       digitalWrite(LORA_RESET, LOW);
-      if (debugFlag) {
+      if (debugFlag)
+      {
         Serial.println("Trying to reconnect");
       }
       doConnect();
@@ -208,8 +251,10 @@ void sendData() {
 }
 
 // blinks the on board led
-void blinkLED(int times) {
-  for (int i = 0; i <= times; i++) {
+void blinkLED(int times)
+{
+  for (int i = 0; i <= times; i++)
+  {
     digitalWrite(LED_BUILTIN, HIGH);
     delay(200);
     digitalWrite(LED_BUILTIN, LOW);
