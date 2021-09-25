@@ -15,9 +15,6 @@ String appKey = "73876F853F8CE2E254F663DAE40FD811";
 
 // RTC object
 RTC_PCF8523 rtc;
-// Alarm interval (days, hours, minutes, seconds)
-TimeSpan timerInterval = TimeSpan(0, 0, 1, 0);
-
 
 // Interrupt pins
 const int timerInterruptPin = 0;
@@ -69,7 +66,15 @@ void setup() {
     // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
   }
 
-  rtc.start();
+  //rtc.start();
+
+  // deconfigure old timers
+  rtc.deconfigureAllTimers();
+
+  // set new timer intervall
+  // rtc.enableCountdownTimer(PCF8523_FrequencyHour, 24);    // 1 day
+  // rtc.enableCountdownTimer(PCF8523_FrequencyMinute, 150); // 2.5 hours
+  rtc.enableCountdownTimer(PCF8523_FrequencySecond, 30); // 30 seconds
 
   if (debugFlag)
   {
@@ -79,10 +84,6 @@ void setup() {
 
   // connect to lora network
   doConnect();
-
-  // setup counter interrupt
-  pinMode(counterInterruptPin, INPUT);
-  LowPower.attachInterruptWakeup(counterInterruptPin, onMotionDetected, RISING);
 
   if (debugFlag)  {
     Serial.println("Lora setup finished");
@@ -94,6 +95,13 @@ void setup() {
 
   delay(200);
 
+  // setup timer interrupt pin
+  pinMode(timerInterruptPin, INPUT_PULLUP);
+  LowPower.attachInterruptWakeup(timerInterruptPin, onTimerInterrupt, FALLING);
+  // setup counter interrupt
+  pinMode(counterInterruptPin, INPUT);
+  LowPower.attachInterruptWakeup(counterInterruptPin, onMotionDetected, RISING);
+
   if (debugFlag)  {
     Serial.println("Setup finished");
   }
@@ -102,6 +110,7 @@ void setup() {
 void loop() {
 
   if (((counter >= sendThreshold) || (timerCalled)) && (!isSending)) {
+    timerCalled = 0;
     blinkLED(2);
     sendData();
   }
