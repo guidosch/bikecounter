@@ -7,6 +7,8 @@ const bool debugFlag = 1;
 
 // Threshold for non periodic data transmission
 const int sendThreshold = 10;
+// Overflow threshold to detect a failure of the motion sensor
+const int countOverflow = 10;
 
 // lora modem object and application properties
 LoRaModem modem(Serial1);
@@ -80,7 +82,7 @@ void setup() {
   // set next alarm
   setAlarm(alarmInterval);
 
- 
+
   if (debugFlag)
   {
     Serial.println("RTC setup finished");
@@ -103,7 +105,7 @@ void setup() {
   // setup timer interrupt pin
   pinMode(timerInterruptPin, INPUT_PULLUP);
   LowPower.attachInterruptWakeup(timerInterruptPin, onTimerInterrupt, FALLING);
-  
+
   // setup counter interrupt
   pinMode(counterInterruptPin, INPUT);
   LowPower.attachInterruptWakeup(counterInterruptPin, onMotionDetected, RISING);
@@ -119,6 +121,17 @@ void loop() {
   if (((counter >= sendThreshold) || (timerCalled)) && (!isSending)) {
     timerCalled = 0;
     setAlarm(alarmInterval);
+
+    // check if the threshold between two counter calls is exeeded
+    if (counter > (sendThreshold + countOverflow))
+    {
+      if (debugFlag)
+      {
+        Serial.println("Counter failure. To much motion between timer calls detected!");
+        while (1) {}
+      }
+    }
+
     blinkLED(2);
     sendData();
   }
