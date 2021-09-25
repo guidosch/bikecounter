@@ -14,7 +14,9 @@ String appEui = "0000000000000000";
 String appKey = "73876F853F8CE2E254F663DAE40FD811";
 
 // RTC object
-RTC_PCF8523 rtc;
+RTC_DS3231 rtc;
+// Alarm interval (days, hours, minutes, seconds)
+TimeSpan alarmInterval = TimeSpan(0, 0, 1, 0);
 
 // Interrupt pins
 const int timerInterruptPin = 0;
@@ -55,27 +57,30 @@ void setup() {
   {
     Serial.println("NO connection to RTC");
   }
-
-  if (! rtc.initialized() || rtc.lostPower()) {
+  if (rtc.lostPower()) {
     if (debugFlag) {
-      Serial.println("RTC is NOT initialized, let's set the time!");
+      Serial.println("RTC lost power, time will be reset.");
     }
-    // sets the RTC to the date & time this sketch was compiled
+    // When time needs to be set on a new device, or after a power loss, the
+    // following line sets the RTC to the date & time this sketch was compiled
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-    // set the RTC to a specific time (year, month, day, hour, minute, second)
+    // This line sets the RTC with an explicit date & time, for example to set
+    // January 21, 2014 at 3am you would call:
     // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
   }
+  //disabel the 32K pin
+  rtc.disable32K();
+  // clear alarms
+  rtc.clearAlarm(1);
+  rtc.clearAlarm(2);
+  // stop oscillating signal at SQW Pin
+  rtc.writeSqwPinMode(DS3231_OFF);
+  // turn off alarm 2
+  rtc.disableAlarm(2);
+  // set next alarm
+  setAlarm(alarmInterval);
 
-  //rtc.start();
-
-  // deconfigure old timers
-  rtc.deconfigureAllTimers();
-
-  // set new timer intervall
-  // rtc.enableCountdownTimer(PCF8523_FrequencyHour, 24);    // 1 day
-  // rtc.enableCountdownTimer(PCF8523_FrequencyMinute, 120); // 2 hours
-  rtc.enableCountdownTimer(PCF8523_FrequencySecond, 50); // 50 seconds
-
+ 
   if (debugFlag)
   {
     Serial.println("RTC setup finished");
@@ -113,6 +118,7 @@ void loop() {
 
   if (((counter >= sendThreshold) || (timerCalled)) && (!isSending)) {
     timerCalled = 0;
+    setAlarm(alarmInterval);
     blinkLED(2);
     sendData();
   }
@@ -224,5 +230,27 @@ void blinkLED(int times) {
     digitalWrite(LED_BUILTIN, HIGH);
     delay(200);
     digitalWrite(LED_BUILTIN, LOW);
+  }
+}
+
+void setAlarm(TimeSpan dt)
+{
+  rtc.clearAlarm(1);
+
+  DateTime nextAlarm = rtc.now() + dt;
+  if (dt.hours() > 0)
+  {
+    // alarm when the hours, the minutes and the seconds match.
+    rtc.setAlarm1(nextAlarm, DS3231_A1_Hour);
+  }
+  else if (dt.minutes() > 0)
+  {
+    // alarm when the minutes and the seconds match.
+    rtc.setAlarm1(nextAlarm, DS3231_A1_Minute);
+  }
+  else
+  {
+    // alarm when the seconds match.
+    rtc.setAlarm1(nextAlarm, DS3231_A1_Second);
   }
 }
