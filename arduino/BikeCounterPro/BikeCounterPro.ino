@@ -73,8 +73,8 @@ void setup() {
 
   // set new timer intervall
   // rtc.enableCountdownTimer(PCF8523_FrequencyHour, 24);    // 1 day
-  // rtc.enableCountdownTimer(PCF8523_FrequencyMinute, 150); // 2.5 hours
-  rtc.enableCountdownTimer(PCF8523_FrequencySecond, 30); // 30 seconds
+  // rtc.enableCountdownTimer(PCF8523_FrequencyMinute, 120); // 2 hours
+  rtc.enableCountdownTimer(PCF8523_FrequencySecond, 50); // 50 seconds
 
   if (debugFlag)
   {
@@ -98,9 +98,11 @@ void setup() {
   // setup timer interrupt pin
   pinMode(timerInterruptPin, INPUT_PULLUP);
   LowPower.attachInterruptWakeup(timerInterruptPin, onTimerInterrupt, FALLING);
+  
   // setup counter interrupt
   pinMode(counterInterruptPin, INPUT);
   LowPower.attachInterruptWakeup(counterInterruptPin, onMotionDetected, RISING);
+
 
   if (debugFlag)  {
     Serial.println("Setup finished");
