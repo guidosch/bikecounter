@@ -9,16 +9,15 @@ const bool debugFlag = 1;
 const int timerInterruptPin = 0;
 const int counterInterruptPin = 1;
 const int batteryVoltagePin = A0;
-const int resetButton = 2;
 
-// Threshold for non periodic data transmission
-// Dependes on the timer intervall
+// threshold for non periodic data transmission
+// dependes on the timer intervall
 // timer <= 1h -> sendThreshold max = 65
 // timer <= 2h -> sendThreshold max = 56
 // timer <= 3h -> sendThreshold max = 49 (selected)
 const int sendThreshold = 10;
-// Threshold to detect a failure of the motion sensor
-const int maxCountBtwTimer = 500;
+// overflow threshold to detect a failure of the motion sensor
+const int countOverflow = 10;
 
 // lora modem object and application properties
 LoRaModem modem(Serial1);
@@ -26,19 +25,18 @@ String appEui = "0000000000000000";
 String appKey = "73876F853F8CE2E254F663DAE40FD811";
 
 // RTC object
-RTC_PCF8523 rtc;
+RTC_DS3231 rtc;
 // Alarm interval (days, hours, minutes, seconds)
-TimeSpan timerInterval = TimeSpan(0, 0, 1, 0);
+TimeSpan alarmInterval = TimeSpan(0, 0, 1, 0);
+
 
 // Motion counter value
 // must be volatile as incremented in interrupt
 volatile int counter = 0;
-int lastCount = 0;
-int totalCount = 0;
 // time array
-unsigned int timeArray[sendThreshold];
+volatile unsigned int timeArray[sendThreshold];
 // hour of the day for next package
-unsigned int houreOfDay = 0;
+volatile unsigned int houreOfDay = 0;
 // Timer interrupt falg
 volatile bool timerCalled = 0;
 // Lora data transmission flag
@@ -52,22 +50,17 @@ const int payloadSize = 1 + (int)((((float)(3 + 5 + timeValueSize * sendThreshol
 // Blink methode prototype
 void blinkLED(int times = 1);
 
-void setup()
-{
-  noInterrupts();
-
+void setup() {
   // setup onboard LED
   pinMode(LED_BUILTIN, OUTPUT);
 
-  // set reset button pin
-  pinMode(resetButton, INPUT);
+  // The MKR WAN 1310 3.3V reference voltage for battery measurements
+  analogReference(AR_DEFAULT);
 
-  if (debugFlag)
-  {
+  if (debugFlag) {
     // open serial connection and wait
     Serial.begin(9600);
-    while (!Serial)
-      ;
+    while (!Serial);
   }
 
   if (debugFlag)
@@ -82,28 +75,29 @@ void setup()
   {
     Serial.println("NO connection to RTC");
   }
-
-  if (!rtc.initialized() || rtc.lostPower())
-  {
-    if (debugFlag)
-    {
-      Serial.println("RTC is NOT initialized, let's set the time!");
+  if (rtc.lostPower()) {
+    if (debugFlag) {
+      Serial.println("RTC lost power, time will be reset.");
     }
-    // sets the RTC to the date & time this sketch was compiled
+    // When time needs to be set on a new device, or after a power loss, the
+    // following line sets the RTC to the date & time this sketch was compiled
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-    // set the RTC to a specific time (year, month, day, hour, minute, second)
+    // This line sets the RTC with an explicit date & time, for example to set
+    // January 21, 2014 at 3am you would call:
     // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
   }
+  //disabel the 32K pin
+  rtc.disable32K();
+  // clear alarms
+  rtc.clearAlarm(1);
+  rtc.clearAlarm(2);
+  // stop oscillating signal at SQW Pin
+  rtc.writeSqwPinMode(DS3231_OFF);
+  // turn off alarm 2
+  rtc.disableAlarm(2);
+  // set next alarm
+  setAlarm(alarmInterval);
 
-  rtc.start();
-
-  // deconfigure old timers
-  rtc.deconfigureAllTimers();
-
-  // set new timer intervall
-  // rtc.enableCountdownTimer(PCF8523_FrequencyHour, 24);    // 1 day
-  // rtc.enableCountdownTimer(PCF8523_FrequencyMinute, 150); // 2.5 hours
-  rtc.enableCountdownTimer(PCF8523_FrequencySecond, 30); // 30 seconds
 
   if (debugFlag)
   {
@@ -114,21 +108,18 @@ void setup()
   // connect to lora network
   doConnect();
 
-  if (debugFlag)
-  {
+  if (debugFlag)  {
     Serial.println("Lora setup finished");
   }
 
   delay(200);
 
+  onMotionDetected();
   sendData();
 
   delay(200);
 
-  // The MKR WAN 1310 3.3V reference voltage for battery measurements
-  analogReference(AR_DEFAULT);
-
-  // setup timer interrupt
+  // setup timer interrupt pin
   pinMode(timerInterruptPin, INPUT_PULLUP);
   LowPower.attachInterruptWakeup(timerInterruptPin, onTimerInterrupt, FALLING);
 
@@ -136,120 +127,85 @@ void setup()
   pinMode(counterInterruptPin, INPUT);
   LowPower.attachInterruptWakeup(counterInterruptPin, onMotionDetected, RISING);
 
-  if (debugFlag)
-  {
+
+  if (debugFlag)  {
     Serial.println("Setup finished");
   }
-
-  delay(200);
-
-  interrupts();
 }
 
-void loop()
-{
-  noInterrupts();
-  if (counter > lastCount)
-  {
-    motionDetected();
-  }
+void loop() {
 
-  if (((counter >= sendThreshold) || (timerCalled)) && (!isSending))
-  {
-    if (debugFlag)
-    {
-      Serial.println("timer called");
-    }
+  if (((counter >= sendThreshold) || (timerCalled)) && (!isSending)) {
     timerCalled = 0;
+    setAlarm(alarmInterval);
 
     // check if the threshold between two counter calls is exeeded
-    if (totalCount > maxCountBtwTimer)
+    if (counter > (sendThreshold + countOverflow))
     {
       if (debugFlag)
       {
         Serial.println("Counter failure. To much motion between timer calls detected!");
-        while (!digitalRead(resetButton))
-        {
-        }
+        while (1) {}
       }
     }
 
     blinkLED(2);
-
     sendData();
   }
 
   delay(200);
 
-  interrupts();
-
-  if (!debugFlag)
-  {
+  if (!debugFlag) {
     LowPower.sleep();
   }
 }
 
-void onMotionDetected()
-{
-  if (!isSending)
-  {
-    ++counter;
-    ++totalCount;
-  }
-}
+void onMotionDetected() {
+  if (!isSending) {
+    DateTime currentTime = rtc.now();
 
-void onTimerInterrupt()
-{
-  if (!isSending)
-  {
-    timerCalled = 1;
-    totalCount = 0;
-  }
-}
-
-void motionDetected()
-{
-  lastCount = counter;
-
-  DateTime currentTime = rtc.now();
-  if (counter == 1)
-  {
-    houreOfDay = currentTime.hour();
-  }
-  timeArray[counter - 1] = (currentTime.hour() - houreOfDay) * 60 + currentTime.minute();
-
-  blinkLED();
-
-  if (debugFlag)
-  {
-    Serial.print("Motion detected (current count = ");
-    Serial.print(counter);
-    Serial.print(" / time: ");
-    Serial.print(currentTime.hour(), DEC);
-    Serial.print(':');
-    Serial.print(currentTime.minute(), DEC);
-    Serial.print(':');
-    Serial.print(currentTime.second(), DEC);
-    Serial.println(')');
-  }
-}
-
-void doConnect()
-{
-  isSending = 1;
-  if (!modem.begin(EU868))
-  {
-    if (debugFlag)
+    if (counter == 0)
     {
+      houreOfDay = currentTime.hour();
+    }
+    timeArray[counter] = (currentTime.hour() - houreOfDay) * 60 + currentTime.minute();
+
+    counter++;
+    blinkLED();
+
+    if (debugFlag) {
+      Serial.print("Motion detected (current count = ");
+      Serial.print(counter);
+      Serial.print(" / time: ");
+      Serial.print(currentTime.hour(), DEC);
+      Serial.print(':');
+      Serial.print(currentTime.minute(), DEC);
+      Serial.print(':');
+      Serial.print(currentTime.second(), DEC);
+      Serial.println(')');
+    }
+  }
+}
+
+void onTimerInterrupt() {
+  if (!isSending) {
+    timerCalled = 1;
+    if (debugFlag) {
+      Serial.println("Timer called");
+    }
+  }
+}
+
+void doConnect() {
+  isSending = 1;
+  if (!modem.begin(EU868)) {
+    if (debugFlag) {
       Serial.println("Failed to start module");
     }
     blinkLED(5);
-    while (1)
-    {
-    }
+    while (1) {}
   };
-  if (debugFlag)
-  {
+  if (debugFlag) {
     Serial.print("Your module version is: ");
     Serial.println(modem.version());
     Serial.print("Your device EUI is: ");
@@ -257,14 +213,11 @@ void doConnect()
   }
   delay(4000); //increase up to 10s if connectio does not work
   int connected = modem.joinOTAA(appEui, appKey);
-  if (!connected)
-  {
-    if (debugFlag)
-    {
+  if (!connected) {
+    if (debugFlag) {
       Serial.println("Something went wrong; are you indoor? Move near a window and retry");
     }
-    while (1)
-    {
+    while (1) {
       blinkLED();
     }
   }
@@ -276,18 +229,23 @@ void doConnect()
   isSending = 0;
 }
 
-void sendData()
-{
+void sendData() {
   isSending = 1;
   int err;
   //data is transmitted as Ascii chars
   modem.beginPacket();
   byte payload[payloadSize];
 
+  for (int i = 0; i < payloadSize; ++i)
+  {
+    payload[i] = 0;
+  }
+
   payload[0] = lowByte(counter);
 
   byte batteryLevel = parsBatLevel(getBatteryLevel());
   byte batAndHour;
+
   bitWrite(batAndHour, 0, bitRead(batteryLevel, 0));
   bitWrite(batAndHour, 1, bitRead(batteryLevel, 1));
   bitWrite(batAndHour, 2, bitRead(batteryLevel, 2));
@@ -305,30 +263,30 @@ void sendData()
 
   modem.write(payload, sizeof(payload));
   err = modem.endPacket(false);
-  if (err > 0)
-  {
-    if (debugFlag)
-    {
+  if (err > 0) {
+    if (debugFlag) {
       Serial.print("Message sent correctly! (count = ");
       Serial.print(counter);
       Serial.print(" / battery level = ");
       Serial.print(getBatteryLevel());
-      Serial.println(" %)");
+      Serial.print(" % / ");
+      Serial.print(getBatteryVoltage());
+      Serial.println(" V)");
     }
     counter = 0;
-  }
-  else
-  {
-    if (debugFlag)
+    for (int i = 0; i < sendThreshold; ++i)
     {
+      timeArray[i] = 0;
+    }
+
+  } else {
+    if (debugFlag) {
       Serial.println("Error sending message :(");
     }
     errorCounter++;
-    if (errorCounter > 1)
-    {
+    if (errorCounter > 1) {
       digitalWrite(LORA_RESET, LOW);
-      if (debugFlag)
-      {
+      if (debugFlag) {
         Serial.println("Trying to reconnect");
       }
       doConnect();
@@ -341,13 +299,33 @@ void sendData()
 }
 
 // blinks the on board led
-void blinkLED(int times)
-{
-  for (int i = 0; i <= times; i++)
-  {
+void blinkLED(int times) {
+  for (int i = 0; i <= times; i++) {
     digitalWrite(LED_BUILTIN, HIGH);
     delay(200);
     digitalWrite(LED_BUILTIN, LOW);
+  }
+}
+
+void setAlarm(TimeSpan dt)
+{
+  rtc.clearAlarm(1);
+
+  DateTime nextAlarm = rtc.now() + dt;
+  if (dt.hours() > 0)
+  {
+    // alarm when the hours, the minutes and the seconds match.
+    rtc.setAlarm1(nextAlarm, DS3231_A1_Hour);
+  }
+  else if (dt.minutes() > 0)
+  {
+    // alarm when the minutes and the seconds match.
+    rtc.setAlarm1(nextAlarm, DS3231_A1_Minute);
+  }
+  else
+  {
+    // alarm when the seconds match.
+    rtc.setAlarm1(nextAlarm, DS3231_A1_Second);
   }
 }
 
