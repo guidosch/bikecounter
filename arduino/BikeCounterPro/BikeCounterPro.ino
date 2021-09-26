@@ -5,9 +5,14 @@
 // set debugFlag = 1 to activate serial debug messages and to disable deepSleep
 const bool debugFlag = 1;
 
-// Threshold for non periodic data transmission
+// pins
+const int timerInterruptPin = 0;
+const int counterInterruptPin = 1;
+const int batteryVoltagePin = A0;
+
+// threshold for non periodic data transmission
 const int sendThreshold = 10;
-// Overflow threshold to detect a failure of the motion sensor
+// overflow threshold to detect a failure of the motion sensor
 const int countOverflow = 10;
 
 // lora modem object and application properties
@@ -20,9 +25,6 @@ RTC_DS3231 rtc;
 // Alarm interval (days, hours, minutes, seconds)
 TimeSpan alarmInterval = TimeSpan(0, 0, 1, 0);
 
-// Interrupt pins
-const int timerInterruptPin = 0;
-const int counterInterruptPin = 1;
 
 // Motion counter value
 // must be volatile as incremented in interrupt
@@ -40,6 +42,9 @@ void blinkLED(int times = 1);
 void setup() {
   // setup onboard LED
   pinMode(LED_BUILTIN, OUTPUT);
+
+  // The MKR WAN 1310 3.3V reference voltage for battery measurements
+  analogReference(AR_DEFAULT);
 
   if (debugFlag) {
     // open serial connection and wait
@@ -215,7 +220,13 @@ void sendData() {
   err = modem.endPacket(false);
   if (err > 0) {
     if (debugFlag) {
-      Serial.println("Message sent correctly!");
+      Serial.print("Message sent correctly! (count = ");
+      Serial.print(counter);
+      Serial.print(" / battery level = ");
+      Serial.print(getBatteryLevel());
+      Serial.print(" % / ");
+      Serial.print(getBatteryVoltage());
+      Serial.println(" V)");
     }
     counter = 0;
   } else {
@@ -266,4 +277,43 @@ void setAlarm(TimeSpan dt)
     // alarm when the seconds match.
     rtc.setAlarm1(nextAlarm, DS3231_A1_Second);
   }
+}
+
+float getBatteryVoltage()
+{
+  // read the input on analog pin 0 (A1) and calculate the voltage
+  return analogRead(batteryVoltagePin) * 3.3f / 1023.0f / 1.2f * (1.2f + 0.33f);
+}
+
+// get battery level [%]
+float getBatteryLevel()
+{
+  float bV = getBatteryVoltage();
+  // charch calculation
+  // devided into two ranges >=3.8V and <3.8
+  // curve parameters from pseudo invers matrix polynom
+  if (bV >= 3.8f)
+  {
+    return -178.57f * bV * bV + 1569.6f * bV - 3342.0f;
+  }
+  else
+  {
+    return 1183.7f * bV * bV * bV * bV - 15843.0f * bV * bV * bV + 79461.0f * bV * bV - 177004.0f * bV + 147744.0f;
+  }
+}
+
+// pars the battery level to a 3 bit indicator
+// 0 = 0%
+// 7 = 100%
+byte parsBatLevel(float batteryLevel)
+{
+  //
+  if (batteryLevel < 0.0f)
+  {
+    batteryLevel = 0.0f;
+  }
+  float fract = 100.0f / (2 * 2 * 2 - 1);
+  float indicator = batteryLevel / fract;
+
+  return (byte)(round(indicator));
 }
