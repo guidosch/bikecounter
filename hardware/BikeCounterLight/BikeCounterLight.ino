@@ -17,7 +17,7 @@ const int donePin = 4;
 // lora modem object and application properties
 LoRaModem modem(Serial1);
 String appEui = "0000000000000000";
-String appKey = "73876F853F8CE2E254F663DAE40FD811";
+String appKey = "";
 
 // Motion counter value
 // must be volatile as incremented in interrupt

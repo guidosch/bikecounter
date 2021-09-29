@@ -3,7 +3,7 @@
 #include "RTClib.h"
 
 // set debugFlag = 1 to activate serial debug messages and to disable deepSleep
-const bool debugFlag = 1;
+const bool debugFlag = 1 constexpr;
 
 // pins
 const int timerInterruptPin = 0;
@@ -22,7 +22,7 @@ const int countOverflow = 10;
 // lora modem object and application properties
 LoRaModem modem(Serial1);
 String appEui = "0000000000000000";
-String appKey = "73876F853F8CE2E254F663DAE40FD811";
+String appKey = "";
 
 // RTC object
 RTC_DS3231 rtc;

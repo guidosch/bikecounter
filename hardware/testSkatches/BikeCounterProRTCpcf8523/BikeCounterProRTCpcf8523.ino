@@ -11,7 +11,7 @@ const int sendThreshold = 10;
 // lora modem object and application properties
 LoRaModem modem(Serial1);
 String appEui = "0000000000000000";
-String appKey = "73876F853F8CE2E254F663DAE40FD811";
+String appKey = "";
 
 RTC_PCF8523 rtc;
 
