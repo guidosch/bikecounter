@@ -1,9 +1,10 @@
 #include "ArduinoLowPower.h"
 #include <MKRWAN.h>
 #include "RTClib.h"
+#include "arduino_secrets.h"
 
 // set debugFlag = 1 to activate serial debug messages and to disable deepSleep
-const bool debugFlag = 1 constexpr;
+constexpr bool debugFlag = 1;
 
 // pins
 const int timerInterruptPin = 0;
@@ -21,8 +22,8 @@ const int countOverflow = 10;
 
 // lora modem object and application properties
 LoRaModem modem(Serial1);
-String appEui = "0000000000000000";
-String appKey = "";
+String appEui = SECRET_APPEUI;
+String appKey = SECRET_APPKEY;
 
 // RTC object
 RTC_DS3231 rtc;

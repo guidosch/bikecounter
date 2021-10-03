@@ -1,5 +1,6 @@
-#include "ArduinoLowPower.h"
 #include <MKRWAN.h>
+#include "ArduinoLowPower.h"
+#include "arduino_secrets.h"
 
 // set this to activate serial debug messages and to disable deepSleep
 const bool debugFlag = 1;
@@ -16,8 +17,8 @@ const int donePin = 4;
 
 // lora modem object and application properties
 LoRaModem modem(Serial1);
-String appEui = "0000000000000000";
-String appKey = "";
+String appEui = SECRET_APPEUI;
+String appKey = SECRET_APPKEY;
 
 // Motion counter value
 // must be volatile as incremented in interrupt

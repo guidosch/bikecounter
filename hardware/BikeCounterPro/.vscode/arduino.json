@@ -1,0 +1,4 @@
+{
+    "sketch": "BikeCounterPro.ino",
+    "board": "arduino:samd:mkrwan1310"
+}
