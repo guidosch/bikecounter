@@ -138,8 +138,35 @@ void setup()
 void loop()
 {
 
+  if (motionDetected)
+  {
+    motionDetected = 0;
 
+    DateTime currentTime = rtc.now();
 
+    if (counter == 0)
+    {
+      houreOfDay = currentTime.hour();
+    }
+    timeArray[counter] = (currentTime.hour() - houreOfDay) * 60 + currentTime.minute();
+
+    counter++;
+
+    blinkLED();
+
+    if (debugFlag)
+    {
+      Serial.print("Motion detected (current count = ");
+      Serial.print(counter);
+      Serial.print(" / time: ");
+      Serial.print(currentTime.hour(), DEC);
+      Serial.print(':');
+      Serial.print(currentTime.minute(), DEC);
+      Serial.print(':');
+      Serial.print(currentTime.second(), DEC);
+      Serial.println(')');
+    }
+  }
 
   if (((counter >= sendThreshold) || (timerCalled)) && (!isSending))
   {
@@ -178,29 +205,7 @@ void onMotionDetected()
 {
   if (!isSending)
   {
-    DateTime currentTime = rtc.now();
-
-    if (counter == 0)
-    {
-      houreOfDay = currentTime.hour();
-    }
-    timeArray[counter] = (currentTime.hour() - houreOfDay) * 60 + currentTime.minute();
-
-    counter++;
-    blinkLED();
-
-    if (debugFlag)
-    {
-      Serial.print("Motion detected (current count = ");
-      Serial.print(counter);
-      Serial.print(" / time: ");
-      Serial.print(currentTime.hour(), DEC);
-      Serial.print(':');
-      Serial.print(currentTime.minute(), DEC);
-      Serial.print(':');
-      Serial.print(currentTime.second(), DEC);
-      Serial.println(')');
-    }
+    motionDetected = 1;
   }
 }
 
