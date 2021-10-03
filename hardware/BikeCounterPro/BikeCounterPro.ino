@@ -30,10 +30,11 @@ RTC_DS3231 rtc;
 // Alarm interval (days, hours, minutes, seconds)
 TimeSpan alarmInterval = TimeSpan(0, 0, 1, 0);
 
-
 // Motion counter value
 // must be volatile as incremented in interrupt
 volatile int counter = 0;
+// motion detected flag
+volatile bool motionDetected = 0;
 // time array
 volatile unsigned int timeArray[sendThreshold];
 // hour of the day for next package
@@ -51,17 +52,20 @@ const int payloadSize = 1 + (int)((((float)(3 + 5 + timeValueSize * sendThreshol
 // Blink methode prototype
 void blinkLED(int times = 1);
 
-void setup() {
+void setup()
+{
   // setup onboard LED
   pinMode(LED_BUILTIN, OUTPUT);
 
   // The MKR WAN 1310 3.3V reference voltage for battery measurements
   analogReference(AR_DEFAULT);
 
-  if (debugFlag) {
+  if (debugFlag)
+  {
     // open serial connection and wait
     Serial.begin(9600);
-    while (!Serial);
+    while (!Serial)
+      ;
   }
 
   if (debugFlag)
@@ -76,8 +80,10 @@ void setup() {
   {
     Serial.println("NO connection to RTC");
   }
-  if (rtc.lostPower()) {
-    if (debugFlag) {
+  if (rtc.lostPower())
+  {
+    if (debugFlag)
+    {
       Serial.println("RTC lost power, time will be reset.");
     }
     // When time needs to be set on a new device, or after a power loss, the
@@ -99,7 +105,6 @@ void setup() {
   // set next alarm
   setAlarm(alarmInterval);
 
-
   if (debugFlag)
   {
     Serial.println("RTC setup finished");
@@ -109,14 +114,10 @@ void setup() {
   // connect to lora network
   doConnect();
 
-  if (debugFlag)  {
+  if (debugFlag)
+  {
     Serial.println("Lora setup finished");
   }
-
-  delay(200);
-
-  onMotionDetected();
-  sendData();
 
   delay(200);
 
@@ -128,15 +129,24 @@ void setup() {
   pinMode(counterInterruptPin, INPUT);
   LowPower.attachInterruptWakeup(counterInterruptPin, onMotionDetected, RISING);
 
-
-  if (debugFlag)  {
+  if (debugFlag)
+  {
     Serial.println("Setup finished");
   }
 }
 
-void loop() {
+void loop()
+{
 
-  if (((counter >= sendThreshold) || (timerCalled)) && (!isSending)) {
+
+
+
+  if (((counter >= sendThreshold) || (timerCalled)) && (!isSending))
+  {
+    if (debugFlag && timerCalled)
+    {
+      Serial.println("Timer called");
+    }
     timerCalled = 0;
     setAlarm(alarmInterval);
 
@@ -146,7 +156,9 @@ void loop() {
       if (debugFlag)
       {
         Serial.println("Counter failure. To much motion between timer calls detected!");
-        while (1) {}
+        while (1)
+        {
+        }
       }
     }
 
@@ -156,13 +168,16 @@ void loop() {
 
   delay(200);
 
-  if (!debugFlag) {
+  if (!debugFlag)
+  {
     LowPower.sleep();
   }
 }
 
-void onMotionDetected() {
-  if (!isSending) {
+void onMotionDetected()
+{
+  if (!isSending)
+  {
     DateTime currentTime = rtc.now();
 
     if (counter == 0)
@@ -174,7 +189,8 @@ void onMotionDetected() {
     counter++;
     blinkLED();
 
-    if (debugFlag) {
+    if (debugFlag)
+    {
       Serial.print("Motion detected (current count = ");
       Serial.print(counter);
       Serial.print(" / time: ");
@@ -188,25 +204,30 @@ void onMotionDetected() {
   }
 }
 
-void onTimerInterrupt() {
-  if (!isSending) {
+void onTimerInterrupt()
+{
+  if (!isSending)
+  {
     timerCalled = 1;
-    if (debugFlag) {
-      Serial.println("Timer called");
-    }
   }
 }
 
-void doConnect() {
+void doConnect()
+{
   isSending = 1;
-  if (!modem.begin(EU868)) {
-    if (debugFlag) {
+  if (!modem.begin(EU868))
+  {
+    if (debugFlag)
+    {
       Serial.println("Failed to start module");
     }
     blinkLED(5);
-    while (1) {}
+    while (1)
+    {
+    }
   };
-  if (debugFlag) {
+  if (debugFlag)
+  {
     Serial.print("Your module version is: ");
     Serial.println(modem.version());
     Serial.print("Your device EUI is: ");
@@ -214,11 +235,14 @@ void doConnect() {
   }
   delay(4000); //increase up to 10s if connectio does not work
   int connected = modem.joinOTAA(appEui, appKey);
-  if (!connected) {
-    if (debugFlag) {
+  if (!connected)
+  {
+    if (debugFlag)
+    {
       Serial.println("Something went wrong; are you indoor? Move near a window and retry");
     }
-    while (1) {
+    while (1)
+    {
       blinkLED();
     }
   }
@@ -230,14 +254,15 @@ void doConnect() {
   isSending = 0;
 }
 
-void sendData() {
+void sendData()
+{
   isSending = 1;
   int err;
   //data is transmitted as Ascii chars
   modem.beginPacket();
-  byte payload[payloadSize];
+  byte payload[counter + 2];
 
-  for (int i = 0; i < payloadSize; ++i)
+  for (int i = 0; i < (counter + 2); ++i)
   {
     payload[i] = 0;
   }
@@ -264,8 +289,10 @@ void sendData() {
 
   modem.write(payload, sizeof(payload));
   err = modem.endPacket(false);
-  if (err > 0) {
-    if (debugFlag) {
+  if (err > 0)
+  {
+    if (debugFlag)
+    {
       Serial.print("Message sent correctly! (count = ");
       Serial.print(counter);
       Serial.print(" / battery level = ");
@@ -279,15 +306,19 @@ void sendData() {
     {
       timeArray[i] = 0;
     }
-
-  } else {
-    if (debugFlag) {
+  }
+  else
+  {
+    if (debugFlag)
+    {
       Serial.println("Error sending message :(");
     }
     errorCounter++;
-    if (errorCounter > 1) {
+    if (errorCounter > 1)
+    {
       digitalWrite(LORA_RESET, LOW);
-      if (debugFlag) {
+      if (debugFlag)
+      {
         Serial.println("Trying to reconnect");
       }
       doConnect();
@@ -300,8 +331,10 @@ void sendData() {
 }
 
 // blinks the on board led
-void blinkLED(int times) {
-  for (int i = 0; i <= times; i++) {
+void blinkLED(int times)
+{
+  for (int i = 0; i <= times; i++)
+  {
     digitalWrite(LED_BUILTIN, HIGH);
     delay(200);
     digitalWrite(LED_BUILTIN, LOW);
