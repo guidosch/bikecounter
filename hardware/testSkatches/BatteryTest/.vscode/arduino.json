@@ -1,0 +1,5 @@
+{
+    "sketch": "BatteryTest.ino",
+    "board": "arduino:samd:mkrwan1310",
+    "port": "COM5"
+}
