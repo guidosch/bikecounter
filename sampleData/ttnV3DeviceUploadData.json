@@ -1,0 +1,70 @@
+{
+    "end_device_ids": {
+        "device_id": "t77-monitor",
+        "application_ids": {
+            "application_id": "freecooling-monitor"
+        },
+        "dev_eui": "A8610A33351C6A07",
+        "join_eui": "70B3D57ED0027B24",
+        "dev_addr": "260BA630"
+    },
+    "correlation_ids": [
+        "as:up:01FJCT4TQAXYXMRM1ZTQ2S5SDB",
+        "gs:conn:01FJAAER0P04CF36Q328R0J0PF",
+        "gs:up:host:01FJAAER0W9C83T2R316FS4EWD",
+        "gs:uplink:01FJCT4TGPNZYTNWBGYBX2T588",
+        "ns:uplink:01FJCT4TGQ5JYE1SAZGA3KXHFZ",
+        "rpc:/ttn.lorawan.v3.GsNs/HandleUplink:01FJCT4TGQ7V7P1KW0C4VMX746",
+        "rpc:/ttn.lorawan.v3.NsAs/HandleUplink:01FJCT4TQ9J5B8TR17TPAQBRBJ"
+    ],
+    "received_at": "2021-10-19T17:38:50.731176432Z",
+    "uplink_message": {
+        "session_key_id": "AXyVA/I3ld6/97Q6KirGFw==",
+        "f_port": 2,
+        "f_cnt": 43,
+        "frm_payload": "CkEJ9g==",
+        "decoded_payload": {
+            "forward_temp": 26.25,
+            "return_temp": 25.5
+        },
+        "rx_metadata": [
+            {
+                "gateway_ids": {
+                    "gateway_id": "waidliving-lora",
+                    "eui": "60C5A8FFFE76F73B"
+                },
+                "timestamp": 1967339475,
+                "rssi": -75,
+                "channel_rssi": -75,
+                "snr": 7,
+                "location": {
+                    "latitude": 47.39861994798823,
+                    "longitude": 8.522780667990446,
+                    "altitude": 550,
+                    "source": "SOURCE_REGISTRY"
+                },
+                "uplink_token": "Ch0KGwoPd2FpZGxpdmluZy1sb3JhEghgxaj//nb3OxDT74yqBxoMCKqFvIsGELzmpvcBILigyPSggBM=",
+                "channel_index": 2
+            }
+        ],
+        "settings": {
+            "data_rate": {
+                "lora": {
+                    "bandwidth": 125000,
+                    "spreading_factor": 7
+                }
+            },
+            "data_rate_index": 5,
+            "coding_rate": "4/5",
+            "frequency": "867500000",
+            "timestamp": 1967339475
+        },
+        "received_at": "2021-10-19T17:38:50.519871933Z",
+        "consumed_airtime": "0.051456s",
+        "network_ids": {
+            "net_id": "000013",
+            "tenant_id": "ttn",
+            "cluster_id": "ttn-eu1"
+        }
+    }
+}
