@@ -9,6 +9,8 @@ const bool debugFlag = 0;
 const int sendThreshold = 10;
 // Sleep intervall (ms)
 const u_int32_t sleepTime = 60000ul; // 4h = 14400000ul (4*60*60*1000)
+// Max. counts between timer calls
+const int maxCount = 1000;
 
 // Interrupt pins
 const int counterInterruptPin = 1;
@@ -21,6 +23,8 @@ String appKey = SECRET_APPKEY;
 // Motion counter value
 // must be volatile as incremented in interrupt
 volatile int counter = 0;
+// total counts between timer calls
+volatile int totalCounter = 0;
 // motion detected flag
 volatile bool motionDetected = 0;
 // Timer interrupt falg
@@ -56,7 +60,7 @@ void setup()
   }
 
   // setup counter interrupt
-  pinMode(counterInterruptPin, INPUT);
+  pinMode(counterInterruptPin, INPUT_PULLDOWN);
   LowPower.attachInterruptWakeup(counterInterruptPin, onMotionDetected, RISING);
 }
 
@@ -66,7 +70,8 @@ void loop()
   if (motionDetected)
   {
     motionDetected = 0;
-    counter++;
+    ++counter;
+    ++totalCounter;
 
     blinkLED();
 
@@ -80,6 +85,19 @@ void loop()
   else
   {
     timerCalled = 1;
+    totalCounter = 0;
+  }
+
+  // check if the floating interrupt pin bug occured
+  if (totalCounter >= maxCount)
+  {
+    if (debugFlag)
+    {
+      Serial.println("Floating interrupt pin detected");
+    }
+    while (1)
+    {
+    }
   }
 
   // send the data if the threshold or the periodic time intervall is exceeded
@@ -91,7 +109,7 @@ void loop()
   }
 
   delay(200);
-  LowPower.sleep(sleepTime);
+  LowPower.deepSleep(sleepTime);
 }
 
 void onMotionDetected()
