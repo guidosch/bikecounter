@@ -11,12 +11,14 @@ const auth = app.auth();
 
 exports.storeHeatpumpData = (req, res) => {
     let payload = req.body;
-    if (payload && payload.app_id == "freecooling-monitor") {
-        const deviceId = payload.dev_id;
-        const forward_temp = payload.payload_fields.forward_temp;
-        const return_temp = payload.payload_fields.return_temp;
-        const timestamp = payload.metadata.time;
-        console.log("timestamp form request object: " + timestamp);
+    let deviceId;
+    //see sampleData ttnV3 json file for json object structure
+    const app_id = payload.end_device_ids.application_ids.application_id;
+    if (payload && app_id == "freecooling-monitor") {
+        deviceId = payload.end_device_ids.device_id;
+        const forward_temp = payload.uplink_message.decoded_payload.forward_temp;
+        const return_temp = payload.uplink_message.decoded_payload.return_temp;;
+        const timestamp = payload.received_at;
 
         //Low power does not work and data is added several times
         if (!alreadyAdded(deviceId, timestamp, 10)) {
@@ -30,16 +32,19 @@ exports.storeHeatpumpData = (req, res) => {
         }
         res.status(200).send(deviceId);
     } else {
+        console.error("payload not valid: "+JSON.stringify(payload));
         res.status(404).send(deviceId);
     }
 };
 
 exports.storeBikecounterData = (req, res) => {
     let payload = req.body;
-    if (payload && payload.app_id == "bikecounter") {
-        const deviceId = payload.dev_id;
-        const counter = payload.payload_fields.counter;
-        const timestamp = payload.metadata.time;
+    let deviceId;
+    const app_id = payload.end_device_ids.application_ids.application_id;
+    if (payload && app_id == "bikecounter") {
+        deviceId = payload.end_device_ids.device_id;
+        const counter = payload.uplink_message.decoded_payload.counter;
+        const timestamp = payload.received_at;
 
         //data comes sometimes twice from TTN???
         if (!alreadyAdded(deviceId, timestamp, 1)) {
@@ -52,6 +57,7 @@ exports.storeBikecounterData = (req, res) => {
         }
         res.status(200).send(deviceId);
     } else {
+        console.error("payload not valid: "+JSON.stringify(payload));
         res.status(404).send(deviceId);
     }
 };
