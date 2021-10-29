@@ -9,6 +9,7 @@ const return_temp = data.uplink_message.decoded_payload.return_temp;;
 const timestamp = data.received_at;
 
 
+
 console.log("app_id: "+app_id);
 console.log("deviceId: "+deviceId);
 console.log("forward_temp: "+forward_temp);
