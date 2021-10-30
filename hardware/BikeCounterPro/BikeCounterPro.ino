@@ -15,7 +15,11 @@ const int batteryVoltagePin = A0;
 // dependes on the timer intervall
 // timer <= 1h -> sendThreshold max = 65
 // timer <= 2h -> sendThreshold max = 56
-// timer <= 3h -> sendThreshold max = 49 (selected)
+// timer <= 4h -> sendThreshold max = 49 (selected)
+// timer <= 8h -> sendThreshold max = 43
+// timer <= 17h -> sendThreshold max = 39
+// timer <= 34h -> sendThreshold max = 35
+// timer <= 68h -> sendThreshold max = 32
 const int sendThreshold = 10;
 // overflow threshold to detect a failure of the motion sensor
 const int countOverflow = 10;
@@ -126,7 +130,7 @@ void setup()
   LowPower.attachInterruptWakeup(timerInterruptPin, onTimerInterrupt, FALLING);
 
   // setup counter interrupt
-  pinMode(counterInterruptPin, INPUT);
+  pinMode(counterInterruptPin, INPUT_PULLDOWN);
   LowPower.attachInterruptWakeup(counterInterruptPin, onMotionDetected, RISING);
 
   if (debugFlag)
