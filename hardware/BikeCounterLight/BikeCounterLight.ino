@@ -20,6 +20,8 @@ const int maxCount = 1000;
 
 // Interrupt pins
 const int counterInterruptPin = 1;
+// PIR sensor power pin
+const int pirPowerPin = 2;
 
 // ----------------------------------------------------
 // -------------- Declaration section -----------------
@@ -42,6 +44,8 @@ volatile bool timerCalled = 0;
 bool isSending = 0;
 // Error counter for connection
 int errorCounter = 0;
+// Error counter for pir-sensor
+int pirError = 0;
 // Last call of main loop in debug mode
 unsigned long lastMillis = 0;
 
@@ -54,8 +58,12 @@ void blinkLED(int times = 1);
 
 void setup()
 {
-  // setup onboard LED
+  // setup pin modes
   pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(pirPowerPin, OUTPUT);
+
+  // power the pir sensor
+  digitalWrite(pirPowerPin, HIGH);
 
   if (debugFlag)
   {
@@ -135,13 +143,26 @@ void loop()
   // check if the floating interrupt pin bug occured
   if (totalCounter >= maxCount)
   {
+    ++pirError;
+    if (pirError > 2)
+    {
+      if (debugFlag)
+      {
+        Serial.println("PIR-sensor error could not me fixed.");
+      }
+      while (1)
+      {
+      }
+    }
     if (debugFlag)
     {
-      Serial.println("Floating interrupt pin detected");
+      Serial.println("Floating interrupt pin detected.");
+      Serial.println("Resetting PIR-sensor");
     }
-    while (1)
-    {
-    }
+    digitalWrite(pirPowerPin, LOW);
+    delay(2000);
+    digitalWrite(pirPowerPin, HIGH);
+    totalCounter = 0;
   }
 
   // send the data if the threshold or the periodic time intervall is exceeded
@@ -255,10 +276,11 @@ void sendData()
 // blinks the on board led
 void blinkLED(int times)
 {
-  for (int i = 0; i <= times; i++)
+  for (int i = 0; i < times; i++)
   {
+    delay(100);
     digitalWrite(LED_BUILTIN, HIGH);
-    delay(200);
+    delay(100);
     digitalWrite(LED_BUILTIN, LOW);
   }
 }
