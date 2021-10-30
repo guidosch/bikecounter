@@ -7,7 +7,7 @@
 // ----------------------------------------------------
 
 // Set this to activate serial debug messages and to disable deepSleep.
-constexpr bool debugFlag = 1;
+constexpr bool debugFlag = 0;
 // The sleep or deepSleep method disables the usb connection which
 // leeds to problems with the serial monitor.
 
@@ -22,6 +22,8 @@ const int maxCount = 1000;
 const int counterInterruptPin = 1;
 // PIR sensor power pin
 const int pirPowerPin = 2;
+// Used pins (not defined pins will be disabled to save power)
+const int usedPins[] = {LED_BUILTIN, counterInterruptPin, pirPowerPin};
 
 // ----------------------------------------------------
 // -------------- Declaration section -----------------
@@ -61,6 +63,7 @@ void setup()
   // setup pin modes
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(pirPowerPin, OUTPUT);
+  disableUnusedPins(usedPins, sizeof(usedPins) / sizeof(usedPins[0]));
 
   // power the pir sensor
   digitalWrite(pirPowerPin, HIGH);
@@ -282,5 +285,29 @@ void blinkLED(int times)
     digitalWrite(LED_BUILTIN, HIGH);
     delay(100);
     digitalWrite(LED_BUILTIN, LOW);
+  }
+}
+
+// Sets all the unused pins to a defined level
+// Output and LOW
+void disableUnusedPins(const int *const activePins, int size)
+{
+  for (int i = 0; i < 22; ++i)
+  {
+    // check if the current pin occures in the pin array
+    bool isUsed = false;
+    for (int j = 0; j < size; ++j)
+    {
+      if (activePins[j] == i)
+      {
+        isUsed = true;
+      }
+    }
+    // if not, set the pin to output and low
+    if (!isUsed)
+    {
+      pinMode(i, OUTPUT);
+      digitalWrite(i, LOW);
+    }
   }
 }
