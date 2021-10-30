@@ -7,16 +7,18 @@
 // ----------------------------------------------------
 
 // Set this to activate serial debug messages and to disable deepSleep.
-constexpr bool debugFlag = 0;
+constexpr bool debugFlag = 1;
 // The sleep or deepSleep method disables the usb connection which
 // leeds to problems with the serial monitor.
 
 // Threshold for non periodic data transmission
-const int sendThreshold = 10;
+const int sendThreshold = 40;
 // Sleep intervall (ms)
 const u_int32_t sleepTime = 60000ul; // 4h = 14400000ul (4*60*60*1000)
 // Max. counts between timer calls (to detect a floating interrupt pin)
 const int maxCount = 1000;
+// deactivate the onboard LED after the spezified amount of blinks
+const int maxBlinks = 50;
 
 // Interrupt pins
 const int counterInterruptPin = 1;
@@ -279,12 +281,18 @@ void sendData()
 // blinks the on board led
 void blinkLED(int times)
 {
-  for (int i = 0; i < times; i++)
+  // deactivate the onboard LED after the spezified amount of blinks
+  static int blinkCount = 0;
+  if (blinkCount < maxBlinks)
   {
-    delay(100);
-    digitalWrite(LED_BUILTIN, HIGH);
-    delay(100);
-    digitalWrite(LED_BUILTIN, LOW);
+    ++blinkCount;
+    for (int i = 0; i < times; i++)
+    {
+      delay(100);
+      digitalWrite(LED_BUILTIN, HIGH);
+      delay(100);
+      digitalWrite(LED_BUILTIN, LOW);
+    }
   }
 }
 
