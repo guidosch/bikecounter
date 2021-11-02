@@ -106,7 +106,6 @@ dist
 
 .vscode/c_cpp_properties.json
 hardware/BikeCounterLight/arduino_secrets.h
-hardware/BikeCounterLight/.vscode/c_cpp_properties.json
-hardware/BikeCounterPro/arduino_secrets.h
-hardware/BikeCounterPro/.vscode/c_cpp_properties.json
 hardware/BikeCounterLight/.vscode/
+hardware/BikeCounterPro/arduino_secrets.h
+hardware/BikeCounterPro/.vscode/
