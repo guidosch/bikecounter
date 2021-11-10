@@ -146,7 +146,7 @@ void loop()
   }
 
   // check if the floating interrupt pin bug occured
-  if (totalCounter >= maxCount)
+  if ((totalCounter >= maxCount) || (counter > (sendThreshold + 10)))
   {
     ++pirError;
     if (pirError > 2)
@@ -201,6 +201,7 @@ void onMotionDetected()
 // Connects to LoRa network
 void doConnect()
 {
+  isSending = 1;
   if (!modem.begin(EU868))
   {
     if (debugFlag)
@@ -234,6 +235,10 @@ void doConnect()
   }
   modem.minPollInterval(60);
   blinkLED(3);
+
+  // wait for all data transmission to finish
+  delay(500);
+  isSending = 0;
 }
 
 // Sends the acquired data

@@ -3,26 +3,42 @@
 #include "RTClib.h"
 #include "arduino_secrets.h"
 
-// set debugFlag = 1 to activate serial debug messages and to disable deepSleep
-constexpr bool debugFlag = 1;
+// ----------------------------------------------------
+// ------------- Configuration section ----------------
+// ----------------------------------------------------
 
-// pins
-const int timerInterruptPin = 0;
-const int counterInterruptPin = 1;
-const int batteryVoltagePin = A0;
+// Set this to activate serial debug messages and to disable deepSleep.
+constexpr bool debugFlag = 1;
+// The sleep or deepSleep method disables the usb connection which
+// leeds to problems with the serial monitor.
 
 // threshold for non periodic data transmission
 // dependes on the timer intervall
-// timer <= 1h -> sendThreshold max = 65
-// timer <= 2h -> sendThreshold max = 56
-// timer <= 4h -> sendThreshold max = 49 (selected)
-// timer <= 8h -> sendThreshold max = 43
-// timer <= 17h -> sendThreshold max = 39
-// timer <= 34h -> sendThreshold max = 35
-// timer <= 68h -> sendThreshold max = 32
+// timer <= 1h -> sendThreshold max = 62
+// timer <= 2h -> sendThreshold max = 53
+// timer <= 4h -> sendThreshold max = 47 (selected)
+// timer <= 8h -> sendThreshold max = 41
+// timer <= 17h -> sendThreshold max = 37
 const int sendThreshold = 10;
-// overflow threshold to detect a failure of the motion sensor
-const int countOverflow = 10;
+// Timer interval (days, hours, minutes, seconds)
+TimeSpan alarmInterval = TimeSpan(0, 0, 1, 0);
+// Max. counts between timer calls (to detect a floating interrupt pin)
+const int maxCount = 1000;
+// deactivate the onboard LED after the spezified amount of blinks
+const int maxBlinks = 50;
+
+// Interrupt pins
+const int timerInterruptPin = 0;
+const int counterInterruptPin = 1;
+const int batteryVoltagePin = A0;
+// PIR sensor power pin
+const int pirPowerPin = 2;
+// Used pins (not defined pins will be disabled to save power)
+const int usedPins[] = {LED_BUILTIN, timerInterruptPin, counterInterruptPin, batteryVoltagePin, pirPowerPin};
+
+// ----------------------------------------------------
+// -------------- Declaration section -----------------
+// ----------------------------------------------------
 
 // lora modem object and application properties
 LoRaModem modem(Serial1);
@@ -31,12 +47,11 @@ String appKey = SECRET_APPKEY;
 
 // RTC object
 RTC_DS3231 rtc;
-// Alarm interval (days, hours, minutes, seconds)
-TimeSpan alarmInterval = TimeSpan(0, 0, 1, 0);
 
-// Motion counter value
-// must be volatile as incremented in interrupt
+// Motion counter value (must be volatile as incremented in IRS)
 volatile int counter = 0;
+// total counts between timer calls
+volatile int totalCounter = 0;
 // motion detected flag
 volatile bool motionDetected = 0;
 // time array
@@ -49,17 +64,28 @@ volatile bool timerCalled = 0;
 volatile bool isSending = 0;
 // Error counter for connection
 int errorCounter = 0;
+// Error counter for pir-sensor
+int pirError = 0;
 // LoraPayload size (Count + BatteryLevel + timeArray)
-const int timeValueSize = 8; // 1h = 6bit, 2h = 7bit, 3h = 8bit
-const int payloadSize = 1 + (int)((((float)(3 + 5 + timeValueSize * sendThreshold)) / 8.0f) + 1);
+const int timeValueSize = 8; // 1h = 6bit, 2h = 7bit, 4h = 8bit, 8h = 9bit, 17h = 10bit
+const int payloadSize = 1 + (int)((((float)(3 + 5 + 5 + 3 + 3 + 5 + timeValueSize * sendThreshold)) / 8.0f) + 1);
 
 // Blink methode prototype
 void blinkLED(int times = 1);
 
+// ----------------------------------------------------
+// -------------- Setup section -----------------
+// ----------------------------------------------------
+
 void setup()
 {
-  // setup onboard LED
+  // setup pin modes
   pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(pirPowerPin, OUTPUT);
+  disableUnusedPins(usedPins, sizeof(usedPins) / sizeof(usedPins[0]));
+
+  // power the pir sensor
+  digitalWrite(pirPowerPin, HIGH);
 
   // The MKR WAN 1310 3.3V reference voltage for battery measurements
   analogReference(AR_DEFAULT);
@@ -70,10 +96,6 @@ void setup()
     Serial.begin(9600);
     while (!Serial)
       ;
-  }
-
-  if (debugFlag)
-  {
     Serial.println("RTC setup started");
   }
 
@@ -123,6 +145,7 @@ void setup()
     Serial.println("Lora setup finished");
   }
 
+  // delay to avoide interference with interrupt pin setup
   delay(200);
 
   // setup timer interrupt pin
@@ -139,9 +162,15 @@ void setup()
   }
 }
 
+// ----------------------------------------------------
+// ---------------- Main loop section -----------------
+// ----------------------------------------------------
+
+// The main loop gets executed after the device wakes up
+// (caused by the timer or the motion detection interrupt)
 void loop()
 {
-
+  // check if a motion was detected.
   if (motionDetected)
   {
     motionDetected = 0;
@@ -154,7 +183,8 @@ void loop()
     }
     timeArray[counter] = (currentTime.hour() - houreOfDay) * 60 + currentTime.minute();
 
-    counter++;
+    ++counter;
+    ++totalCounter;
 
     blinkLED();
 
@@ -174,23 +204,43 @@ void loop()
 
   if (((counter >= sendThreshold) || (timerCalled)) && (!isSending))
   {
-    if (debugFlag && timerCalled)
+    if (timerCalled)
     {
-      Serial.println("Timer called");
+      totalCounter = 0;
+      if (debugFlag)
+      {
+        Serial.println("Timer called");
+      }
     }
+
     timerCalled = 0;
     setAlarm(alarmInterval);
 
-    // check if the threshold between two counter calls is exeeded
-    if (counter > (sendThreshold + countOverflow))
+    // check if the floating interrupt pin bug occured
+    // method 1: check if the totalCount exceeds the maxCount inbetween the timer calls.
+    // method 2: detect if the count goes up very qickly. (faster then the board is able to send)
+    if ((totalCounter >= maxCount) || (counter > (sendThreshold + 5)))
     {
-      if (debugFlag)
+      ++pirError;
+      if (pirError > 2)
       {
-        Serial.println("Counter failure. To much motion between timer calls detected!");
+        if (debugFlag)
+        {
+          Serial.println("PIR-sensor error could not me fixed.");
+        }
         while (1)
         {
         }
       }
+      if (debugFlag)
+      {
+        Serial.println("Floating interrupt pin detected.");
+        Serial.println("Resetting PIR-sensor");
+      }
+      digitalWrite(pirPowerPin, LOW);
+      delay(2000);
+      digitalWrite(pirPowerPin, HIGH);
+      totalCounter = 0;
     }
 
     blinkLED(2);
@@ -201,9 +251,14 @@ void loop()
 
   if (!debugFlag)
   {
-    LowPower.sleep();
+    delay(200);
+    LowPower.deepSleep();
   }
 }
+
+// ----------------------------------------------------
+// --------- Methode implementation section -----------
+// ----------------------------------------------------
 
 void onMotionDetected()
 {
@@ -221,6 +276,7 @@ void onTimerInterrupt()
   }
 }
 
+// Connects to LoRa network
 void doConnect()
 {
   isSending = 1;
@@ -342,11 +398,42 @@ void sendData()
 // blinks the on board led
 void blinkLED(int times)
 {
-  for (int i = 0; i <= times; i++)
+  // deactivate the onboard LED after the spezified amount of blinks
+  static int blinkCount = 0;
+  if (blinkCount < maxBlinks)
   {
-    digitalWrite(LED_BUILTIN, HIGH);
-    delay(200);
-    digitalWrite(LED_BUILTIN, LOW);
+    ++blinkCount;
+    for (int i = 0; i < times; i++)
+    {
+      delay(100);
+      digitalWrite(LED_BUILTIN, HIGH);
+      delay(100);
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+  }
+}
+
+// Sets all the unused pins to a defined level
+// Output and LOW
+void disableUnusedPins(const int *const activePins, int size)
+{
+  for (int i = 0; i < 22; ++i)
+  {
+    // check if the current pin occures in the pin array
+    bool isUsed = false;
+    for (int j = 0; j < size; ++j)
+    {
+      if (activePins[j] == i)
+      {
+        isUsed = true;
+      }
+    }
+    // if not, set the pin to output and low
+    if (!isUsed)
+    {
+      pinMode(i, OUTPUT);
+      digitalWrite(i, LOW);
+    }
   }
 }
 
