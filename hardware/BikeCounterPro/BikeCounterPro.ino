@@ -1,6 +1,8 @@
-#include "ArduinoLowPower.h"
 #include <MKRWAN.h>
+#include "ArduinoLowPower.h"
 #include "RTClib.h"
+#include "Adafruit_Sensor.h"
+#include "Adafruit_AM2320.h"
 #include "arduino_secrets.h"
 
 // ----------------------------------------------------
@@ -47,6 +49,9 @@ String appKey = SECRET_APPKEY;
 
 // RTC object
 RTC_DS3231 rtc;
+
+// Humidity and temperature sensor object
+Adafruit_AM2320 am2320 = Adafruit_AM2320();
 
 // Motion counter value (must be volatile as incremented in IRS)
 volatile int counter = 0;
@@ -134,6 +139,15 @@ void setup()
   if (debugFlag)
   {
     Serial.println("RTC setup finished");
+    Serial.println("Temp. sensor setup started");
+  }
+
+  // initialize temperature and humidity sensor
+  am2320.begin();
+
+  if (debugFlag)
+  {
+    Serial.println("Temp. sensor setup finished");
     Serial.println("Lora setup started");
   }
 
@@ -334,6 +348,9 @@ void sendData()
 
   payload[0] = lowByte(counter);
 
+  float temp = am2320.readTemperature();
+  float hum = am2320.readHumidity();
+
   byte batteryLevel = parsBatLevel(getBatteryLevel());
   byte batAndHour;
 
@@ -360,7 +377,11 @@ void sendData()
     {
       Serial.print("Message sent correctly! (count = ");
       Serial.print(counter);
-      Serial.print(" / battery level = ");
+      Serial.print(" / temperature = ");
+      Serial.print(temp);
+      Serial.print("°C / humidity = ");
+      Serial.print(hum);
+      Serial.print("% / battery level = ");
       Serial.print(getBatteryLevel());
       Serial.print(" % / ");
       Serial.print(getBatteryVoltage());
