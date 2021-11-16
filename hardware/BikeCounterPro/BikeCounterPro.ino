@@ -4,6 +4,7 @@
 #include "Adafruit_Sensor.h"
 #include "Adafruit_AM2320.h"
 #include "arduino_secrets.h"
+#include "dataPackage.hpp"
 
 // ----------------------------------------------------
 // ------------- Configuration section ----------------
@@ -71,9 +72,6 @@ volatile bool isSending = 0;
 int errorCounter = 0;
 // Error counter for pir-sensor
 int pirError = 0;
-// LoraPayload size (Count + BatteryLevel + timeArray)
-const int timeValueSize = 8; // 1h = 6bit, 2h = 7bit, 4h = 8bit, 8h = 9bit, 17h = 10bit
-const int payloadSize = 1 + (int)((((float)(3 + 5 + 5 + 3 + 3 + 5 + timeValueSize * sendThreshold)) / 8.0f) + 1);
 
 // Blink methode prototype
 void blinkLED(int times = 1);
@@ -335,6 +333,10 @@ void doConnect()
 
 void sendData()
 {
+  // // LoraPayload size (Count + BatteryLevel + timeArray)
+  // const int timeValueSize = 8; // 1h = 6bit, 2h = 7bit, 4h = 8bit, 8h = 9bit, 17h = 10bit
+  // const int payloadSize = 1 + (int)((((float)(3 + 5 + 5 + 3 + 3 + 5 + timeValueSize * sendThreshold)) / 8.0f) + 1);
+
   isSending = 1;
   int err;
   //data is transmitted as Ascii chars
