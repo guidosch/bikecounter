@@ -2,6 +2,8 @@
 #define DATAPACKAGE_H
 
 #include <math.h>
+#include <stdint.h>
+#include "Arduino.h"
 
 class DataPackage
 {
@@ -23,26 +25,39 @@ public:
      * @param temp (optional) temperatur
      * @param hum (optional) humidity
      * @param hotd (optional) houre of the day
+     * @param tVec (optional) pointer to the time array
      */
-    DataPackage(int intervalTime, int count = 0, int s = 0, int batLevel = 0, int temp = 0, int hum = 0, int hotd = 0);
+    DataPackage(unsigned int intervalTime,
+                uint8_t count = 0,
+                uint8_t s = 0,
+                uint8_t batLevel = 0,
+                uint8_t temp = 0,
+                uint8_t hum = 0,
+                uint8_t hotd = 0,
+                uint8_t *tVec = nullptr);
     DataPackage(const DataPackage &co);
     ~DataPackage();
     // getter and setter
-    void setMotionCount(int count) { motionCount = count; }
-    int getMotionCount() const { return motionCount; }
-    void setStatus(int s) { status = s; }
-    int getStatus() const { return status; }
-    void setBatteryLevel(int bl) { batteryLevel = bl; }
-    int getBatteryLevel() { return batteryLevel; }
-    void setTemperatur(int temp) { temperatur = temp; }
-    int getTemperatur() { return temperatur; }
-    void setHumidity(int hum) { humidity = hum; }
-    int getHumidity() { return humidity; }
-    void setHoureOfTheDay(int h) { houreOfTheDay = h; }
-    int getHoureOfTheDay() { return houreOfTheDay; }
+    void setMotionCount(uint8_t count) { motionCount = count; }
+    uint8_t getMotionCount() const { return motionCount; }
+    void setStatus(uint8_t s) { status = s; }
+    uint8_t getStatus() const { return status; }
+    void setBatteryLevel(uint8_t bl) { batteryLevel = bl; }
+    void setBatteryLevel(float voltage);
+    float getBatteryLevel() const;
+    void setTemperatur(uint8_t temp) { temperatur = temp; }
+    void setTemperatur(float temp);
+    float getTemperatur() const;
+    void setHumidity(uint8_t hum) { humidity = hum; }
+    void setHumidity(float hum);
+    float getHumidity() const;
+    void setHoureOfTheDay(uint8_t h) { houreOfTheDay = h; }
+    uint8_t getHoureOfTheDay() const { return houreOfTheDay; }
+    void setTimeArray(uint8_t *arr) { timeVector = arr; }
+    uint8_t *getTimeArray() const { return timeVector; }
     // payload operations
-    int getPayloadLength() { return 3 + 1 + (int)ceil(((float)(motionCount * minuteBits[selectedInterval])) / 8.0f); }
-    byte *getPayload();
+    int getPayloadLength() const { return 3 + 1 + (int)ceil(((float)(motionCount * minuteBits[selectedInterval])) / 8.0f); }
+    uint8_t *getPayload();
 
 private:
     enum TimerInterval
@@ -55,15 +70,24 @@ private:
     };
     TimerInterval selectedInterval = max_1h;
     int minuteBits[5] = {6, 7, 8, 9, 10};
+    unsigned int bitCountBat = 5;
+    unsigned int bitCountTemp = 5;
+    unsigned int bitCountHum = 3;
+    float minTemp = -20.0f;
+    float maxTemp = 50.0f;
 
-    unsigned int motionCount;
-    unsigned int status;
-    unsigned int batteryLevel;
-    unsigned int temperatur;
-    unsigned int humidity;
-    unsigned int houreOfTheDay;
+    uint8_t motionCount;
+    uint8_t status;
+    uint8_t batteryLevel;
+    uint8_t temperatur;
+    uint8_t humidity;
+    uint8_t houreOfTheDay;
+    uint8_t *timeVector;
 
-    byte payload[51] = {0};
+    uint8_t payload[51] = {0};
+
+    uint8_t reduceFloat(float value, float min, float max, unsigned int bitCount);
+    float expandFloat(uint8_t value, float min, float max, unsigned int bitCount) const;
 };
 
 #endif //DATAPACKAGE_H

@@ -109,3 +109,4 @@ hardware/BikeCounterLight/arduino_secrets.h
 hardware/BikeCounterLight/.vscode/
 hardware/BikeCounterPro/arduino_secrets.h
 hardware/BikeCounterPro/.vscode/
+hardware/build/
