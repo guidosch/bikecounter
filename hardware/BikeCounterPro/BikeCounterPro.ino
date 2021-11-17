@@ -24,7 +24,7 @@ constexpr bool debugFlag = 1;
 // timer <= 17h -> sendThreshold max = 37
 const int sendThreshold = 10;
 // Timer interval (days, hours, minutes, seconds)
-TimeSpan alarmInterval = TimeSpan(0, 0, 1, 0);
+TimeSpan alarmInterval = TimeSpan(0, 0, 5, 0);
 // Max. counts between timer calls (to detect a floating interrupt pin)
 const int maxCount = 1000;
 // deactivate the onboard LED after the spezified amount of blinks
@@ -54,16 +54,19 @@ RTC_DS3231 rtc;
 // Humidity and temperature sensor object
 Adafruit_AM2320 am2320 = Adafruit_AM2320();
 
+// DataPackage object to encode the payload
+DataPackage dataHandler = DataPackage(alarmInterval.totalseconds() / 60);
+
 // Motion counter value (must be volatile as incremented in IRS)
-volatile int counter = 0;
+int counter = 0;
 // total counts between timer calls
-volatile int totalCounter = 0;
+int totalCounter = 0;
 // motion detected flag
 volatile bool motionDetected = 0;
 // time array
-volatile unsigned int timeArray[sendThreshold];
+unsigned int timeArray[sendThreshold];
 // hour of the day for next package
-volatile unsigned int houreOfDay = 0;
+unsigned int houreOfDay = 0;
 // Timer interrupt falg
 volatile bool timerCalled = 0;
 // Lora data transmission flag
@@ -333,45 +336,20 @@ void doConnect()
 
 void sendData()
 {
-  // // LoraPayload size (Count + BatteryLevel + timeArray)
-  // const int timeValueSize = 8; // 1h = 6bit, 2h = 7bit, 4h = 8bit, 8h = 9bit, 17h = 10bit
-  // const int payloadSize = 1 + (int)((((float)(3 + 5 + 5 + 3 + 3 + 5 + timeValueSize * sendThreshold)) / 8.0f) + 1);
-
   isSending = 1;
   int err;
   //data is transmitted as Ascii chars
   modem.beginPacket();
-  byte payload[counter + 2];
 
-  for (int i = 0; i < (counter + 2); ++i)
-  {
-    payload[i] = 0;
-  }
+  dataHandler.setStatus(0);
+  dataHandler.setMotionCount(counter);
+  dataHandler.setBatteryLevel(getBatteryVoltage());
+  dataHandler.setTemperatur(am2320.readTemperature());
+  dataHandler.setHumidity(am2320.readHumidity());
+  dataHandler.setHoureOfTheDay(houreOfDay);
+  dataHandler.setTimeArray(timeArray);
 
-  payload[0] = lowByte(counter);
-
-  float temp = am2320.readTemperature();
-  float hum = am2320.readHumidity();
-
-  byte batteryLevel = 0; //parsBatLevel(getBatteryLevel());
-  byte batAndHour;
-
-  bitWrite(batAndHour, 0, bitRead(batteryLevel, 0));
-  bitWrite(batAndHour, 1, bitRead(batteryLevel, 1));
-  bitWrite(batAndHour, 2, bitRead(batteryLevel, 2));
-  bitWrite(batAndHour, 3, bitRead(houreOfDay, 0));
-  bitWrite(batAndHour, 4, bitRead(houreOfDay, 1));
-  bitWrite(batAndHour, 5, bitRead(houreOfDay, 2));
-  bitWrite(batAndHour, 6, bitRead(houreOfDay, 3));
-  bitWrite(batAndHour, 7, bitRead(houreOfDay, 4));
-  payload[1] = batAndHour;
-
-  for (int i = 0; i < counter; ++i)
-  {
-    payload[i + 2] = timeArray[i];
-  }
-
-  modem.write(payload, sizeof(payload));
+  modem.write(dataHandler.getPayload(), dataHandler.getPayloadLength());
   err = modem.endPacket(false);
   if (err > 0)
   {
@@ -380,11 +358,11 @@ void sendData()
       Serial.print("Message sent correctly! (count = ");
       Serial.print(counter);
       Serial.print(" / temperature = ");
-      Serial.print(temp);
+      Serial.print(dataHandler.getTemperatur());
       Serial.print("°C / humidity = ");
-      Serial.print(hum);
+      Serial.print(dataHandler.getHumidity());
       Serial.print("% / battery level = ");
-      Serial.print(getBatteryLevel());
+      Serial.print(dataHandler.getBatteryLevel());
       Serial.print(" % / ");
       Serial.print(getBatteryVoltage());
       Serial.println(" V)");

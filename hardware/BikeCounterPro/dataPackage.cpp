@@ -7,13 +7,13 @@ DataPackage::DataPackage(unsigned int intervalTime,
                          uint8_t temp,
                          uint8_t hum,
                          uint8_t hotd,
-                         uint8_t *tVec) : motionCount(count),
-                                          status(s),
-                                          batteryLevel(batLevel),
-                                          temperatur(temp),
-                                          humidity(hum),
-                                          houreOfTheDay(hotd),
-                                          timeVector(tVec)
+                         unsigned int *tVec) : motionCount(count),
+                                               status(s),
+                                               batteryLevel(batLevel),
+                                               temperatur(temp),
+                                               humidity(hum),
+                                               houreOfTheDay(hotd),
+                                               timeVector(tVec)
 {
     //set the interval index according to the selected timer interval
     if (intervalTime <= 60)

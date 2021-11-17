@@ -34,9 +34,8 @@ public:
                 uint8_t temp = 0,
                 uint8_t hum = 0,
                 uint8_t hotd = 0,
-                uint8_t *tVec = nullptr);
+                unsigned int *tVec = nullptr);
     DataPackage(const DataPackage &co);
-    ~DataPackage();
     // getter and setter
     void setMotionCount(uint8_t count) { motionCount = count; }
     uint8_t getMotionCount() const { return motionCount; }
@@ -53,8 +52,8 @@ public:
     float getHumidity() const;
     void setHoureOfTheDay(uint8_t h) { houreOfTheDay = h; }
     uint8_t getHoureOfTheDay() const { return houreOfTheDay; }
-    void setTimeArray(uint8_t *arr) { timeVector = arr; }
-    uint8_t *getTimeArray() const { return timeVector; }
+    void setTimeArray(unsigned int *arr) { timeVector = arr; }
+    unsigned int *getTimeArray() const { return timeVector; }
     // payload operations
     int getPayloadLength() const { return 3 + 1 + (int)ceil(((float)(motionCount * minuteBits[selectedInterval])) / 8.0f); }
     uint8_t *getPayload();
@@ -82,7 +81,7 @@ private:
     uint8_t temperatur;
     uint8_t humidity;
     uint8_t houreOfTheDay;
-    uint8_t *timeVector;
+    unsigned int *timeVector;
 
     uint8_t payload[51] = {0};
 
