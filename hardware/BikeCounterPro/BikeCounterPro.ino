@@ -196,6 +196,13 @@ void loop()
   {
     motionDetected = 0;
 
+    // reinitialize the rtc to be sure that the connection is still good
+    bool rtcConnection = rtc.begin();
+    if ((!rtcConnection) && debugFlag)
+    {
+      Serial.println("NO connection to RTC");
+    }
+
     DateTime currentTime = rtc.now();
 
     if (counter == 0)
