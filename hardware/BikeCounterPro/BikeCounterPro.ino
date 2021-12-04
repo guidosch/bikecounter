@@ -90,11 +90,14 @@ void setup()
   pinMode(pirPowerPin, OUTPUT);
   disableUnusedPins(usedPins, sizeof(usedPins) / sizeof(usedPins[0]));
 
-  // power the pir sensor
-  digitalWrite(pirPowerPin, HIGH);
+  // disable the pir sensor
+  digitalWrite(pirPowerPin, LOW);
 
   // The MKR WAN 1310 3.3V reference voltage for battery measurements
   analogReference(AR_DEFAULT);
+
+  // initialize the I2C communication
+  Wire.begin();
 
   if (debugFlag)
   {
@@ -170,6 +173,9 @@ void setup()
   // setup counter interrupt
   pinMode(counterInterruptPin, INPUT_PULLDOWN);
   LowPower.attachInterruptWakeup(counterInterruptPin, onMotionDetected, RISING);
+
+  // power the pir sensor
+  digitalWrite(pirPowerPin, HIGH);
 
   if (debugFlag)
   {
