@@ -196,7 +196,8 @@ void loop()
   {
     motionDetected = 0;
 
-    // reinitialize the rtc to be sure that the connection is still good
+    // reinitialize the rtc connection
+    // due to the voltage drop while sending the connection needs to be reinitialize
     bool rtcConnection = rtc.begin();
     if ((!rtcConnection) && debugFlag)
     {

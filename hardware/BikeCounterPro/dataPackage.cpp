@@ -94,8 +94,8 @@ uint8_t *DataPackage::getPayload()
     unsigned int offsetBits = 4 * 8;
     for (int payloadBit = offsetBits; payloadBit < ((motionCount * minuteBits[selectedInterval]) + offsetBits); ++payloadBit)
     {
-        unsigned int currentMotionByte = payloadBit / minuteBits[selectedInterval];
-        unsigned int currentMotionBit = payloadBit % minuteBits[selectedInterval];
+        unsigned int currentMotionByte = (payloadBit - offsetBits) / minuteBits[selectedInterval];
+        unsigned int currentMotionBit = (payloadBit - offsetBits) % minuteBits[selectedInterval];
         unsigned int currentPayloadByte = payloadBit / 8;
         unsigned int currentPayloadBit = payloadBit % 8;
 
