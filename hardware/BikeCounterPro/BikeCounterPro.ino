@@ -454,6 +454,14 @@ void disableUnusedPins(const int *const activePins, int size)
 
 void setAlarm(TimeSpan dt)
 {
+  // reinitialize the rtc connection
+  // due to the voltage drop while sending the connection needs to be reinitialize
+  bool rtcConnection = rtc.begin();
+  if ((!rtcConnection) && debugFlag)
+  {
+    Serial.println("NO connection to RTC");
+  }
+
   rtc.clearAlarm(1);
 
   DateTime nextAlarm = rtc.now() + dt;
