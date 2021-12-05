@@ -42,22 +42,19 @@ function decodeUplink(input) {
     for (var j = 0; j < data.count; j++) {
         absMinArray[j] = 0;
     }
-    for (var payloadBit = offsetBits; payloadBit < ((data.count * intervalBitSize[data.selectedIntervall]) + offsetBits); payloadBit++) {
-        var currentMotionByte = (payloadBit - offsetBits) / intervalBitSize[data.selectedIntervall];
-        var currentMotionBit = (payloadBit - offsetBits) % intervalBitSize[data.selectedIntervall];
-        var currentMotionBitMask = (1 << currentMotionBit) >> 1;
-        var currentPayloadByte = payloadBit / 8;
-        var currentPayloadBit = payloadBit % 8;
-        var currentPayloadBitMask = (1 << currentPayloadBit) >> 1;
 
+    for (var payloadBit = offsetBits; payloadBit < ((data.count * intervalBitSize[data.intervallId]) + offsetBits); payloadBit++) {
+        var currentMotionByte = Math.floor((payloadBit - offsetBits) / intervalBitSize[data.intervallId]);
+        var currentMotionBit = Math.floor((payloadBit - offsetBits) % intervalBitSize[data.intervallId]);
+        var currentMotionBitMask = 1 << currentMotionBit;
+        var currentPayloadByte = Math.floor(payloadBit / 8);
+        var currentPayloadBit = Math.floor(payloadBit % 8);
+        var currentPayloadBitMask = 1 << currentPayloadBit;
+        
         var readBit = input.bytes[currentPayloadByte] & currentPayloadBitMask;
 
-        if (readBit === 0) {
-            // clear bit
-            absMinArray[currentMotionByte] &= ~currentMotionBitMask;
-        }
-        else {
-            // set bit
+        if (readBit !== 0) {
+             // set bit
             absMinArray[currentMotionByte] |= currentMotionBitMask;
         }
     }
@@ -65,7 +62,7 @@ function decodeUplink(input) {
     var minArray = [];
     for (var k = 0; k < data.count; k++) {
         hourArray.push(data.hourOfDay + Math.floor(absMinArray[k] / 60));
-        minArray.push(Math.floor(absMinArray[k] % 60));
+        minArray.push(absMinArray[k] % 60);
     }
     // create output time array
     var ts = new Date(Date.now());
@@ -73,18 +70,39 @@ function decodeUplink(input) {
     ts.setUTCMinutes(0);
     ts.setUTCSeconds(0);
     ts.setUTCMilliseconds(0);
-    var ta = [];
+
+    data.timeArray = [];
     for (var l = 0; l < data.count; l++) {
-        var ts_i = ts;
-        ts.setUTCHours(hourArray[l]);
+        var ts_i = new Date(ts);
+        ts_i.setUTCHours(hourArray[l]);
         ts_i.setUTCMinutes(minArray[l]);
-        ta.push(ts_i);
+        data.timeArray.push(ts_i);
     }
-    // data.date = ts.getUTCFullYear() + "." + (ts.getUTCMonth()+1) + "." + ts.getUTCDate();
-    data.timeArray = ta;
+
     return {
         data: data,
         warnings: [],
         errors: []
     };
 }
+
+/*
+// Motion detected (current count = 1 / time: 19:56:57)
+// Motion detected (current count = 2 / time: 19:57:9)
+// Motion detected (current count = 3 / time: 19:58:13)
+// Motion detected (current count = 4 / time: 19:58:17)
+// Motion detected (current count = 5 / time: 19:58:20)
+// Motion detected (current count = 6 / time: 19:58:24)
+// Motion detected (current count = 7 / time: 19:58:27)
+// Motion detected (current count = 8 / time: 19:58:31)
+// Motion detected (current count = 9 / time: 19:58:34)
+// Motion detected (current count = 10 / time: 19:58:37)
+// Message sent correctly! (count = 10 / temperature = 22.90°C / humidity = 42.86% / battery level = 25.81 % / 2.96 V)
+*/
+var input = {};
+input.bytes = [0x0A, 0x40, 0x73, 0x98, 0x78, 0xAE, 0xEB, 0xBA, 0xAE, 0xEB, 0xBA, 0x0E];
+//input.bytes = [0x0A, 0x40, 0x73, 0xA8, 0x59, 0x96, 0x65, 0x9A, 0xA6, 0x69, 0x9A, 0x06];
+var test = decodeUplink(input);
+
+console.log(test.data.timeArray);
+
