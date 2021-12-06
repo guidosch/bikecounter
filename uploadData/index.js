@@ -1,5 +1,5 @@
 const functions = require("firebase-functions"),
-    admin = require("firebase-admin");
+admin = require("firebase-admin");
 
 const app = admin.initializeApp();
 const firestore = app.firestore();
@@ -9,10 +9,36 @@ firestore.settings({ timestampsInSnapshots: true });
 
 const auth = app.auth();
 
+
+exports.storeBikecounterData = (req, res) => {
+    let payload = req.body;
+    let deviceId;
+    const app_id = payload.end_device_ids.application_ids.application_id;
+    if (payload && app_id == "bikecounterzueritrails") {
+        deviceId = payload.end_device_ids.device_id;
+        const counter = payload.uplink_message.decoded_payload.counter;
+        const timestamp = payload.received_at;
+
+        //Low power does not work and data is added several times
+        if (!alreadyAdded(deviceId, timestamp, 10)) {
+
+            try {
+                firestore.collection(`${deviceId}`).add({'counter': counter, 'timestamp': timestamp });
+                console.log(`Added data for ${deviceId}`);
+            } catch (error) {
+                console.error(`error while trying to store data for: ${deviceId}`, error);
+            }
+        }
+        res.status(200).send(deviceId);
+    } else {
+        console.error("payload not valid: "+JSON.stringify(payload));
+        res.status(404).send(deviceId);
+    }
+};
+
 exports.storeHeatpumpData = (req, res) => {
     let payload = req.body;
     let deviceId;
-    //see sampleData ttnV3 json file for json object structure
     const app_id = payload.end_device_ids.application_ids.application_id;
     if (payload && app_id == "freecooling-monitor") {
         deviceId = payload.end_device_ids.device_id;
@@ -37,30 +63,6 @@ exports.storeHeatpumpData = (req, res) => {
     }
 };
 
-exports.storeBikecounterData = (req, res) => {
-    let payload = req.body;
-    let deviceId;
-    const app_id = payload.end_device_ids.application_ids.application_id;
-    if (payload && app_id == "bikecounter") {
-        deviceId = payload.end_device_ids.device_id;
-        const counter = payload.uplink_message.decoded_payload.counter;
-        const timestamp = payload.received_at;
-
-        //data comes sometimes twice from TTN???
-        if (!alreadyAdded(deviceId, timestamp, 1)) {
-            try {
-                firestore.collection(`${deviceId}`).add({ 'counter': counter, 'timestamp': timestamp });
-                console.log(`Added data for ${deviceId}`);
-            } catch (error) {
-                console.error(`error while trying to store data for: ${deviceId}`, error);
-            }
-        }
-        res.status(200).send(deviceId);
-    } else {
-        console.error("payload not valid: "+JSON.stringify(payload));
-        res.status(404).send(deviceId);
-    }
-};
 
 function alreadyAdded(deviceId, timestamp, minutes) {
     let time = new Date(Date.parse(timestamp));
