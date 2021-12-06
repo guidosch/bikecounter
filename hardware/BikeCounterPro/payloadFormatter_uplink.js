@@ -14,14 +14,14 @@ function decodeUplink(input) {
     };
     data.stat = statusCode[(input.bytes[1] & 0x07)];
     // battery level
-    data.batteryIndex = input.bytes[1] >> 3;
-    data.batteryLevel = 100 / (32 - 1) * data.batteryIndex;
+    let batteryIndex = input.bytes[1] >> 3;
+    data.batteryLevel = 100 / (32 - 1) * batteryIndex;
     // temperatur
-    data.tempIndex = input.bytes[2] & 0x1F;
-    data.temperatur = 70 / (32 - 1) * data.tempIndex - 20;
+    let tempIndex = input.bytes[2] & 0x1F;
+    data.temperatur = 70 / (32 - 1) * tempIndex - 20;
     // humidity
-    data.humIndex = input.bytes[2] >> 5;
-    data.humidity = 100 / (8 - 1) * data.humIndex;
+    let humIndex = input.bytes[2] >> 5;
+    data.humidity = 100 / (8 - 1) * humIndex;
     // timer interval
     data.intervallId = input.bytes[3] & 0x07;
     var intervalTime = {
@@ -76,7 +76,7 @@ function decodeUplink(input) {
         var ts_i = new Date(ts);
         ts_i.setUTCHours(hourArray[l]);
         ts_i.setUTCMinutes(minArray[l]);
-        data.timeArray.push(ts_i);
+        data.timeArray.push(ts_i.getTime());
     }
 
     return {
