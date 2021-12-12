@@ -1,4 +1,4 @@
-19110416102112258
+19115340087054397
 Battery
 BatteryHolder_Bulgin_BX0036_1xC
 Bulgin Battery Holder, BX0036, Battery Type C (https://www.bulgin.com/products/pub/media/bulgin/data/Battery_holders.pdf)
@@ -52282,6 +52282,27 @@ BatteryHolder_Keystone_1049_2x18650
 0
 4
 4
+General_TM
+Switch_MHS12204
+
+
+0
+3
+3
+GraphicsLib
+ZueriTrailsLogo
+
+
+0
+0
+0
+GraphicsLib
+ZueriTrailsLogo_small
+
+
+0
+0
+0
 Heatsink
 Heatsink_35x26mm_1xFixation3mm_Fischer-SK486-35
 Heatsink, 35mm x 26mm, 1x Fixation 3mm, Fischer SK486-35

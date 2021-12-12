@@ -27,76 +27,65 @@ $EndComp
 $Comp
 L Device:R R2
 U 1 1 615B9C8E
-P 4050 3700
-F 0 "R2" H 4120 3746 50  0000 L CNN
-F 1 "1.2M" H 4120 3655 50  0000 L CNN
-F 2 "Resistor_SMD:R_1206_3216Metric_Pad1.42x1.75mm_HandSolder" V 3980 3700 50  0001 C CNN
-F 3 "~" H 4050 3700 50  0001 C CNN
-	1    4050 3700
+P 3550 3700
+F 0 "R2" H 3620 3746 50  0000 L CNN
+F 1 "1.2M" H 3620 3655 50  0000 L CNN
+F 2 "Resistor_SMD:R_1206_3216Metric_Pad1.42x1.75mm_HandSolder" V 3480 3700 50  0001 C CNN
+F 3 "~" H 3550 3700 50  0001 C CNN
+	1    3550 3700
 	1    0    0    -1  
 $EndComp
 $Comp
 L Device:R R1
 U 1 1 615BA347
-P 4050 3300
-F 0 "R1" H 4120 3346 50  0000 L CNN
-F 1 "330k" H 4120 3255 50  0000 L CNN
-F 2 "Resistor_SMD:R_1206_3216Metric_Pad1.42x1.75mm_HandSolder" V 3980 3300 50  0001 C CNN
-F 3 "~" H 4050 3300 50  0001 C CNN
-	1    4050 3300
+P 3550 3300
+F 0 "R1" H 3620 3346 50  0000 L CNN
+F 1 "330k" H 3620 3255 50  0000 L CNN
+F 2 "Resistor_SMD:R_1206_3216Metric_Pad1.42x1.75mm_HandSolder" V 3480 3300 50  0001 C CNN
+F 3 "~" H 3550 3300 50  0001 C CNN
+	1    3550 3300
 	1    0    0    -1  
 $EndComp
 $Comp
 L Device:C C1
 U 1 1 615B5D7E
-P 3600 3700
-F 0 "C1" H 3715 3746 50  0000 L CNN
-F 1 "0.1uF" H 3715 3655 50  0000 L CNN
-F 2 "Capacitor_SMD:C_0805_2012Metric_Pad1.15x1.40mm_HandSolder" H 3638 3550 50  0001 C CNN
-F 3 "~" H 3600 3700 50  0001 C CNN
-	1    3600 3700
+P 3100 3700
+F 0 "C1" H 3215 3746 50  0000 L CNN
+F 1 "0.1uF" H 3215 3655 50  0000 L CNN
+F 2 "Capacitor_SMD:C_0805_2012Metric_Pad1.15x1.40mm_HandSolder" H 3138 3550 50  0001 C CNN
+F 3 "~" H 3100 3700 50  0001 C CNN
+	1    3100 3700
 	1    0    0    -1  
 $EndComp
 Wire Wire Line
-	4050 3450 4050 3500
+	3550 3450 3550 3500
 Wire Wire Line
-	3600 3550 3600 3500
+	3100 3550 3100 3500
 Wire Wire Line
-	3600 3500 4050 3500
-Connection ~ 4050 3500
+	3100 3500 3550 3500
+Connection ~ 3550 3500
 Wire Wire Line
-	4050 3500 4050 3550
+	3550 3500 3550 3550
 Wire Wire Line
-	4050 3950 4050 3850
+	3550 3950 3550 3850
 Wire Wire Line
-	4050 3950 3600 3950
+	3550 3950 3100 3950
 Wire Wire Line
-	3600 3950 3600 3850
+	3100 3950 3100 3850
 $Comp
 L power:GND #PWR0104
 U 1 1 615B913B
-P 3600 4000
-F 0 "#PWR0104" H 3600 3750 50  0001 C CNN
-F 1 "GND" H 3605 3827 50  0000 C CNN
-F 2 "" H 3600 4000 50  0001 C CNN
-F 3 "" H 3600 4000 50  0001 C CNN
-	1    3600 4000
+P 3100 4000
+F 0 "#PWR0104" H 3100 3750 50  0001 C CNN
+F 1 "GND" H 3105 3827 50  0000 C CNN
+F 2 "" H 3100 4000 50  0001 C CNN
+F 3 "" H 3100 4000 50  0001 C CNN
+	1    3100 4000
 	1    0    0    -1  
 $EndComp
 Wire Wire Line
-	3600 4000 3600 3950
-Connection ~ 3600 3950
-$Comp
-L Timer_RTC:DS3231M U1
-U 1 1 615C6A37
-P 8650 2950
-F 0 "U1" H 8200 2550 50  0000 C CNN
-F 1 "DS3231M" H 8200 2450 50  0000 C CNN
-F 2 "Package_SO:SOIC-16W_7.5x10.3mm_P1.27mm" H 8650 2350 50  0001 C CNN
-F 3 "http://datasheets.maximintegrated.com/en/ds/DS3231.pdf" H 8920 3000 50  0001 C CNN
-	1    8650 2950
-	1    0    0    -1  
-$EndComp
+	3100 4000 3100 3950
+Connection ~ 3100 3950
 $Comp
 L Device:R R4
 U 1 1 615C81F9
@@ -251,27 +240,6 @@ Wire Wire Line
 	8650 2400 9900 2400
 Wire Wire Line
 	4800 4200 4950 4200
-Wire Wire Line
-	9150 3050 9250 3050
-$Comp
-L Connector:Conn_01x04_Female J2
-U 1 1 615E1037
-P 6650 1550
-F 0 "J2" H 6678 1526 50  0000 L CNN
-F 1 "AUX" H 6678 1435 50  0000 L CNN
-F 2 "Connector_PinSocket_2.54mm:PinSocket_1x04_P2.54mm_Vertical" H 6650 1550 50  0001 C CNN
-F 3 "~" H 6650 1550 50  0001 C CNN
-	1    6650 1550
-	1    0    0    -1  
-$EndComp
-Wire Wire Line
-	8150 3150 8050 3150
-Wire Wire Line
-	9150 2750 9250 2750
-Wire Wire Line
-	6300 1650 6450 1650
-Wire Wire Line
-	6300 1750 6450 1750
 $Comp
 L Connector:Conn_01x04_Male J1
 U 1 1 615E6BA2
@@ -347,32 +315,6 @@ Wire Wire Line
 	8850 2050 8850 2100
 Wire Wire Line
 	4800 4300 4950 4300
-$Comp
-L power:GND #PWR0114
-U 1 1 615F4A01
-P 6300 1450
-F 0 "#PWR0114" H 6300 1200 50  0001 C CNN
-F 1 "GND" V 6305 1322 50  0000 R CNN
-F 2 "" H 6300 1450 50  0001 C CNN
-F 3 "" H 6300 1450 50  0001 C CNN
-	1    6300 1450
-	0    1    1    0   
-$EndComp
-$Comp
-L power:+3.3V #PWR0115
-U 1 1 615F408E
-P 6300 1550
-F 0 "#PWR0115" H 6300 1400 50  0001 C CNN
-F 1 "+3.3V" V 6315 1678 50  0000 L CNN
-F 2 "" H 6300 1550 50  0001 C CNN
-F 3 "" H 6300 1550 50  0001 C CNN
-	1    6300 1550
-	0    -1   -1   0   
-$EndComp
-Wire Wire Line
-	6450 1450 6300 1450
-Wire Wire Line
-	6450 1550 6300 1550
 Wire Wire Line
 	3800 4950 3950 4950
 $Comp
@@ -408,16 +350,6 @@ Text GLabel 4800 4300 0    50   Input ~ 0
 PIR_signal
 Text GLabel 4800 4200 0    50   Input ~ 0
 RTC_timer
-Text GLabel 9250 3050 2    50   Input ~ 0
-RTC_timer
-Text GLabel 9250 2750 2    50   Input ~ 0
-RTC_32KHZ
-Text GLabel 8050 3150 0    50   Input ~ 0
-RTC_RST
-Text GLabel 6300 1750 0    50   Input ~ 0
-RTC_32KHZ
-Text GLabel 6300 1650 0    50   Input ~ 0
-RTC_RST
 Wire Wire Line
 	9900 2500 9900 2400
 NoConn ~ 4950 3400
@@ -562,33 +494,18 @@ Wire Wire Line
 Wire Wire Line
 	6000 4300 6350 4300
 $Comp
-L Switch:SW_DIP_x03 SW1
+L Switch:SW_DIP_x03 SW2
 U 1 1 61605D37
-P 7350 4500
-F 0 "SW1" H 7350 4967 50  0000 C CNN
-F 1 "SW_DIP_x03" H 7350 4876 50  0000 C CNN
-F 2 "Button_Switch_SMD:SW_DIP_SPSTx03_Slide_6.7x9.18mm_W8.61mm_P2.54mm_LowProfile" H 7350 4500 50  0001 C CNN
-F 3 "~" H 7350 4500 50  0001 C CNN
-	1    7350 4500
-	1    0    0    -1  
+P 7350 4300
+F 0 "SW2" H 7350 4000 50  0000 C CNN
+F 1 "SW_DIP_x03" H 7350 4100 50  0000 C CNN
+F 2 "Button_Switch_SMD:SW_DIP_SPSTx03_Slide_6.7x9.18mm_W8.61mm_P2.54mm_LowProfile" H 7350 4300 50  0001 C CNN
+F 3 "~" H 7350 4300 50  0001 C CNN
+	1    7350 4300
+	1    0    0    1   
 $EndComp
 NoConn ~ 4950 2900
 NoConn ~ 4950 3000
-$Comp
-L Connector:Conn_01x01_Female J3
-U 1 1 61A49201
-P 3850 3000
-F 0 "J3" H 3742 3185 50  0000 C CNN
-F 1 "Vbat" H 3742 3094 50  0000 C CNN
-F 2 "Connector_PinSocket_2.54mm:PinSocket_1x01_P2.54mm_Vertical" H 3850 3000 50  0001 C CNN
-F 3 "~" H 3850 3000 50  0001 C CNN
-	1    3850 3000
-	-1   0    0    -1  
-$EndComp
-Wire Wire Line
-	4050 3000 4050 3150
-Wire Wire Line
-	4050 3500 4950 3500
 $Comp
 L Connector:Conn_01x04_Female J4
 U 1 1 61AC02D4
@@ -692,4 +609,92 @@ Wire Wire Line
 	3600 1300 3600 1400
 Wire Wire Line
 	3600 1800 4150 1800
+$Comp
+L Connector:Conn_01x02_Female J3
+U 1 1 61B73454
+P 4000 2800
+F 0 "J3" H 4050 2800 50  0000 L CNN
+F 1 "Battery connector" H 4050 2700 50  0000 L CNN
+F 2 "Connector_PinSocket_2.54mm:PinSocket_1x02_P2.54mm_Vertical" H 4000 2800 50  0001 C CNN
+F 3 "~" H 4000 2800 50  0001 C CNN
+	1    4000 2800
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	3550 3500 4950 3500
+$Comp
+L Connector:Conn_01x02_Female J2
+U 1 1 61B7F74F
+P 2550 2800
+F 0 "J2" H 2700 2800 50  0000 C CNN
+F 1 "Power layer connector" H 3050 2700 50  0000 C CNN
+F 2 "Connector_PinSocket_2.54mm:PinSocket_1x02_P2.54mm_Vertical" H 2550 2800 50  0001 C CNN
+F 3 "~" H 2550 2800 50  0001 C CNN
+	1    2550 2800
+	-1   0    0    -1  
+$EndComp
+$Comp
+L Switch:SW_SPST SW1
+U 1 1 61B85A6B
+P 3150 2800
+F 0 "SW1" H 3150 3035 50  0000 C CNN
+F 1 "SW_SPST" H 3150 2944 50  0000 C CNN
+F 2 "General_TM:Switch_MHS12204" H 3150 2800 50  0001 C CNN
+F 3 "~" H 3150 2800 50  0001 C CNN
+	1    3150 2800
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	2750 2800 2950 2800
+Wire Wire Line
+	3350 2800 3550 2800
+Wire Wire Line
+	2750 2900 3800 2900
+Wire Wire Line
+	3550 2800 3550 3150
+Connection ~ 3550 2800
+Wire Wire Line
+	3550 2800 3800 2800
+$Comp
+L Timer_RTC:DS3231M U1
+U 1 1 615C6A37
+P 8650 2950
+F 0 "U1" H 8200 2550 50  0000 C CNN
+F 1 "DS3231M" H 8200 2450 50  0000 C CNN
+F 2 "Package_SO:SOIC-16W_7.5x10.3mm_P1.27mm" H 8650 2350 50  0001 C CNN
+F 3 "http://datasheets.maximintegrated.com/en/ds/DS3231.pdf" H 8920 3000 50  0001 C CNN
+	1    8650 2950
+	1    0    0    -1  
+$EndComp
+Text GLabel 9250 3050 2    50   Input ~ 0
+RTC_timer
+Wire Wire Line
+	9150 3050 9250 3050
+Text GLabel 9250 2750 2    50   Input ~ 0
+RTC_32kHz
+Text GLabel 10150 3500 2    50   Input ~ 0
+RTC_32kHz
+Wire Wire Line
+	9150 2750 9250 2750
+Text GLabel 10150 3600 2    50   Input ~ 0
+RTC_RST
+Text GLabel 8050 3150 0    50   Input ~ 0
+RTC_RST
+Wire Wire Line
+	8050 3150 8150 3150
+$Comp
+L Connector:Conn_01x02_Female J5
+U 1 1 61BC8555
+P 9800 3500
+F 0 "J5" H 9850 3500 50  0000 L CNN
+F 1 "RTC AUX" H 9850 3400 50  0000 L CNN
+F 2 "Connector_PinSocket_2.54mm:PinSocket_1x02_P2.54mm_Vertical" H 9800 3500 50  0001 C CNN
+F 3 "~" H 9800 3500 50  0001 C CNN
+	1    9800 3500
+	-1   0    0    -1  
+$EndComp
+Wire Wire Line
+	10000 3500 10150 3500
+Wire Wire Line
+	10000 3600 10150 3600
 $EndSCHEMATC
