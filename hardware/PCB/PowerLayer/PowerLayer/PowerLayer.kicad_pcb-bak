@@ -967,7 +967,7 @@
   (gr_circle (center 152.146 124.146) (end 150.346 124.146) (layer Dwgs.User) (width 0.15) (tstamp 61B64923))
   (gr_circle (center 57.146 152.146) (end 58.946 152.146) (layer Edge.Cuts) (width 0.15) (tstamp 61B64922))
   (gr_circle (center 57.146 124.146) (end 58.946 124.146) (layer Edge.Cuts) (width 0.15) (tstamp 61B64921))
-  (gr_circle (center 152.146 152.146) (end 153.946 152.146) (layer Dwgs.User) (width 0.15) (tstamp 61B64920))
+  (gr_circle (center 152.146 152.146) (end 153.946 152.146) (layer Edge.Cuts) (width 0.15) (tstamp 61B64920))
   (gr_arc (start 49.401 111.731) (end 57.731 111.731) (angle 90) (layer Edge.Cuts) (width 0.15) (tstamp 61B6491F))
   (gr_line (start 60.931 156.231) (end 49.401 156.231) (layer Dwgs.User) (width 0.15) (tstamp 61B6491E))
   (gr_line (start 57.731 111.731) (end 140.031 111.731) (layer Edge.Cuts) (width 0.15) (tstamp 61B6491D))
