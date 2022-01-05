@@ -15,13 +15,13 @@ function decodeUplink(input) {
     data.stat = statusCode[(input.bytes[1] & 0x07)];
     // battery level
     let batteryIndex = input.bytes[1] >> 3;
-    data.batteryLevel = 100 / (32 - 1) * batteryIndex;
+    data.batteryLevel = Math.round(((100 / (32 - 1) * batteryIndex)) * 10) / 10;
     // temperatur
     let tempIndex = input.bytes[2] & 0x1F;
-    data.temperatur = 70 / (32 - 1) * tempIndex - 20;
+    data.temperature = Math.round(((70 / (32 - 1) * tempIndex - 20)) * 10) / 10 ;
     // humidity
     let humIndex = input.bytes[2] >> 5;
-    data.humidity = 100 / (8 - 1) * humIndex;
+    data.humidity = Math.round(((100 / (8 - 1) * humIndex)) * 10) / 10;
     // timer interval
     data.intervallId = input.bytes[3] & 0x07;
     var intervalTime = {
