@@ -10,11 +10,6 @@
 // ------------- Configuration section ----------------
 // ----------------------------------------------------
 
-// Set this to activate serial debug messages and to disable deepSleep.
-constexpr bool debugFlag = 1;
-// The sleep or deepSleep method disables the usb connection which
-// leeds to problems with the serial monitor.
-
 // threshold for non periodic data transmission
 // dependes on the timer intervall
 // timer <= 1h -> sendThreshold max = 62
@@ -27,17 +22,19 @@ const int sendThreshold = 10;
 TimeSpan alarmInterval = TimeSpan(0, 0, 5, 0);
 // Max. counts between timer calls (to detect a floating interrupt pin)
 const int maxCount = 1000;
-// deactivate the onboard LED after the spezified amount of blinks
+// deactivate the onboard LED after the specified amount of blinks
 const int maxBlinks = 50;
 
 // Interrupt pins
 const int timerInterruptPin = 0;
 const int counterInterruptPin = 1;
+const int debugSwitchPin = 8;
+const int configSwitchPin = 9;
 const int batteryVoltagePin = A0;
 // PIR sensor power pin
 const int pirPowerPin = 2;
 // Used pins (not defined pins will be disabled to save power)
-const int usedPins[] = {LED_BUILTIN, timerInterruptPin, counterInterruptPin, batteryVoltagePin, pirPowerPin};
+const int usedPins[] = {LED_BUILTIN, timerInterruptPin, counterInterruptPin, debugSwitchPin, configSwitchPin, batteryVoltagePin, pirPowerPin};
 
 // ----------------------------------------------------
 // -------------- Declaration section -----------------
@@ -67,14 +64,18 @@ volatile bool motionDetected = 0;
 unsigned int timeArray[sendThreshold];
 // hour of the day for next package
 unsigned int houreOfDay = 0;
-// Timer interrupt falg
-volatile bool timerCalled = 0;
+// Timer interrupt flag (initial on 1 to trigger a dummy message on startup)
+volatile bool timerCalled = 1;
 // Lora data transmission flag
 volatile bool isSending = 0;
 // Error counter for connection
 int errorCounter = 0;
 // Error counter for pir-sensor
 int pirError = 0;
+// Holdes the debug state of the dip switch
+int debugFlag = 0;
+// Holdes the config state of the dip switch
+int configFlag = 0;
 
 // Blink methode prototype
 void blinkLED(int times = 1);
@@ -85,6 +86,17 @@ void blinkLED(int times = 1);
 
 void setup()
 {
+  // read dip switch states
+  pinMode(debugSwitchPin, INPUT);
+  pinMode(configSwitchPin, INPUT);
+  debugFlag = digitalRead(debugSwitchPin);
+  configFlag = digitalRead(configSwitchPin);
+  // deactivate the dip switch pins
+  pinMode(debugSwitchPin, OUTPUT);
+  pinMode(configSwitchPin, OUTPUT);
+  digitalWrite(debugSwitchPin, LOW);
+  digitalWrite(configSwitchPin, LOW);
+
   // setup pin modes
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(pirPowerPin, OUTPUT);
