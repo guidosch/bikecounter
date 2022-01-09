@@ -1,7 +1,6 @@
 #include <MKRWAN.h>
 #include "ArduinoLowPower.h"
 #include "RTClib.h"
-//#include "Adafruit_Sensor.h"
 #include "Adafruit_AM2320.h"
 #include "arduino_secrets.h"
 #include "dataPackage.hpp"
@@ -11,7 +10,7 @@
 // ----------------------------------------------------
 
 // threshold for non periodic data transmission
-// dependes on the timer intervall
+// depends on the timer intervall
 // timer <= 1h -> sendThreshold max = 62
 // timer <= 2h -> sendThreshold max = 53
 // timer <= 4h -> sendThreshold max = 47 (selected)
@@ -72,9 +71,9 @@ volatile bool isSending = 0;
 int errorCounter = 0;
 // Error counter for pir-sensor
 int pirError = 0;
-// Holdes the debug state of the dip switch
+// Holds the debug state of the dip switch
 int debugFlag = 0;
-// Holdes the config state of the dip switch
+// Holds the config state of the dip switch
 int configFlag = 0;
 
 // Blink methode prototype
@@ -114,7 +113,7 @@ void setup()
   if (debugFlag)
   {
     // open serial connection and wait
-    Serial.begin(9600);
+    Serial.begin(115200);
     while (!Serial)
       ;
     Serial.println("RTC setup started");
@@ -245,6 +244,10 @@ void loop()
 
   if (((counter >= sendThreshold) || (timerCalled)) && (!isSending))
   {
+    isSending = 1;
+    // disable the pir sensor
+    digitalWrite(pirPowerPin, LOW);
+
     if (timerCalled)
     {
       totalCounter = 0;
@@ -257,9 +260,9 @@ void loop()
     timerCalled = 0;
     setAlarm(alarmInterval);
 
-    // check if the floating interrupt pin bug occured
-    // method 1: check if the totalCount exceeds the maxCount inbetween the timer calls.
-    // method 2: detect if the count goes up very qickly. (faster then the board is able to send)
+    // check if the floating interrupt pin bug occurred
+    // method 1: check if the totalCount exceeds the maxCount between the timer calls.
+    // method 2: detect if the count goes up very quickly. (faster then the board is able to send)
     if ((totalCounter >= maxCount) || (counter > (sendThreshold + 5)))
     {
       ++pirError;
@@ -286,6 +289,15 @@ void loop()
 
     blinkLED(2);
     sendData();
+
+    delay(200);
+
+    // enable the pir sensor
+    digitalWrite(pirPowerPin, HIGH);
+
+    delay(200);
+
+    isSending = 0;
   }
 
   delay(200);
@@ -320,7 +332,6 @@ void onTimerInterrupt()
 // Connects to LoRa network
 void doConnect()
 {
-  isSending = 1;
   if (!modem.begin(EU868))
   {
     if (debugFlag)
@@ -339,7 +350,7 @@ void doConnect()
     Serial.print("Your device EUI is: ");
     Serial.println(modem.deviceEUI());
   }
-  delay(4000); //increase up to 10s if connectio does not work
+  delay(4000); //increase up to 10s if connection does not work
   int connected = modem.joinOTAA(appEui, appKey);
   if (!connected)
   {
@@ -357,12 +368,10 @@ void doConnect()
 
   // wait for all data transmission to finish
   delay(500);
-  isSending = 0;
 }
 
 void sendData()
 {
-  isSending = 1;
   int err;
   //data is transmitted as Ascii chars
   modem.beginPacket();
@@ -370,7 +379,7 @@ void sendData()
   dataHandler.setStatus(0);
   dataHandler.setMotionCount(counter);
   dataHandler.setBatteryLevel(getBatteryVoltage());
-  dataHandler.setTemperatur(am2320.readTemperature());
+  dataHandler.setTemperature(am2320.readTemperature());
   dataHandler.setHumidity(am2320.readHumidity());
   dataHandler.setHoureOfTheDay(houreOfDay);
   dataHandler.setTimeArray(timeArray);
@@ -384,7 +393,7 @@ void sendData()
       Serial.print("Message sent correctly! (count = ");
       Serial.print(counter);
       Serial.print(" / temperature = ");
-      Serial.print(dataHandler.getTemperatur());
+      Serial.print(dataHandler.getTemperature());
       Serial.print("°C / humidity = ");
       Serial.print(dataHandler.getHumidity());
       Serial.print("% / battery level = ");
@@ -419,13 +428,12 @@ void sendData()
 
   // wait for all data transmission to finish
   delay(500);
-  isSending = 0;
 }
 
 // blinks the on board led
 void blinkLED(int times)
 {
-  // deactivate the onboard LED after the spezified amount of blinks
+  // deactivate the onboard LED after the specified amount of blinks
   static int blinkCount = 0;
   if (blinkCount < maxBlinks)
   {
@@ -446,7 +454,7 @@ void disableUnusedPins(const int *const activePins, int size)
 {
   for (int i = 0; i < 22; ++i)
   {
-    // check if the current pin occures in the pin array
+    // check if the current pin occurs in the pin array
     bool isUsed = false;
     for (int j = 0; j < size; ++j)
     {

@@ -22,9 +22,9 @@ public:
      * @param count (optional) motion counter value
      * @param s (optional) status
      * @param batLevel (optional) battery level
-     * @param temp (optional) temperatur
+     * @param temp (optional) temperature
      * @param hum (optional) humidity
-     * @param hotd (optional) houre of the day
+     * @param hotd (optional) hour of the day
      * @param tVec (optional) pointer to the time array
      */
     DataPackage(unsigned int intervalTime,
@@ -44,9 +44,9 @@ public:
     void setBatteryLevel(uint8_t bl) { batteryLevel = bl; }
     void setBatteryLevel(float voltage);
     float getBatteryLevel() const;
-    void setTemperatur(uint8_t temp) { temperatur = temp; }
-    void setTemperatur(float temp);
-    float getTemperatur() const;
+    void setTemperature(uint8_t temp) { temperature = temp; }
+    void setTemperature(float temp);
+    float getTemperature() const;
     void setHumidity(uint8_t hum) { humidity = hum; }
     void setHumidity(float hum);
     float getHumidity() const;
@@ -78,7 +78,7 @@ private:
     uint8_t motionCount;
     uint8_t status;
     uint8_t batteryLevel;
-    uint8_t temperatur;
+    uint8_t temperature;
     uint8_t humidity;
     uint8_t houreOfTheDay;
     unsigned int *timeVector;

@@ -10,7 +10,7 @@ DataPackage::DataPackage(unsigned int intervalTime,
                          unsigned int *tVec) : motionCount(count),
                                                status(s),
                                                batteryLevel(batLevel),
-                                               temperatur(temp),
+                                               temperature(temp),
                                                humidity(hum),
                                                houreOfTheDay(hotd),
                                                timeVector(tVec)
@@ -66,13 +66,13 @@ uint8_t *DataPackage::getPayload()
     bitWrite(statusAndBat, 7, bitRead(batteryLevel, 4));
     payload[1] = statusAndBat;
 
-    // 3. byte - temperatur and humidity
+    // 3. byte - temperature and humidity
     uint8_t tempAndHum;
-    bitWrite(tempAndHum, 0, bitRead(temperatur, 0));
-    bitWrite(tempAndHum, 1, bitRead(temperatur, 1));
-    bitWrite(tempAndHum, 2, bitRead(temperatur, 2));
-    bitWrite(tempAndHum, 3, bitRead(temperatur, 3));
-    bitWrite(tempAndHum, 4, bitRead(temperatur, 4));
+    bitWrite(tempAndHum, 0, bitRead(temperature, 0));
+    bitWrite(tempAndHum, 1, bitRead(temperature, 1));
+    bitWrite(tempAndHum, 2, bitRead(temperature, 2));
+    bitWrite(tempAndHum, 3, bitRead(temperature, 3));
+    bitWrite(tempAndHum, 4, bitRead(temperature, 4));
     bitWrite(tempAndHum, 5, bitRead(humidity, 0));
     bitWrite(tempAndHum, 6, bitRead(humidity, 1));
     bitWrite(tempAndHum, 7, bitRead(humidity, 2));
@@ -131,8 +131,8 @@ float DataPackage::expandFloat(uint8_t value, float min, float max, unsigned int
 
 void DataPackage::setBatteryLevel(float voltage)
 {
-    // charch calculation
-    // devided into two ranges >=3.8V and <3.8
+    // charge calculation
+    // divided into two ranges >=3.8V and <3.8
     // curve parameters from pseudo invers matrix polynom
     float batLf = 0;
     if (voltage >= 3.8f)
@@ -151,14 +151,14 @@ float DataPackage::getBatteryLevel() const
     return expandFloat(batteryLevel, 0, 100, bitCountBat);
 }
 
-void DataPackage::setTemperatur(float temp)
+void DataPackage::setTemperature(float temp)
 {
-    temperatur = reduceFloat(temp, minTemp, maxTemp, bitCountTemp);
+    temperature = reduceFloat(temp, minTemp, maxTemp, bitCountTemp);
 }
 
-float DataPackage::getTemperatur() const
+float DataPackage::getTemperature() const
 {
-    return expandFloat(temperatur, minTemp, maxTemp, bitCountTemp);
+    return expandFloat(temperature, minTemp, maxTemp, bitCountTemp);
 }
 
 void DataPackage::setHumidity(float hum)
