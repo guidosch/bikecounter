@@ -21,7 +21,7 @@ public:
      * @param intervalTime the timer interval in minutes
      * @param count (optional) motion counter value
      * @param s (optional) status
-     * @param batLevel (optional) battery level
+     * @param batVoltage (optional) battery voltage
      * @param temp (optional) temperature
      * @param hum (optional) humidity
      * @param hotd (optional) hour of the day
@@ -30,7 +30,7 @@ public:
     DataPackage(unsigned int intervalTime,
                 uint8_t count = 0,
                 uint8_t s = 0,
-                uint8_t batLevel = 0,
+                uint8_t batVoltage = 0,
                 uint8_t temp = 0,
                 uint8_t hum = 0,
                 uint8_t hotd = 0,
@@ -41,9 +41,9 @@ public:
     uint8_t getMotionCount() const { return motionCount; }
     void setStatus(uint8_t s) { status = s; }
     uint8_t getStatus() const { return status; }
-    void setBatteryLevel(uint8_t bl) { batteryLevel = bl; }
-    void setBatteryLevel(float voltage);
-    float getBatteryLevel() const;
+    void setBatteryVoltage(uint8_t bl) { batteryVoltage = bl; }
+    void setBatteryVoltage(float voltage);
+    float getBatteryVoltage() const;
     void setTemperature(uint8_t temp) { temperature = temp; }
     void setTemperature(float temp);
     float getTemperature() const;
@@ -74,10 +74,12 @@ private:
     unsigned int bitCountHum = 3;
     float minTemp = -20.0f;
     float maxTemp = 50.0f;
+    float minVoltage = 3.0f;
+    float maxVoltage = 4.5f;
 
     uint8_t motionCount;
     uint8_t status;
-    uint8_t batteryLevel;
+    uint8_t batteryVoltage;
     uint8_t temperature;
     uint8_t humidity;
     uint8_t houreOfTheDay;

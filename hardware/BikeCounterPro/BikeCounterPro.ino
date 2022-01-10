@@ -153,6 +153,13 @@ void setup()
 
   if (debugFlag)
   {
+    DateTime currentTime = rtc.now();
+    Serial.print("RTC current time: ");
+    Serial.print(currentTime.hour(), DEC);
+    Serial.print(':');
+    Serial.print(currentTime.minute(), DEC);
+    Serial.print(':');
+    Serial.println(currentTime.second(), DEC);
     Serial.println("RTC setup finished");
     Serial.println("Temp. sensor setup started");
   }
@@ -378,7 +385,7 @@ void sendData()
 
   dataHandler.setStatus(0);
   dataHandler.setMotionCount(counter);
-  dataHandler.setBatteryLevel(getBatteryVoltage());
+  dataHandler.setBatteryVoltage(getBatteryVoltage());
   dataHandler.setTemperature(am2320.readTemperature());
   dataHandler.setHumidity(am2320.readHumidity());
   dataHandler.setHoureOfTheDay(houreOfDay);
@@ -396,10 +403,8 @@ void sendData()
       Serial.print(dataHandler.getTemperature());
       Serial.print("°C / humidity = ");
       Serial.print(dataHandler.getHumidity());
-      Serial.print("% / battery level = ");
-      Serial.print(dataHandler.getBatteryLevel());
-      Serial.print(" % / ");
-      Serial.print(getBatteryVoltage());
+      Serial.print("% / battery voltage = ");
+      Serial.print(dataHandler.getBatteryVoltage());
       Serial.println(" V)");
     }
     counter = 0;

@@ -3,13 +3,13 @@
 DataPackage::DataPackage(unsigned int intervalTime,
                          uint8_t count,
                          uint8_t s,
-                         uint8_t batLevel,
+                         uint8_t batVoltage,
                          uint8_t temp,
                          uint8_t hum,
                          uint8_t hotd,
                          unsigned int *tVec) : motionCount(count),
                                                status(s),
-                                               batteryLevel(batLevel),
+                                               batteryVoltage(batVoltage),
                                                temperature(temp),
                                                humidity(hum),
                                                houreOfTheDay(hotd),
@@ -54,16 +54,16 @@ uint8_t *DataPackage::getPayload()
     // 1. byte - counter value
     payload[0] = lowByte(motionCount);
 
-    // 2. byte - status and battery level
+    // 2. byte - status and battery Voltage
     uint8_t statusAndBat;
     bitWrite(statusAndBat, 0, bitRead(status, 0));
     bitWrite(statusAndBat, 1, bitRead(status, 1));
     bitWrite(statusAndBat, 2, bitRead(status, 2));
-    bitWrite(statusAndBat, 3, bitRead(batteryLevel, 0));
-    bitWrite(statusAndBat, 4, bitRead(batteryLevel, 1));
-    bitWrite(statusAndBat, 5, bitRead(batteryLevel, 2));
-    bitWrite(statusAndBat, 6, bitRead(batteryLevel, 3));
-    bitWrite(statusAndBat, 7, bitRead(batteryLevel, 4));
+    bitWrite(statusAndBat, 3, bitRead(batteryVoltage, 0));
+    bitWrite(statusAndBat, 4, bitRead(batteryVoltage, 1));
+    bitWrite(statusAndBat, 5, bitRead(batteryVoltage, 2));
+    bitWrite(statusAndBat, 6, bitRead(batteryVoltage, 3));
+    bitWrite(statusAndBat, 7, bitRead(batteryVoltage, 4));
     payload[1] = statusAndBat;
 
     // 3. byte - temperature and humidity
@@ -129,26 +129,14 @@ float DataPackage::expandFloat(uint8_t value, float min, float max, unsigned int
     return (((float)value) / slope + ((float)min));
 }
 
-void DataPackage::setBatteryLevel(float voltage)
+void DataPackage::setBatteryVoltage(float voltage)
 {
-    // charge calculation
-    // divided into two ranges >=3.8V and <3.8
-    // curve parameters from pseudo invers matrix polynom
-    float batLf = 0;
-    if (voltage >= 3.8f)
-    {
-        batLf = -178.57f * voltage * voltage + 1569.6f * voltage - 3342.0f;
-    }
-    else
-    {
-        batLf = 1183.7f * voltage * voltage * voltage * voltage - 15843.0f * voltage * voltage * voltage + 79461.0f * voltage * voltage - 177004.0f * voltage + 147744.0f;
-    }
-    batteryLevel = reduceFloat(batLf, 0, 100, bitCountBat);
+    batteryVoltage = reduceFloat(voltage, minVoltage, maxVoltage, bitCountBat);
 }
 
-float DataPackage::getBatteryLevel() const
+float DataPackage::getBatteryVoltage() const
 {
-    return expandFloat(batteryLevel, 0, 100, bitCountBat);
+    return expandFloat(batteryVoltage, minVoltage, maxVoltage, bitCountBat);
 }
 
 void DataPackage::setTemperature(float temp)

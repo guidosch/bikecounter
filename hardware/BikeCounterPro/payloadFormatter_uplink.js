@@ -15,15 +15,16 @@ function decodeUplink(input) {
     data.stat = statusCode[(input.bytes[1] & 0x07)];
     // battery level
     let batteryIndex = input.bytes[1] >> 3;
-    data.batteryLevel = Math.round(((100 / (32 - 1) * batteryIndex)) * 10) / 10;
-    // temperatur
+    data.batteryVoltage = Math.round(((1.5 / (32 - 1) * batteryIndex + 3)) * 100) / 100;
+    data.batteryLevel = 0; // needs to be implemented
+    // temperature
     let tempIndex = input.bytes[2] & 0x1F;
     data.temperature = Math.round(((70 / (32 - 1) * tempIndex - 20)) * 10) / 10 ;
     // humidity
     let humIndex = input.bytes[2] >> 5;
     data.humidity = Math.round(((100 / (8 - 1) * humIndex)) * 10) / 10;
     // timer interval
-    data.intervallId = input.bytes[3] & 0x07;
+    data.intervalId = input.bytes[3] & 0x07;
     var intervalTime = {
         0: "< 1h",
         1: "< 2h",
@@ -32,7 +33,7 @@ function decodeUplink(input) {
         4: "< 17h"
     };
     var intervalBitSize = [6, 7, 8, 9, 10];
-    data.selectedIntervall = intervalTime[data.intervallId];
+    data.selectedInterval = intervalTime[data.intervalId];
     // start hour of day
     data.hourOfDay = input.bytes[3] >> 3;
     // decode payload time array
@@ -43,9 +44,9 @@ function decodeUplink(input) {
         absMinArray[j] = 0;
     }
 
-    for (var payloadBit = offsetBits; payloadBit < ((data.count * intervalBitSize[data.intervallId]) + offsetBits); payloadBit++) {
-        var currentMotionByte = Math.floor((payloadBit - offsetBits) / intervalBitSize[data.intervallId]);
-        var currentMotionBit = Math.floor((payloadBit - offsetBits) % intervalBitSize[data.intervallId]);
+    for (var payloadBit = offsetBits; payloadBit < ((data.count * intervalBitSize[data.intervalId]) + offsetBits); payloadBit++) {
+        var currentMotionByte = Math.floor((payloadBit - offsetBits) / intervalBitSize[data.intervalId]);
+        var currentMotionBit = Math.floor((payloadBit - offsetBits) % intervalBitSize[data.intervalId]);
         var currentMotionBitMask = 1 << currentMotionBit;
         var currentPayloadByte = Math.floor(payloadBit / 8);
         var currentPayloadBit = Math.floor(payloadBit % 8);
@@ -100,9 +101,11 @@ function decodeUplink(input) {
 // Message sent correctly! (count = 10 / temperature = 22.90°C / humidity = 42.86% / battery level = 25.81 % / 2.96 V)
 */
 var input = {};
-input.bytes = [0x0A, 0x40, 0x73, 0x98, 0x78, 0xAE, 0xEB, 0xBA, 0xAE, 0xEB, 0xBA, 0x0E];
-//input.bytes = [0x0A, 0x40, 0x73, 0xA8, 0x59, 0x96, 0x65, 0x9A, 0xA6, 0x69, 0x9A, 0x06];
+//input.bytes = [0x0A, 0x40, 0x73, 0x98, 0x78, 0xAE, 0xEB, 0xBA, 0xAE, 0xEB, 0xBA, 0x0E];
+input.bytes = [0x0A, 0x40, 0x73, 0xA8, 0x59, 0x96, 0x65, 0x9A, 0xA6, 0x69, 0x9A, 0x06];
 var test = decodeUplink(input);
 
+console.log(test.data.batteryVoltage);
+console.log(test.data.batteryLevel);
 console.log(test.data.timeArray);
-
+console.log(JSON.stringify(test));
