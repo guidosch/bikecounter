@@ -1,0 +1,41 @@
+[
+  {
+    "id": "adlisberg",
+    "online": true,
+    "temperature": 3,
+    "humidity": 88,
+    "battery": 3.7,
+    "status": 0,
+    "location": "Adlisberg",
+    "sumLast24h": 16,
+    "sumToday":12,
+    "gateways": "lora-gw-1",
+    "timestampLastMsg": "2021-12-21"
+  },
+  {
+    "id": "uetliberg",
+    "online": true,
+    "temperature": 3,
+    "humidity": 77,
+    "battery": 3.7,
+    "status": 0,
+    "location": "uetliberg beim spielplatz",
+    "sumLast24h": 16,
+    "sumToday":11,
+    "gateways": "lora-gw-2",
+    "timestampLastMsg": "2021-12-22"
+  },
+  {
+    "id": "Höckler",
+    "online": true,
+    "temperature": 3,
+    "humidity": 66,
+    "battery": 3.7,
+    "status": 0,
+    "location": "Höckler ganz unten",
+    "sumLast24h": 16,
+    "sumToday":13,
+    "gatewayId": "lora-gw-3",
+    "gateways": "2021-12-23"
+  }
+]
