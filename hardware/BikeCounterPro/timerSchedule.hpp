@@ -17,7 +17,6 @@ private:
         {7, 6, 5, 5, 5, 5, 5, 5, 6, 6, 6, 7},              // ZRH (+1) { 8,  7,  6,  6,  6,  6,  6,  6,  7,  7,  7,  8} start day interval
         {16, 17, 19, 20, 21, 21, 21, 20, 19, 18, 16, 16}}; // ZRH (+1) {17, 18, 20, 21, 22, 22, 22, 21, 20, 19, 17, 17} start night interval
     bool isLastCall = false;
-    TimeSpan offset = TimeSpan(0, 0, 10, 0);
     int getIntervalId(int currentHour, int currentMonth);
 };
 
