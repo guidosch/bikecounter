@@ -1,12 +1,15 @@
 #ifndef TIMERSCHEDULE_H
 #define TIMERSCHEDULE_H
 
+#ifndef UNITTEST
 #include "RTClib.h"
+#else
+#include "RTClib_mock.h"
+#endif
 
 class TimerSchedule
 {
 public:
-    TimerSchedule();
     DateTime getNextIntervalTime(DateTime &currentDateTime);
 
 private:

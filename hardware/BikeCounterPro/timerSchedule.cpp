@@ -23,6 +23,7 @@ DateTime TimerSchedule::getNextIntervalTime(DateTime &cDT)
             nDT = DateTime(cDT.year(), cDT.month(), cDT.day(), IntervalStartUTC[nId][nDT.month() - 1], 0, 0) + TimeSpan(0, 0, 1, 0);
         }
     }
+    return nDT;
 };
 
 int TimerSchedule::getIntervalId(int currentHour, int currentMonth)
