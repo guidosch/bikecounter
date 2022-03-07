@@ -3,7 +3,7 @@
 #include "RTClib.h"
 #include "Adafruit_AM2320.h"
 #include "arduino_secrets.h"
-#include "dataPackage.hpp"
+#include "src/dataPackage/dataPackage.hpp"
 
 // ----------------------------------------------------
 // ------------- Configuration section ----------------

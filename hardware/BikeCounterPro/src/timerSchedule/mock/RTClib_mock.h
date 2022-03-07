@@ -19,6 +19,8 @@
 */
 /**************************************************************************/
 
+#ifdef UNITTEST
+
 #ifndef _RTCLIB_MOCK_H_
 #define _RTCLIB_MOCK_H_
 
@@ -215,3 +217,5 @@ protected:
 };
 
 #endif // _RTCLIB_MOCK_H_
+
+#endif

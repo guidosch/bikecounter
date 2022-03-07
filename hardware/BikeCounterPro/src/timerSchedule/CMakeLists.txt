@@ -18,11 +18,12 @@ FetchContent_MakeAvailable(googletest)
 
 enable_testing()
 
-include_directories(${PROJECT_SOURCE_DIR})
-add_library(rtclib STATIC RTClib_mock.cpp RTClib_mock.h)
-add_library(timerSchedule STATIC timerSchedule.cpp timerSchedule.hpp)
-
 add_compile_definitions(UNITTEST)
+
+add_subdirectory(mock)
+add_library(timerSchedule timerSchedule.cpp timerSchedule.hpp)
+
+
 
 add_executable(unittest unitTests.cc)
 target_link_libraries(unittest rtclib timerSchedule gtest_main)

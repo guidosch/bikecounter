@@ -43,6 +43,8 @@
 */
 /**************************************************************************/
 
+#ifdef UNITTEST
+
 #include "RTClib_mock.h"
 #include <stdint.h>
 #include <string.h>
@@ -649,3 +651,5 @@ TimeSpan TimeSpan::operator+(const TimeSpan &right) const {
 TimeSpan TimeSpan::operator-(const TimeSpan &right) const {
   return TimeSpan(_seconds - right._seconds);
 }
+
+#endif

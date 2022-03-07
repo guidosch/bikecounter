@@ -2,9 +2,9 @@
 #define TIMERSCHEDULE_H
 
 #ifndef UNITTEST
-#include "RTClib.h"
+#include <RTClib.h>
 #else
-#include "RTClib_mock.h"
+#include "mock/RTClib_mock.h"
 #endif
 
 class TimerSchedule
