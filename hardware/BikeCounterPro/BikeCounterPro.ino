@@ -4,21 +4,12 @@
 #include "Adafruit_AM2320.h"
 #include "arduino_secrets.h"
 #include "src/dataPackage/dataPackage.hpp"
+#include "src/timerSchedule/timerSchedule.hpp"
 
 // ----------------------------------------------------
 // ------------- Configuration section ----------------
 // ----------------------------------------------------
 
-// threshold for non periodic data transmission
-// depends on the timer intervall
-// timer <= 1h -> sendThreshold max = 62
-// timer <= 2h -> sendThreshold max = 53
-// timer <= 4h -> sendThreshold max = 47 (selected)
-// timer <= 8h -> sendThreshold max = 41
-// timer <= 17h -> sendThreshold max = 37
-const int sendThreshold = 10;
-// Timer interval (days, hours, minutes, seconds)
-TimeSpan alarmInterval = TimeSpan(0, 0, 5, 0);
 // Max. counts between timer calls (to detect a floating interrupt pin)
 const int maxCount = 1000;
 // deactivate the onboard LED after the specified amount of blinks
@@ -51,7 +42,10 @@ RTC_DS3231 rtc;
 Adafruit_AM2320 am2320 = Adafruit_AM2320();
 
 // DataPackage object to encode the payload
-DataPackage dataHandler = DataPackage(alarmInterval.totalseconds() / 60);
+DataPackage dataHandler = DataPackage();
+
+// TimerSchedule object to determin the next timer call
+TimerSchedule timeHandler = TimerSchedule();
 
 // Motion counter value (must be volatile as incremented in IRS)
 int counter = 0;
@@ -59,8 +53,10 @@ int counter = 0;
 int totalCounter = 0;
 // motion detected flag
 volatile bool motionDetected = 0;
+// time array size
+const int timeArraySize = 62;
 // time array
-unsigned int timeArray[sendThreshold];
+unsigned int timeArray[timeArraySize];
 // hour of the day for next package
 unsigned int houreOfDay = 0;
 // Timer interrupt flag (initial on 1 to trigger a dummy message on startup)
@@ -139,7 +135,7 @@ void setup()
     // January 21, 2014 at 3am you would call:
     // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
   }
-  //disabel the 32K pin
+  // disabel the 32K pin
   rtc.disable32K();
   // clear alarms
   rtc.clearAlarm(1);
@@ -149,11 +145,11 @@ void setup()
   // turn off alarm 2
   rtc.disableAlarm(2);
   // set next alarm
-  setAlarm(alarmInterval);
+  DateTime currentTime = rtc.now();
+  setAlarm(currentTime);
 
   if (debugFlag)
   {
-    DateTime currentTime = rtc.now();
     Serial.print("RTC current time: ");
     Serial.print(currentTime.hour(), DEC);
     Serial.print(':');
@@ -209,20 +205,20 @@ void setup()
 // (caused by the timer or the motion detection interrupt)
 void loop()
 {
+  // reinitialize the rtc connection
+  // due to the voltage drop while sending the connection needs to be reinitialize
+  bool rtcConnection = rtc.begin();
+  if ((!rtcConnection) && debugFlag)
+  {
+    Serial.println("NO connection to RTC");
+  }
+
+  DateTime currentTime = rtc.now();
+
   // check if a motion was detected.
   if (motionDetected)
   {
     motionDetected = 0;
-
-    // reinitialize the rtc connection
-    // due to the voltage drop while sending the connection needs to be reinitialize
-    bool rtcConnection = rtc.begin();
-    if ((!rtcConnection) && debugFlag)
-    {
-      Serial.println("NO connection to RTC");
-    }
-
-    DateTime currentTime = rtc.now();
 
     if (counter == 0)
     {
@@ -248,8 +244,8 @@ void loop()
       Serial.println(')');
     }
   }
-
-  if (((counter >= sendThreshold) || (timerCalled)) && (!isSending))
+  int currentThreshold = dataHandler.getMaxCount(timeHandler.getCurrentIntervalMinutes(currentTime));
+  if (((counter >= currentThreshold) || (timerCalled)) && (!isSending))
   {
     isSending = 1;
     // disable the pir sensor
@@ -265,12 +261,12 @@ void loop()
     }
 
     timerCalled = 0;
-    setAlarm(alarmInterval);
+    setAlarm(currentTime);
 
     // check if the floating interrupt pin bug occurred
     // method 1: check if the totalCount exceeds the maxCount between the timer calls.
     // method 2: detect if the count goes up very quickly. (faster then the board is able to send)
-    if ((totalCounter >= maxCount) || (counter > (sendThreshold + 5)))
+    if ((totalCounter >= maxCount) || (counter > (currentThreshold + 5)))
     {
       ++pirError;
       if (pirError > 2)
@@ -357,7 +353,7 @@ void doConnect()
     Serial.print("Your device EUI is: ");
     Serial.println(modem.deviceEUI());
   }
-  delay(4000); //increase up to 10s if connection does not work
+  delay(4000); // increase up to 10s if connection does not work
   int connected = modem.joinOTAA(appEui, appKey);
   if (!connected)
   {
@@ -380,7 +376,7 @@ void doConnect()
 void sendData()
 {
   int err;
-  //data is transmitted as Ascii chars
+  // data is transmitted as Ascii chars
   modem.beginPacket();
 
   dataHandler.setStatus(0);
@@ -408,7 +404,7 @@ void sendData()
       Serial.println(" V)");
     }
     counter = 0;
-    for (int i = 0; i < sendThreshold; ++i)
+    for (int i = 0; i < timeArraySize; ++i)
     {
       timeArray[i] = 0;
     }
@@ -477,7 +473,7 @@ void disableUnusedPins(const int *const activePins, int size)
   }
 }
 
-void setAlarm(TimeSpan dt)
+void setAlarm(DateTime currentTime)
 {
   // reinitialize the rtc connection
   // due to the voltage drop while sending the connection needs to be reinitialize
@@ -489,22 +485,10 @@ void setAlarm(TimeSpan dt)
 
   rtc.clearAlarm(1);
 
-  DateTime nextAlarm = rtc.now() + dt;
-  if (dt.hours() > 0)
-  {
-    // alarm when the hours, the minutes and the seconds match.
-    rtc.setAlarm1(nextAlarm, DS3231_A1_Hour);
-  }
-  else if (dt.minutes() > 0)
-  {
-    // alarm when the minutes and the seconds match.
-    rtc.setAlarm1(nextAlarm, DS3231_A1_Minute);
-  }
-  else
-  {
-    // alarm when the seconds match.
-    rtc.setAlarm1(nextAlarm, DS3231_A1_Second);
-  }
+  DateTime nextAlarm = timeHandler.getNextIntervalTime(currentTime);
+
+  // alarm when the hours, the minutes and the seconds match.
+  rtc.setAlarm1(nextAlarm, DS3231_A1_Hour);
 }
 
 float getBatteryVoltage()

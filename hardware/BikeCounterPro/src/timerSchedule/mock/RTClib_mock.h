@@ -211,7 +211,7 @@ public:
 
   TimeSpan operator+(const TimeSpan &right) const;
   TimeSpan operator-(const TimeSpan &right) const;
-
+  bool operator==(const TimeSpan &right) const;
 protected:
   int32_t _seconds; ///< Actual TimeSpan value is stored as seconds
 };

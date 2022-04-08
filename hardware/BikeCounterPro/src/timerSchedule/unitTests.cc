@@ -54,3 +54,16 @@ TEST_F(TimerScheduleTest, LastCallOfTheDayTests)
     EXPECT_FALSE(ts1.getNextIntervalTime(t1) == DateTime(2022, 3, 26, 3, 47, 39));
     EXPECT_FALSE(ts1.getNextIntervalTime(t1) == DateTime(2022, 3, 25, 23, 47, 39));
 }
+
+TEST_F(TimerScheduleTest, CurrentIntervalTests)
+{
+    // first interval
+    DateTime t1 = DateTime(2022, 3, 25, 4, 45, 13);
+    EXPECT_TRUE(ts1.getCurrentInterval(t1) == TimeSpan(0, 6, 0, 0));
+    EXPECT_FALSE(ts1.getCurrentInterval(t1) == TimeSpan(0, 2, 0, 0));
+
+    // second interval
+    DateTime t2 = DateTime(2022, 3, 25, 18, 35, 0);
+    EXPECT_TRUE(ts1.getCurrentInterval(t2) == TimeSpan(0, 2, 0, 0));
+    EXPECT_FALSE(ts1.getCurrentInterval(t2) == TimeSpan(0, 6, 0, 0));
+}

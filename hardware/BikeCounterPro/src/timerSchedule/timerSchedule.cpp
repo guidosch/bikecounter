@@ -26,6 +26,18 @@ DateTime TimerSchedule::getNextIntervalTime(DateTime &cDT)
     return nDT;
 };
 
+TimeSpan TimerSchedule::getCurrentInterval(DateTime &cDT)
+{
+    int cId = getIntervalId(cDT.hour(), cDT.month());
+    return timeSpanIntervals[cId];
+};
+
+unsigned int TimerSchedule::getCurrentIntervalMinutes(DateTime &cDT)
+{
+    int cId = getIntervalId(cDT.hour(), cDT.month());
+    return timeSpanIntervals[cId].totalseconds() / 60;
+};
+
 int TimerSchedule::getIntervalId(int currentHour, int currentMonth)
 {
     int intervalId = 0;

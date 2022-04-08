@@ -11,10 +11,8 @@ public:
     /**
      * @brief Construct a new Data Package object
      * The DataPackage object handles the protocol encoding/decoding to send the lora data
-     * @param intervalTime the timer interval in minutes
-     * @param count 
      */
-
+    DataPackage(){}; 
     /**
      * @brief Construct a new Data Package object
      * The DataPackage object handles the protocol encoding/decoding to send the lora data
@@ -57,6 +55,7 @@ public:
     // payload operations
     int getPayloadLength() const { return 3 + 1 + (int)ceil(((float)(motionCount * minuteBits[selectedInterval])) / 8.0f); }
     uint8_t *getPayload();
+    int getMaxCount(unsigned int intervalTime);
 
 private:
     enum TimerInterval
@@ -67,6 +66,7 @@ private:
         max_8h,
         max_17h
     };
+    int maxCount[5] = {62, 53, 47, 41, 37};
     TimerInterval selectedInterval = max_1h;
     int minuteBits[5] = {6, 7, 8, 9, 10};
     unsigned int bitCountBat = 5;
@@ -89,6 +89,7 @@ private:
 
     uint8_t reduceFloat(float value, float min, float max, unsigned int bitCount);
     float expandFloat(uint8_t value, float min, float max, unsigned int bitCount) const;
+    void setTimerInterval(unsigned int intervalTime);
 };
 
-#endif //DATAPACKAGE_H
+#endif // DATAPACKAGE_H

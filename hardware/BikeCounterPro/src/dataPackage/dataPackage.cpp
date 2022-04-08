@@ -15,7 +15,12 @@ DataPackage::DataPackage(unsigned int intervalTime,
                                                houreOfTheDay(hotd),
                                                timeVector(tVec)
 {
-    //set the interval index according to the selected timer interval
+    setTimerInterval(intervalTime);
+}
+
+void DataPackage::setTimerInterval(unsigned int intervalTime)
+{
+    // set the interval index according to the selected timer interval
     if (intervalTime <= 60)
     {
         selectedInterval = max_1h;
@@ -44,8 +49,8 @@ DataPackage::DataPackage(unsigned int intervalTime,
 
 uint8_t *DataPackage::getPayload()
 {
-    //reset array to avoid sending old data
-    //this should not happen due to the payload length property (getPayloadLength()) but you never know
+    // reset array to avoid sending old data
+    // this should not happen due to the payload length property (getPayloadLength()) but you never know
     for (int i = 0; i < 51; ++i)
     {
         payload[i] = 0;
@@ -156,4 +161,10 @@ void DataPackage::setHumidity(float hum)
 float DataPackage::getHumidity() const
 {
     return expandFloat(humidity, 0, 100, bitCountHum);
+}
+
+int DataPackage::getMaxCount(unsigned int intervalTime)
+{
+    setTimerInterval(intervalTime);
+    return maxCount[selectedInterval];
 }

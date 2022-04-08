@@ -11,6 +11,8 @@ class TimerSchedule
 {
 public:
     DateTime getNextIntervalTime(DateTime &currentDateTime);
+    TimeSpan getCurrentInterval(DateTime &currentDateTime);
+    unsigned int getCurrentIntervalMinutes(DateTime &currentDateTime);
 
 private:
     static const int intervalCount = 3;

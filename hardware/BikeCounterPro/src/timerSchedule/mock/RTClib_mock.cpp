@@ -652,4 +652,9 @@ TimeSpan TimeSpan::operator-(const TimeSpan &right) const {
   return TimeSpan(_seconds - right._seconds);
 }
 
+
+bool TimeSpan::operator==(const TimeSpan &right) const {
+  return (right.totalseconds() == _seconds);
+}
+
 #endif
