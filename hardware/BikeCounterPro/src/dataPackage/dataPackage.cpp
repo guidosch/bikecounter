@@ -3,12 +3,16 @@
 DataPackage::DataPackage(unsigned int intervalTime,
                          uint8_t count,
                          uint8_t s,
+                         uint8_t hwV,
+                         uint8_t swV,
                          uint8_t batVoltage,
                          uint8_t temp,
                          uint8_t hum,
                          uint8_t hotd,
                          unsigned int *tVec) : motionCount(count),
                                                status(s),
+                                               hwVersion(hwV),
+                                               swVersion(swV),
                                                batteryVoltage(batVoltage),
                                                temperature(temp),
                                                humidity(hum),
@@ -59,7 +63,19 @@ uint8_t *DataPackage::getPayload()
     // 1. byte - counter value
     payload[0] = lowByte(motionCount);
 
-    // 2. byte - status and battery Voltage
+    // 2. byte - software and hardware version
+    uint8_t swAndHwVersion;
+    bitWrite(swAndHwVersion, 0, bitRead(swVersion, 0));
+    bitWrite(swAndHwVersion, 1, bitRead(swVersion, 1));
+    bitWrite(swAndHwVersion, 2, bitRead(swVersion, 2));
+    bitWrite(swAndHwVersion, 3, bitRead(swVersion, 3));
+    bitWrite(swAndHwVersion, 4, bitRead(hwVersion, 0));
+    bitWrite(swAndHwVersion, 5, bitRead(hwVersion, 1));
+    bitWrite(swAndHwVersion, 6, bitRead(hwVersion, 2));
+    bitWrite(swAndHwVersion, 7, bitRead(hwVersion, 3));
+    payload[1] = swAndHwVersion;
+
+    // 3. byte - status and battery Voltage
     uint8_t statusAndBat;
     bitWrite(statusAndBat, 0, bitRead(status, 0));
     bitWrite(statusAndBat, 1, bitRead(status, 1));
@@ -69,9 +85,9 @@ uint8_t *DataPackage::getPayload()
     bitWrite(statusAndBat, 5, bitRead(batteryVoltage, 2));
     bitWrite(statusAndBat, 6, bitRead(batteryVoltage, 3));
     bitWrite(statusAndBat, 7, bitRead(batteryVoltage, 4));
-    payload[1] = statusAndBat;
+    payload[2] = statusAndBat;
 
-    // 3. byte - temperature and humidity
+    // 4. byte - temperature and humidity
     uint8_t tempAndHum;
     bitWrite(tempAndHum, 0, bitRead(temperature, 0));
     bitWrite(tempAndHum, 1, bitRead(temperature, 1));
@@ -81,9 +97,9 @@ uint8_t *DataPackage::getPayload()
     bitWrite(tempAndHum, 5, bitRead(humidity, 0));
     bitWrite(tempAndHum, 6, bitRead(humidity, 1));
     bitWrite(tempAndHum, 7, bitRead(humidity, 2));
-    payload[2] = tempAndHum;
+    payload[3] = tempAndHum;
 
-    // 4. byte - intervall index and hour of the day
+    // 5. byte - intervall index and hour of the day
     uint8_t indexAndHOD;
     bitWrite(indexAndHOD, 0, bitRead(selectedInterval, 0));
     bitWrite(indexAndHOD, 1, bitRead(selectedInterval, 1));
@@ -93,10 +109,10 @@ uint8_t *DataPackage::getPayload()
     bitWrite(indexAndHOD, 5, bitRead(houreOfTheDay, 2));
     bitWrite(indexAndHOD, 6, bitRead(houreOfTheDay, 3));
     bitWrite(indexAndHOD, 7, bitRead(houreOfTheDay, 4));
-    payload[3] = indexAndHOD;
+    payload[4] = indexAndHOD;
 
-    // 5. - 51. byte - detected minutes
-    unsigned int offsetBits = 4 * 8;
+    // 6. - 51. byte - detected minutes
+    unsigned int offsetBits = 5 * 8;
     for (int payloadBit = offsetBits; payloadBit < ((motionCount * minuteBits[selectedInterval]) + offsetBits); ++payloadBit)
     {
         unsigned int currentMotionByte = (payloadBit - offsetBits) / minuteBits[selectedInterval];

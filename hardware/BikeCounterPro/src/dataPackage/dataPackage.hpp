@@ -28,6 +28,8 @@ public:
     DataPackage(unsigned int intervalTime,
                 uint8_t count = 0,
                 uint8_t s = 0,
+                uint8_t hwV = 0,
+                uint8_t swV = 0,
                 uint8_t batVoltage = 0,
                 uint8_t temp = 0,
                 uint8_t hum = 0,
@@ -39,6 +41,10 @@ public:
     uint8_t getMotionCount() const { return motionCount; }
     void setStatus(uint8_t s) { status = s; }
     uint8_t getStatus() const { return status; }
+    void setSwVersion(uint8_t v) { swVersion = v; }
+    uint8_t getSwVersion() const { return swVersion; }
+    void setHwVersion(uint8_t v) { hwVersion = v; }
+    uint8_t getHwVersion() const { return hwVersion; }
     void setBatteryVoltage(uint8_t bl) { batteryVoltage = bl; }
     void setBatteryVoltage(float voltage);
     float getBatteryVoltage() const;
@@ -66,7 +72,7 @@ private:
         max_8h,
         max_17h
     };
-    int maxCount[5] = {62, 53, 47, 41, 37};
+    int maxCount[5] = {61, 52, 46, 40, 36};
     TimerInterval selectedInterval = max_1h;
     int minuteBits[5] = {6, 7, 8, 9, 10};
     unsigned int bitCountBat = 5;
@@ -79,6 +85,8 @@ private:
 
     uint8_t motionCount;
     uint8_t status;
+    uint8_t swVersion;
+    uint8_t hwVersion;
     uint8_t batteryVoltage;
     uint8_t temperature;
     uint8_t humidity;

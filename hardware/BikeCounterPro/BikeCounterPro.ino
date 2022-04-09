@@ -3,6 +3,7 @@
 #include "RTClib.h"
 #include "Adafruit_AM2320.h"
 #include "arduino_secrets.h"
+#include "versionConfig.h"
 #include "src/dataPackage/dataPackage.hpp"
 #include "src/timerSchedule/timerSchedule.hpp"
 
@@ -380,6 +381,8 @@ void sendData()
   modem.beginPacket();
 
   dataHandler.setStatus(0);
+  dataHandler.setHwVersion(hwVersion);
+  dataHandler.setSwVersion(swVersion);
   dataHandler.setMotionCount(counter);
   dataHandler.setBatteryVoltage(getBatteryVoltage());
   dataHandler.setTemperature(am2320.readTemperature());
