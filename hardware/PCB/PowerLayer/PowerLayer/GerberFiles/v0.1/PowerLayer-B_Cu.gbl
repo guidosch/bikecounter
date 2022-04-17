@@ -1,0 +1,40 @@
+G04 #@! TF.GenerationSoftware,KiCad,Pcbnew,(5.1.10)-1*
+G04 #@! TF.CreationDate,2021-12-13T23:36:20+01:00*
+G04 #@! TF.ProjectId,PowerLayer,506f7765-724c-4617-9965-722e6b696361,rev?*
+G04 #@! TF.SameCoordinates,Original*
+G04 #@! TF.FileFunction,Copper,L2,Bot*
+G04 #@! TF.FilePolarity,Positive*
+%FSLAX46Y46*%
+G04 Gerber Fmt 4.6, Leading zero omitted, Abs format (unit mm)*
+G04 Created by KiCad (PCBNEW (5.1.10)-1) date 2021-12-13 23:36:20*
+%MOMM*%
+%LPD*%
+G01*
+G04 APERTURE LIST*
+G04 #@! TA.AperFunction,ComponentPad*
+%ADD10C,7.000000*%
+G04 #@! TD*
+G04 #@! TA.AperFunction,ComponentPad*
+%ADD11C,2.640000*%
+G04 #@! TD*
+G04 #@! TA.AperFunction,ComponentPad*
+%ADD12O,1.700000X1.700000*%
+G04 #@! TD*
+G04 #@! TA.AperFunction,ComponentPad*
+%ADD13R,1.700000X1.700000*%
+G04 #@! TD*
+G04 APERTURE END LIST*
+D10*
+X152146000Y-152146000D03*
+X57146000Y-152146000D03*
+X57146000Y-124146000D03*
+D11*
+X136906000Y-124304000D03*
+X136906000Y-143434000D03*
+X64686000Y-124304000D03*
+X64686000Y-143434000D03*
+D12*
+X57150000Y-139686000D03*
+D13*
+X57146000Y-137146000D03*
+M02*

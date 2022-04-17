@@ -1,28 +1,35 @@
-#include "ArduinoLowPower.h"
 #include <MKRWAN.h>
+#include "ArduinoLowPower.h"
 #include "RTClib.h"
+#include "Adafruit_AM2320.h"
 #include "arduino_secrets.h"
+#include "versionConfig.h"
+#include "src/dataPackage/dataPackage.hpp"
+#include "src/timerSchedule/timerSchedule.hpp"
 
-// set debugFlag = 1 to activate serial debug messages and to disable deepSleep
-constexpr bool debugFlag = 1;
+// ----------------------------------------------------
+// ------------- Configuration section ----------------
+// ----------------------------------------------------
 
-// pins
+// Max. counts between timer calls (to detect a floating interrupt pin)
+const int maxCount = 1000;
+// deactivate the onboard LED after the specified amount of blinks
+const int maxBlinks = 50;
+
+// Interrupt pins
 const int timerInterruptPin = 0;
 const int counterInterruptPin = 1;
+const int debugSwitchPin = 8;
+const int configSwitchPin = 9;
 const int batteryVoltagePin = A0;
+// PIR sensor power pin
+const int pirPowerPin = 2;
+// Used pins (not defined pins will be disabled to save power)
+const int usedPins[] = {LED_BUILTIN, timerInterruptPin, counterInterruptPin, debugSwitchPin, configSwitchPin, batteryVoltagePin, pirPowerPin};
 
-// threshold for non periodic data transmission
-// dependes on the timer intervall
-// timer <= 1h -> sendThreshold max = 65
-// timer <= 2h -> sendThreshold max = 56
-// timer <= 4h -> sendThreshold max = 49 (selected)
-// timer <= 8h -> sendThreshold max = 43
-// timer <= 17h -> sendThreshold max = 39
-// timer <= 34h -> sendThreshold max = 35
-// timer <= 68h -> sendThreshold max = 32
-const int sendThreshold = 10;
-// overflow threshold to detect a failure of the motion sensor
-const int countOverflow = 10;
+// ----------------------------------------------------
+// -------------- Declaration section -----------------
+// ----------------------------------------------------
 
 // lora modem object and application properties
 LoRaModem modem(Serial1);
@@ -31,49 +38,81 @@ String appKey = SECRET_APPKEY;
 
 // RTC object
 RTC_DS3231 rtc;
-// Alarm interval (days, hours, minutes, seconds)
-TimeSpan alarmInterval = TimeSpan(0, 0, 1, 0);
 
-// Motion counter value
-// must be volatile as incremented in interrupt
-volatile int counter = 0;
+// Humidity and temperature sensor object
+Adafruit_AM2320 am2320 = Adafruit_AM2320();
+
+// DataPackage object to encode the payload
+DataPackage dataHandler = DataPackage();
+
+// TimerSchedule object to determin the next timer call
+TimerSchedule timeHandler = TimerSchedule();
+
+// Motion counter value (must be volatile as incremented in IRS)
+int counter = 0;
+// total counts between timer calls
+int totalCounter = 0;
 // motion detected flag
 volatile bool motionDetected = 0;
+// time array size
+const int timeArraySize = 62;
 // time array
-volatile unsigned int timeArray[sendThreshold];
+unsigned int timeArray[timeArraySize];
 // hour of the day for next package
-volatile unsigned int houreOfDay = 0;
-// Timer interrupt falg
-volatile bool timerCalled = 0;
+unsigned int houreOfDay = 0;
+// Timer interrupt flag (initial on 1 to trigger a dummy message on startup)
+volatile bool timerCalled = 1;
 // Lora data transmission flag
 volatile bool isSending = 0;
 // Error counter for connection
 int errorCounter = 0;
-// LoraPayload size (Count + BatteryLevel + timeArray)
-const int timeValueSize = 8; // 1h = 6bit, 2h = 7bit, 3h = 8bit
-const int payloadSize = 1 + (int)((((float)(3 + 5 + timeValueSize * sendThreshold)) / 8.0f) + 1);
+// Error counter for pir-sensor
+int pirError = 0;
+// Holds the debug state of the dip switch
+int debugFlag = 0;
+// Holds the config state of the dip switch
+int configFlag = 0;
 
 // Blink methode prototype
 void blinkLED(int times = 1);
 
+// ----------------------------------------------------
+// -------------- Setup section -----------------
+// ----------------------------------------------------
+
 void setup()
 {
-  // setup onboard LED
+  // read dip switch states
+  pinMode(debugSwitchPin, INPUT);
+  pinMode(configSwitchPin, INPUT);
+  debugFlag = digitalRead(debugSwitchPin);
+  configFlag = digitalRead(configSwitchPin);
+  // deactivate the dip switch pins
+  pinMode(debugSwitchPin, OUTPUT);
+  pinMode(configSwitchPin, OUTPUT);
+  digitalWrite(debugSwitchPin, LOW);
+  digitalWrite(configSwitchPin, LOW);
+
+  // setup pin modes
   pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(pirPowerPin, OUTPUT);
+  disableUnusedPins(usedPins, sizeof(usedPins) / sizeof(usedPins[0]));
+
+  // disable the pir sensor
+  digitalWrite(pirPowerPin, LOW);
 
   // The MKR WAN 1310 3.3V reference voltage for battery measurements
   analogReference(AR_DEFAULT);
 
-  if (debugFlag)
-  {
-    // open serial connection and wait
-    Serial.begin(9600);
-    while (!Serial)
-      ;
-  }
+  // initialize the I2C communication
+  Wire.begin();
 
   if (debugFlag)
   {
+    // open serial connection and wait
+    Serial.begin(115200);
+    while (!Serial)
+      ;
     Serial.println("RTC setup started");
   }
 
@@ -92,12 +131,14 @@ void setup()
     }
     // When time needs to be set on a new device, or after a power loss, the
     // following line sets the RTC to the date & time this sketch was compiled
-    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+    DateTime compileTime = DateTime(F(__DATE__), F(__TIME__));
+    DateTime newTimeUTC = compileTime - TimeSpan(0, 2, 0, 0); // summer time +2
+    rtc.adjust(newTimeUTC);
     // This line sets the RTC with an explicit date & time, for example to set
     // January 21, 2014 at 3am you would call:
     // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
   }
-  //disabel the 32K pin
+  // disabel the 32K pin
   rtc.disable32K();
   // clear alarms
   rtc.clearAlarm(1);
@@ -107,11 +148,27 @@ void setup()
   // turn off alarm 2
   rtc.disableAlarm(2);
   // set next alarm
-  setAlarm(alarmInterval);
+  DateTime currentTime = rtc.now();
+  setAlarm(currentTime);
 
   if (debugFlag)
   {
+    Serial.print("RTC current time: ");
+    Serial.print(currentTime.hour(), DEC);
+    Serial.print(':');
+    Serial.print(currentTime.minute(), DEC);
+    Serial.print(':');
+    Serial.println(currentTime.second(), DEC);
     Serial.println("RTC setup finished");
+    Serial.println("Temp. sensor setup started");
+  }
+
+  // initialize temperature and humidity sensor
+  am2320.begin();
+
+  if (debugFlag)
+  {
+    Serial.println("Temp. sensor setup finished");
     Serial.println("Lora setup started");
   }
 
@@ -123,6 +180,7 @@ void setup()
     Serial.println("Lora setup finished");
   }
 
+  // delay to avoide interference with interrupt pin setup
   delay(200);
 
   // setup timer interrupt pin
@@ -133,20 +191,37 @@ void setup()
   pinMode(counterInterruptPin, INPUT_PULLDOWN);
   LowPower.attachInterruptWakeup(counterInterruptPin, onMotionDetected, RISING);
 
+  // power the pir sensor
+  digitalWrite(pirPowerPin, HIGH);
+
   if (debugFlag)
   {
     Serial.println("Setup finished");
   }
 }
 
+// ----------------------------------------------------
+// ---------------- Main loop section -----------------
+// ----------------------------------------------------
+
+// The main loop gets executed after the device wakes up
+// (caused by the timer or the motion detection interrupt)
 void loop()
 {
+  // reinitialize the rtc connection
+  // due to the voltage drop while sending the connection needs to be reinitialize
+  bool rtcConnection = rtc.begin();
+  if ((!rtcConnection) && debugFlag)
+  {
+    Serial.println("NO connection to RTC");
+  }
 
+  DateTime currentTime = rtc.now();
+
+  // check if a motion was detected.
   if (motionDetected)
   {
     motionDetected = 0;
-
-    DateTime currentTime = rtc.now();
 
     if (counter == 0)
     {
@@ -154,7 +229,8 @@ void loop()
     }
     timeArray[counter] = (currentTime.hour() - houreOfDay) * 60 + currentTime.minute();
 
-    counter++;
+    ++counter;
+    ++totalCounter;
 
     blinkLED();
 
@@ -171,39 +247,77 @@ void loop()
       Serial.println(')');
     }
   }
-
-  if (((counter >= sendThreshold) || (timerCalled)) && (!isSending))
+  int currentThreshold = dataHandler.getMaxCount(timeHandler.getCurrentIntervalMinutes(currentTime));
+  if (((counter >= currentThreshold) || (timerCalled)) && (!isSending))
   {
-    if (debugFlag && timerCalled)
-    {
-      Serial.println("Timer called");
-    }
-    timerCalled = 0;
-    setAlarm(alarmInterval);
+    isSending = 1;
+    // disable the pir sensor
+    digitalWrite(pirPowerPin, LOW);
 
-    // check if the threshold between two counter calls is exeeded
-    if (counter > (sendThreshold + countOverflow))
+    if (timerCalled)
     {
+      totalCounter = 0;
       if (debugFlag)
       {
-        Serial.println("Counter failure. To much motion between timer calls detected!");
+        Serial.println("Timer called");
+      }
+    }
+
+    timerCalled = 0;
+    setAlarm(currentTime);
+
+    // check if the floating interrupt pin bug occurred
+    // method 1: check if the totalCount exceeds the maxCount between the timer calls.
+    // method 2: detect if the count goes up very quickly. (faster then the board is able to send)
+    if ((totalCounter >= maxCount) || (counter > (currentThreshold + 5)))
+    {
+      ++pirError;
+      if (pirError > 2)
+      {
+        if (debugFlag)
+        {
+          Serial.println("PIR-sensor error could not me fixed.");
+        }
         while (1)
         {
         }
       }
+      if (debugFlag)
+      {
+        Serial.println("Floating interrupt pin detected.");
+        Serial.println("Resetting PIR-sensor");
+      }
+      digitalWrite(pirPowerPin, LOW);
+      delay(2000);
+      digitalWrite(pirPowerPin, HIGH);
+      totalCounter = 0;
     }
 
     blinkLED(2);
     sendData();
+
+    delay(200);
+
+    // enable the pir sensor
+    digitalWrite(pirPowerPin, HIGH);
+
+    delay(200);
+
+    isSending = 0;
   }
 
   delay(200);
 
   if (!debugFlag)
   {
-    LowPower.sleep();
+    delay(200);
+    LowPower.deepSleep();
   }
 }
+
+// ----------------------------------------------------
+// --------- Methode implementation section -----------
+// ----------------------------------------------------
 
 void onMotionDetected()
 {
@@ -221,9 +335,9 @@ void onTimerInterrupt()
   }
 }
 
+// Connects to LoRa network
 void doConnect()
 {
-  isSending = 1;
   if (!modem.begin(EU868))
   {
     if (debugFlag)
@@ -242,7 +356,7 @@ void doConnect()
     Serial.print("Your device EUI is: ");
     Serial.println(modem.deviceEUI());
   }
-  delay(4000); //increase up to 10s if connectio does not work
+  delay(4000); // increase up to 10s if connection does not work
   int connected = modem.joinOTAA(appEui, appKey);
   if (!connected)
   {
@@ -260,58 +374,42 @@ void doConnect()
 
   // wait for all data transmission to finish
   delay(500);
-  isSending = 0;
 }
 
 void sendData()
 {
-  isSending = 1;
   int err;
-  //data is transmitted as Ascii chars
+  // data is transmitted as Ascii chars
   modem.beginPacket();
-  byte payload[counter + 2];
 
-  for (int i = 0; i < (counter + 2); ++i)
-  {
-    payload[i] = 0;
-  }
+  dataHandler.setStatus(0);
+  dataHandler.setHwVersion(hwVersion);
+  dataHandler.setSwVersion(swVersion);
+  dataHandler.setMotionCount(counter);
+  dataHandler.setBatteryVoltage(getBatteryVoltage());
+  dataHandler.setTemperature(am2320.readTemperature());
+  dataHandler.setHumidity(am2320.readHumidity());
+  dataHandler.setHoureOfTheDay(houreOfDay);
+  dataHandler.setTimeArray(timeArray);
 
-  payload[0] = lowByte(counter);
-
-  byte batteryLevel = parsBatLevel(getBatteryLevel());
-  byte batAndHour;
-
-  bitWrite(batAndHour, 0, bitRead(batteryLevel, 0));
-  bitWrite(batAndHour, 1, bitRead(batteryLevel, 1));
-  bitWrite(batAndHour, 2, bitRead(batteryLevel, 2));
-  bitWrite(batAndHour, 3, bitRead(houreOfDay, 0));
-  bitWrite(batAndHour, 4, bitRead(houreOfDay, 1));
-  bitWrite(batAndHour, 5, bitRead(houreOfDay, 2));
-  bitWrite(batAndHour, 6, bitRead(houreOfDay, 3));
-  bitWrite(batAndHour, 7, bitRead(houreOfDay, 4));
-  payload[1] = batAndHour;
-
-  for (int i = 0; i < counter; ++i)
-  {
-    payload[i + 2] = timeArray[i];
-  }
-
-  modem.write(payload, sizeof(payload));
-  err = modem.endPacket(false);
+  modem.write(dataHandler.getPayload(), dataHandler.getPayloadLength());
+  err = modem.endPacket(true);
   if (err > 0)
   {
     if (debugFlag)
     {
       Serial.print("Message sent correctly! (count = ");
       Serial.print(counter);
-      Serial.print(" / battery level = ");
-      Serial.print(getBatteryLevel());
-      Serial.print(" % / ");
-      Serial.print(getBatteryVoltage());
+      Serial.print(" / temperature = ");
+      Serial.print(dataHandler.getTemperature());
+      Serial.print("°C / humidity = ");
+      Serial.print(dataHandler.getHumidity());
+      Serial.print("% / battery voltage = ");
+      Serial.print(dataHandler.getBatteryVoltage());
       Serial.println(" V)");
     }
     counter = 0;
-    for (int i = 0; i < sendThreshold; ++i)
+    for (int i = 0; i < timeArraySize; ++i)
     {
       timeArray[i] = 0;
     }
@@ -336,77 +434,70 @@ void sendData()
 
   // wait for all data transmission to finish
   delay(500);
-  isSending = 0;
 }
 
 // blinks the on board led
 void blinkLED(int times)
 {
-  for (int i = 0; i <= times; i++)
+  // deactivate the onboard LED after the specified amount of blinks
+  static int blinkCount = 0;
+  if (blinkCount < maxBlinks)
   {
-    digitalWrite(LED_BUILTIN, HIGH);
-    delay(200);
-    digitalWrite(LED_BUILTIN, LOW);
+    ++blinkCount;
+    for (int i = 0; i < times; i++)
+    {
+      delay(100);
+      digitalWrite(LED_BUILTIN, HIGH);
+      delay(100);
+      digitalWrite(LED_BUILTIN, LOW);
+    }
   }
 }
 
-void setAlarm(TimeSpan dt)
+// Sets all the unused pins to a defined level
+// Output and LOW
+void disableUnusedPins(const int *const activePins, int size)
 {
+  for (int i = 0; i < 22; ++i)
+  {
+    // check if the current pin occurs in the pin array
+    bool isUsed = false;
+    for (int j = 0; j < size; ++j)
+    {
+      if (activePins[j] == i)
+      {
+        isUsed = true;
+      }
+    }
+    // if not, set the pin to output and low
+    if (!isUsed)
+    {
+      pinMode(i, OUTPUT);
+      digitalWrite(i, LOW);
+    }
+  }
+}
+
+void setAlarm(DateTime currentTime)
+{
+  // reinitialize the rtc connection
+  // due to the voltage drop while sending the connection needs to be reinitialize
+  bool rtcConnection = rtc.begin();
+  if ((!rtcConnection) && debugFlag)
+  {
+    Serial.println("NO connection to RTC");
+  }
+
   rtc.clearAlarm(1);
 
-  DateTime nextAlarm = rtc.now() + dt;
-  if (dt.hours() > 0)
-  {
-    // alarm when the hours, the minutes and the seconds match.
-    rtc.setAlarm1(nextAlarm, DS3231_A1_Hour);
-  }
-  else if (dt.minutes() > 0)
-  {
-    // alarm when the minutes and the seconds match.
-    rtc.setAlarm1(nextAlarm, DS3231_A1_Minute);
-  }
-  else
-  {
-    // alarm when the seconds match.
-    rtc.setAlarm1(nextAlarm, DS3231_A1_Second);
-  }
+  DateTime nextAlarm = timeHandler.getNextIntervalTime(currentTime);
+
+  // alarm when the hours, the minutes and the seconds match.
+  rtc.setAlarm1(nextAlarm, DS3231_A1_Hour);
 }
 
 float getBatteryVoltage()
 {
   // read the input on analog pin 0 (A1) and calculate the voltage
   return analogRead(batteryVoltagePin) * 3.3f / 1023.0f / 1.2f * (1.2f + 0.33f);
-}
-
-// get battery level [%]
-float getBatteryLevel()
-{
-  float bV = getBatteryVoltage();
-  // charch calculation
-  // devided into two ranges >=3.8V and <3.8
-  // curve parameters from pseudo invers matrix polynom
-  if (bV >= 3.8f)
-  {
-    return -178.57f * bV * bV + 1569.6f * bV - 3342.0f;
-  }
-  else
-  {
-    return 1183.7f * bV * bV * bV * bV - 15843.0f * bV * bV * bV + 79461.0f * bV * bV - 177004.0f * bV + 147744.0f;
-  }
-}
-
-// pars the battery level to a 3 bit indicator
-// 0 = 0%
-// 7 = 100%
-byte parsBatLevel(float batteryLevel)
-{
-  //
-  if (batteryLevel < 0.0f)
-  {
-    batteryLevel = 0.0f;
-  }
-  float fract = 100.0f / (2 * 2 * 2 - 1);
-  float indicator = batteryLevel / fract;
-
-  return (byte)(round(indicator));
 }

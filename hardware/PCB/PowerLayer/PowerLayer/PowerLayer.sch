@@ -1,0 +1,104 @@
+EESchema Schematic File Version 4
+EELAYER 30 0
+EELAYER END
+$Descr A4 11693 8268
+encoding utf-8
+Sheet 1 1
+Title ""
+Date ""
+Rev ""
+Comp ""
+Comment1 ""
+Comment2 ""
+Comment3 ""
+Comment4 ""
+$EndDescr
+$Comp
+L power:+3V8 #PWR05
+U 1 1 61A0771B
+P 6900 3400
+F 0 "#PWR05" H 6900 3250 50  0001 C CNN
+F 1 "+3V8" V 6915 3528 50  0000 L CNN
+F 2 "" H 6900 3400 50  0001 C CNN
+F 3 "" H 6900 3400 50  0001 C CNN
+	1    6900 3400
+	0    -1   -1   0   
+$EndComp
+$Comp
+L General_TM:Keystone_1049 B1
+U 1 1 61A12CE1
+P 5750 3450
+F 0 "B1" H 5750 3725 50  0000 C CNN
+F 1 "Keystone_1049" H 5750 3634 50  0000 C CNN
+F 2 "General_TM:BatteryHolder_Keystone_1049_2x18650" H 6250 3800 50  0001 C CNN
+F 3 "" H 6250 3800 50  0001 C CNN
+	1    5750 3450
+	1    0    0    -1  
+$EndComp
+$Comp
+L power:+3V8 #PWR01
+U 1 1 61A14500
+P 5500 3400
+F 0 "#PWR01" H 5500 3250 50  0001 C CNN
+F 1 "+3V8" V 5515 3528 50  0000 L CNN
+F 2 "" H 5500 3400 50  0001 C CNN
+F 3 "" H 5500 3400 50  0001 C CNN
+	1    5500 3400
+	0    -1   -1   0   
+$EndComp
+$Comp
+L power:GND #PWR02
+U 1 1 61A14506
+P 5500 3500
+F 0 "#PWR02" H 5500 3250 50  0001 C CNN
+F 1 "GND" V 5505 3372 50  0000 R CNN
+F 2 "" H 5500 3500 50  0001 C CNN
+F 3 "" H 5500 3500 50  0001 C CNN
+	1    5500 3500
+	0    1    1    0   
+$EndComp
+$Comp
+L power:+3V8 #PWR07
+U 1 1 61A14702
+P 6000 3400
+F 0 "#PWR07" H 6000 3250 50  0001 C CNN
+F 1 "+3V8" V 6015 3528 50  0000 L CNN
+F 2 "" H 6000 3400 50  0001 C CNN
+F 3 "" H 6000 3400 50  0001 C CNN
+	1    6000 3400
+	0    1    -1   0   
+$EndComp
+$Comp
+L power:GND #PWR08
+U 1 1 61A14708
+P 6000 3500
+F 0 "#PWR08" H 6000 3250 50  0001 C CNN
+F 1 "GND" V 6005 3372 50  0000 R CNN
+F 2 "" H 6000 3500 50  0001 C CNN
+F 3 "" H 6000 3500 50  0001 C CNN
+	1    6000 3500
+	0    -1   1    0   
+$EndComp
+$Comp
+L power:GND #PWR06
+U 1 1 61A07B60
+P 6900 3500
+F 0 "#PWR06" H 6900 3250 50  0001 C CNN
+F 1 "GND" V 6905 3372 50  0000 R CNN
+F 2 "" H 6900 3500 50  0001 C CNN
+F 3 "" H 6900 3500 50  0001 C CNN
+	1    6900 3500
+	0    1    1    0   
+$EndComp
+$Comp
+L Connector:Conn_01x02_Male J1
+U 1 1 61B68130
+P 7100 3400
+F 0 "J1" H 7050 3400 50  0000 R CNN
+F 1 "Logic layer connection" H 7050 3300 50  0000 R CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical" H 7100 3400 50  0001 C CNN
+F 3 "~" H 7100 3400 50  0001 C CNN
+	1    7100 3400
+	-1   0    0    -1  
+$EndComp
+$EndSCHEMATC

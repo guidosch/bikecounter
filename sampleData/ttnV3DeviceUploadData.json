@@ -1,8 +1,8 @@
 {
     "end_device_ids": {
-        "device_id": "t77-monitor",
+        "device_id": "test-test",
         "application_ids": {
-            "application_id": "freecooling-monitor"
+            "application_id": "bikecounter"
         },
         "dev_eui": "A8610A33351C6A07",
         "join_eui": "70B3D57ED0027B24",
@@ -24,9 +24,27 @@
         "f_cnt": 43,
         "frm_payload": "CkEJ9g==",
         "decoded_payload": {
-            "forward_temp": 26.25,
-            "return_temp": 25.5
-        },
+        "batteryLevel": 25.8,
+        "count": 10,
+        "hourOfDay": 19,
+        "humidity": 42.9,
+        "intervallId": 0,
+        "selectedIntervall": "< 1h",
+        "stat": "no error",
+        "temperatur": 22.9,
+        "timeArray": [
+          1640030160000,
+          1640030220000,
+          1640030280000,
+          1640030280000,
+          1640030280000,
+          1640030280000,
+          1640030280000,
+          1640030280000,
+          1640030280000,
+          1640030280000
+        ]
+      },
         "rx_metadata": [
             {
                 "gateway_ids": {
