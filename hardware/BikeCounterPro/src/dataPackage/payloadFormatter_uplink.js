@@ -92,6 +92,11 @@ function decodeUplink(input) {
     data.timeArray.push(ts_i.getTime());
   }
 
+  // temp. solution for deviceTransmissionTime
+  var today = new Date();
+  // seconds since 1 Jan 1970
+  data.deviceTransmissionTime = (today.getTime() / 1000) >> 0;
+
   return {
     data: data,
     warnings: [],
