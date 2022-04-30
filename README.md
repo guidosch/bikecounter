@@ -1,2 +1,2 @@
 # bikecounter
-Repo to server the bikecounterUI Angular app over Githubpages
+Repo to serve the bikecounterUI Angular app over Githubpages (gh-pages branch)
