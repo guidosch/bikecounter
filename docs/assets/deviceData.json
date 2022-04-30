@@ -10,7 +10,7 @@
     "sumLast24h": 16,
     "sumToday":12,
     "gateways": "lora-gw-1",
-    "timestampLastMsg": "2021-12-21"
+    "timestampLastMsg": "2021-12-21",
   },
   {
     "id": "uetliberg",
@@ -23,7 +23,7 @@
     "sumLast24h": 16,
     "sumToday":11,
     "gateways": "lora-gw-2",
-    "timestampLastMsg": "2021-12-22"
+    "timestampLastMsg": "2021-12-22",
   },
   {
     "id": "Höckler",
@@ -36,6 +36,7 @@
     "sumLast24h": 16,
     "sumToday":13,
     "gatewayId": "lora-gw-3",
-    "gateways": "2021-12-23"
+    "gateways": "2021-12-23",
+    "timestampLastMsg": "2021-12-23",
   }
 ]

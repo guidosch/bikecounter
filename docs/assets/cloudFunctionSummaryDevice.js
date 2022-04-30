@@ -1,33 +1,34 @@
 const admin = require('firebase-admin');
+const moment = require('moment');
 
 admin.initializeApp();
 const oneDayBack = new Date(new Date().getTime() - (1000 * 60 * 60 * 24));
 const db = admin.firestore();
 
-
-
-exports.getDevicesSummaryPro = (req, res) => {
+exports.getDeviceSummaryPro = (req, res) => {
     let deviceSummary = [];
-
-    let collection = request.query.collection;
+    let collection = req.query.collection;
     if (!collection) {
         doRespond(500, "<h1>No collection query attribute found!</h1>", res);
         return;
     }
-    const collectionRef = database.collection(collection);
-
-    collectionRef.where("timestamp", ">", oneDayBack.toISOString())
+    const collectionRef = db.collection(collection);
+    collectionRef.where("timestamp", ">=", oneDayBack.toISOString())
         .orderBy("timestamp", "asc").get()
         .then(snapshot => {
             let device = {};
-            device.id = collection.id;
+            device.id = collection;
             device.sumLast24h = null;
-            device.battery = null;
+            device.sumToday = null;
+            device.batteryLevel = null;
+            device.batteryVoltage = null;
             device.temperature = null;
             device.humidity = null;
             device.gateways = null;
             device.location = null;
             device.status = null;
+            device.swVersion = null;
+            device.hwVersion = null;
 
             if (snapshot.empty) {
                 device.online = false;
@@ -35,15 +36,19 @@ exports.getDevicesSummaryPro = (req, res) => {
 
             snapshot.forEach(doc => {
                 device.sumLast24h += doc.data().counter;
+                device.sumToday += isCountDataFromToday(doc.data().counter, doc.data().timestamp);
                 device.timestampLastMsg = doc.data().timestamp;
                 device.online = true;
                 if (Object.keys(doc.data()).length > 2) {
-                    device.battery = doc.data().batteryLevel;
+                    device.batteryLevel = doc.data().batteryLevel;
+                    device.batteryVoltage = doc.data().batteryVoltage;
                     device.temperature = doc.data().temperature;
                     device.humidity = doc.data().humidity;
                     device.gateways = doc.data().gateways;
                     device.location = doc.data().location;
                     device.status = doc.data().stat;
+                    device.swVersion = doc.data().swVersion;
+                    device.hwVersion = doc.data().hwVersion;
                 }
             });
             console.log("Added device: " + JSON.stringify(device));
@@ -67,4 +72,13 @@ function doRespond(statusCode, responseString, response, asJson) {
         response.setHeader("Content-Type", "text/html");
     }
     response.send(responseString);
+}
+
+function isCountDataFromToday(count, timestamp) {
+    let sameDay = moment().isSame(timestamp, 'day'); 
+    if (sameDay) {
+        return count;
+    }
+    return 0;
+     
 }
