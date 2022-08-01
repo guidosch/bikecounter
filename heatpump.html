@@ -29,6 +29,8 @@
         var collection = "t77-monitor";
         var lineChart;
         var lineChartData;
+        var startDate;
+
         var options = {
             chart: {
                 title: 'Rohdaten der gleichen Zeitperiode wie oben. Vorlauf- und Rücklauftemperatur Heizung/Kühlung und Differenz.'
@@ -64,6 +66,7 @@
                 dataType: "json",
                 async: false,
                 data: {
+                    startDate: startDate,
                     collection: collection
                 }
             })
@@ -227,6 +230,8 @@
         }
 
         $(document).ready(function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            startDate = urlParams.get("startDate");
             $('#collection').change(function () {
                 resetData();
                 collection = $(this).val();
