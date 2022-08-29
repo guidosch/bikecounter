@@ -17,7 +17,6 @@ const int maxCount = 1000;
 const int maxBlinks = 50;
 
 // Interrupt pins
-const int timerInterruptPin = 0;
 const int counterInterruptPin = 1;
 const int debugSwitchPin = 8;
 const int configSwitchPin = 9;
@@ -25,7 +24,7 @@ const int batteryVoltagePin = A0;
 // PIR sensor power pin
 const int pirPowerPin = 2;
 // Used pins (not defined pins will be disabled to save power)
-const int usedPins[] = {LED_BUILTIN, timerInterruptPin, counterInterruptPin, debugSwitchPin, configSwitchPin, batteryVoltagePin, pirPowerPin};
+const int usedPins[] = {LED_BUILTIN, counterInterruptPin, debugSwitchPin, configSwitchPin, batteryVoltagePin, pirPowerPin};
 
 // ----------------------------------------------------
 // -------------- Declaration section -----------------
@@ -35,9 +34,6 @@ const int usedPins[] = {LED_BUILTIN, timerInterruptPin, counterInterruptPin, deb
 LoRaModem modem(Serial1);
 String appEui = SECRET_APPEUI;
 String appKey = SECRET_APPKEY;
-
-// RTC object
-RTC_DS3231 rtc;
 
 // Humidity and temperature sensor object
 Adafruit_AM2320 am2320 = Adafruit_AM2320();
@@ -59,9 +55,7 @@ const int timeArraySize = 62;
 // time array
 unsigned int timeArray[timeArraySize];
 // hour of the day for next package
-unsigned int houreOfDay = 0;
-// Timer interrupt flag (initial on 1 to trigger a dummy message on startup)
-volatile bool timerCalled = 1;
+unsigned int hourOfDay = 0;
 // Lora data transmission flag
 volatile bool isSending = 0;
 // Error counter for connection
@@ -112,54 +106,19 @@ void setup()
     // open serial connection and wait
     Serial.begin(115200);
     while (!Serial)
-      ;
-    Serial.println("RTC setup started");
-  }
-
-  // setup rtc
-  bool rtcConnection = rtc.begin();
-
-  if ((!rtcConnection) && debugFlag)
-  {
-    Serial.println("NO connection to RTC");
-  }
-  if (rtc.lostPower())
-  {
-    if (debugFlag)
     {
-      Serial.println("RTC lost power, time will be reset.");
-    }
-    // When time needs to be set on a new device, or after a power loss, the
-    // following line sets the RTC to the date & time this sketch was compiled
-    DateTime compileTime = DateTime(F(__DATE__), F(__TIME__));
-    DateTime newTimeUTC = compileTime - TimeSpan(0, 2, 0, 0); // summer time +2
-    rtc.adjust(newTimeUTC);
-    // This line sets the RTC with an explicit date & time, for example to set
-    // January 21, 2014 at 3am you would call:
-    // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
+    };
   }
-  // disabel the 32K pin
-  rtc.disable32K();
-  // clear alarms
-  rtc.clearAlarm(1);
-  rtc.clearAlarm(2);
-  // stop oscillating signal at SQW Pin
-  rtc.writeSqwPinMode(DS3231_OFF);
-  // turn off alarm 2
-  rtc.disableAlarm(2);
-  // set next alarm
-  DateTime currentTime = rtc.now();
-  setAlarm(currentTime);
 
   if (debugFlag)
   {
+    DateTime currentTime = rtc.now();
     Serial.print("RTC current time: ");
     Serial.print(currentTime.hour(), DEC);
     Serial.print(':');
     Serial.print(currentTime.minute(), DEC);
     Serial.print(':');
     Serial.println(currentTime.second(), DEC);
-    Serial.println("RTC setup finished");
     Serial.println("Temp. sensor setup started");
   }
 
@@ -180,12 +139,8 @@ void setup()
     Serial.println("Lora setup finished");
   }
 
-  // delay to avoide interference with interrupt pin setup
+  // delay to avoid interference with interrupt pin setup
   delay(200);
-
-  // setup timer interrupt pin
-  pinMode(timerInterruptPin, INPUT_PULLUP);
-  LowPower.attachInterruptWakeup(timerInterruptPin, onTimerInterrupt, FALLING);
 
   // setup counter interrupt
   pinMode(counterInterruptPin, INPUT_PULLDOWN);
@@ -208,15 +163,8 @@ void setup()
 // (caused by the timer or the motion detection interrupt)
 void loop()
 {
-  // reinitialize the rtc connection
-  // due to the voltage drop while sending the connection needs to be reinitialize
-  bool rtcConnection = rtc.begin();
-  if ((!rtcConnection) && debugFlag)
-  {
-    Serial.println("NO connection to RTC");
-  }
-
   DateTime currentTime = rtc.now();
+  int timerCalled = 0;
 
   // check if a motion was detected.
   if (motionDetected)
@@ -225,9 +173,9 @@ void loop()
 
     if (counter == 0)
     {
-      houreOfDay = currentTime.hour();
+      hourOfDay = currentTime.hour();
     }
-    timeArray[counter] = (currentTime.hour() - houreOfDay) * 60 + currentTime.minute();
+    timeArray[counter] = (currentTime.hour() - hourOfDay) * 60 + currentTime.minute();
 
     ++counter;
     ++totalCounter;
@@ -247,6 +195,10 @@ void loop()
       Serial.println(')');
     }
   }
+  else
+  {
+    timerCalled = 1;
+  }
   int currentThreshold = dataHandler.getMaxCount(timeHandler.getCurrentIntervalMinutes(currentTime));
   if (((counter >= currentThreshold) || (timerCalled)) && (!isSending))
   {
@@ -264,7 +216,6 @@ void loop()
     }
 
     timerCalled = 0;
-    setAlarm(currentTime);
 
     // check if the floating interrupt pin bug occurred
     // method 1: check if the totalCount exceeds the maxCount between the timer calls.
@@ -311,12 +262,14 @@ void loop()
   if (!debugFlag)
   {
     delay(200);
-    LowPower.deepSleep();
+    DateTime nextAlarm = timeHandler.getNextIntervalTime(currentTime);
+    TimeSpan sleepTime = nextAlarm - currentTime;
+    LowPower.deepSleep((int)sleepTime.totalseconds() * 1000);
   }
 }
 
 // ----------------------------------------------------
-// --------- Methode implementation section -----------
+// --------- Method implementation section -----------
 // ----------------------------------------------------
 
 void onMotionDetected()
@@ -324,14 +277,6 @@ void onMotionDetected()
   if (!isSending)
   {
     motionDetected = 1;
-  }
-}
-
-void onTimerInterrupt()
-{
-  if (!isSending)
-  {
-    timerCalled = 1;
   }
 }
 
@@ -389,7 +334,7 @@ void sendData()
   dataHandler.setBatteryVoltage(getBatteryVoltage());
   dataHandler.setTemperature(am2320.readTemperature());
   dataHandler.setHumidity(am2320.readHumidity());
-  dataHandler.setHoureOfTheDay(houreOfDay);
+  dataHandler.setHoureOfTheDay(hourOfDay);
   dataHandler.setTimeArray(timeArray);
 
   modem.write(dataHandler.getPayload(), dataHandler.getPayloadLength());
@@ -476,24 +421,6 @@ void disableUnusedPins(const int *const activePins, int size)
       digitalWrite(i, LOW);
     }
   }
-}
-
-void setAlarm(DateTime currentTime)
-{
-  // reinitialize the rtc connection
-  // due to the voltage drop while sending the connection needs to be reinitialize
-  bool rtcConnection = rtc.begin();
-  if ((!rtcConnection) && debugFlag)
-  {
-    Serial.println("NO connection to RTC");
-  }
-
-  rtc.clearAlarm(1);
-
-  DateTime nextAlarm = timeHandler.getNextIntervalTime(currentTime);
-
-  // alarm when the hours, the minutes and the seconds match.
-  rtc.setAlarm1(nextAlarm, DS3231_A1_Hour);
 }
 
 float getBatteryVoltage()
