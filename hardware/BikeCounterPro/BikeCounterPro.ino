@@ -1,4 +1,5 @@
 #include <MKRWAN.h>
+#include <RTCZero.h>
 #include "ArduinoLowPower.h"
 #include "RTClib.h"
 #include "Adafruit_AM2320.h"
@@ -26,6 +27,9 @@ const int pirPowerPin = 2;
 // Used pins (not defined pins will be disabled to save power)
 const int usedPins[] = {LED_BUILTIN, counterInterruptPin, debugSwitchPin, configSwitchPin, batteryVoltagePin, pirPowerPin};
 
+// Debug sleep interval (ms)
+const u_int32_t debugSleepTime = 300000ul; // 5*60*1000
+
 // ----------------------------------------------------
 // -------------- Declaration section -----------------
 // ----------------------------------------------------
@@ -35,13 +39,16 @@ LoRaModem modem(Serial1);
 String appEui = SECRET_APPEUI;
 String appKey = SECRET_APPKEY;
 
+// Internal RTC object
+RTCZero rtc;
+
 // Humidity and temperature sensor object
 Adafruit_AM2320 am2320 = Adafruit_AM2320();
 
 // DataPackage object to encode the payload
 DataPackage dataHandler = DataPackage();
 
-// TimerSchedule object to determin the next timer call
+// TimerSchedule object to determine the next timer call
 TimerSchedule timeHandler = TimerSchedule();
 
 // Motion counter value (must be volatile as incremented in IRS)
@@ -66,8 +73,10 @@ int pirError = 0;
 int debugFlag = 0;
 // Holds the config state of the dip switch
 int configFlag = 0;
+// Last call of main loop in debug mode
+unsigned long lastMillis = 0;
 
-// Blink methode prototype
+// Blink method prototype
 void blinkLED(int times = 1);
 
 // ----------------------------------------------------
@@ -108,17 +117,33 @@ void setup()
     while (!Serial)
     {
     };
+
+    Serial.println("RTC setup started");
   }
+
+  // setup rtc
+  rtc.begin();
+  // rtc.setEpoch(1640995200); // default startup date 01.01.2022
 
   if (debugFlag)
   {
-    DateTime currentTime = rtc.now();
+    // DateTime currentTime = rtc.now();
     Serial.print("RTC current time: ");
-    Serial.print(currentTime.hour(), DEC);
+    Serial.print(rtc.getHours(), DEC);
     Serial.print(':');
-    Serial.print(currentTime.minute(), DEC);
+    Serial.print(rtc.getMinutes(), DEC);
     Serial.print(':');
-    Serial.println(currentTime.second(), DEC);
+    Serial.println(rtc.getSeconds(), DEC);
+    Serial.print("RTC current date: ");
+    Serial.print(rtc.getDay(), DEC);
+    Serial.print('.');
+    Serial.print(rtc.getMonth(), DEC);
+    Serial.print('.');
+    Serial.println(rtc.getYear(), DEC);
+    Serial.print("RTC epoch: ");
+    Serial.println(rtc.getEpoch(), DEC);
+    Serial.print("RTC epoch Y2k: ");
+    Serial.println(rtc.getY2kEpoch(), DEC);
     Serial.println("Temp. sensor setup started");
   }
 
@@ -163,7 +188,27 @@ void setup()
 // (caused by the timer or the motion detection interrupt)
 void loop()
 {
-  DateTime currentTime = rtc.now();
+  // This statement simulates the sleep/deepSleep method in debug mode.
+  // The reason for not using the sleep or deepSleep method is, that it disables
+  // the usb connection which leeds to problems with the serial monitor.
+  if (debugFlag)
+  {
+    // Check if a motion was detected or the sleep time expired
+    // (Implemented in a nested if-statement to give the compiler the opportunity
+    // to remove the whole outer statement depending on the constexpr debugFlag.)
+    if ((motionDetected) || ((millis() - lastMillis) >= debugSleepTime))
+    {
+      // Run the main loop once
+      lastMillis = millis();
+    }
+    else
+    {
+      // Noting happened, continue with the next cycle
+      return;
+    }
+  }
+
+  DateTime currentTime = DateTime(rtc.getEpoch());
   int timerCalled = 0;
 
   // check if a motion was detected.
@@ -227,7 +272,7 @@ void loop()
       {
         if (debugFlag)
         {
-          Serial.println("PIR-sensor error could not me fixed.");
+          Serial.println("PIR-sensor error could not be fixed.");
         }
         while (1)
         {
@@ -334,7 +379,8 @@ void sendData()
   dataHandler.setBatteryVoltage(getBatteryVoltage());
   dataHandler.setTemperature(am2320.readTemperature());
   dataHandler.setHumidity(am2320.readHumidity());
-  dataHandler.setHoureOfTheDay(hourOfDay);
+  dataHandler.setHourOfTheDay(hourOfDay);
+  dataHandler.setDeviceTime(rtc.getEpoch());
   dataHandler.setTimeArray(timeArray);
 
   modem.write(dataHandler.getPayload(), dataHandler.getPayloadLength());
@@ -427,4 +473,10 @@ float getBatteryVoltage()
 {
   // read the input on analog pin 0 (A1) and calculate the voltage
   return analogRead(batteryVoltagePin) * 3.3f / 1023.0f / 1.2f * (1.2f + 0.33f);
+}
+
+void correctRTCTime(int32_t delta)
+{
+  uint32_t currentEpoch = rtc.getEpoch();
+  rtc.setEpoch(currentEpoch + delta);
 }
