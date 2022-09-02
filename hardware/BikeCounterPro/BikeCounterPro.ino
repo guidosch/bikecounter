@@ -424,8 +424,43 @@ void sendData()
     }
   }
 
-  // wait for all data transmission to finish
-  delay(500);
+  // wait for all data transmission to finish (up- and downlink)
+  delay(1000);
+  // receive and decode downlink message
+  if (modem.available())
+  {
+    char rcv[64];
+    int i = 0;
+    while (modem.available())
+    {
+      rcv[i++] = (char)modem.read();
+    }
+    if (debugFlag)
+    {
+      Serial.print("Received: ");
+      for (unsigned int j = 0; j < i; j++)
+      {
+        Serial.print(rcv[j] >> 4, HEX);
+        Serial.print(rcv[j] & 0xF, HEX);
+        Serial.print(" ");
+      }
+      Serial.println();
+    }
+    // decode time drift
+    int32_t timeDrift = rcv[3];
+    timeDrift = (timeDrift << 8) | rcv[2];
+    timeDrift = (timeDrift << 8) | rcv[1];
+    timeDrift = (timeDrift << 8) | rcv[0];
+    if (debugFlag)
+    {
+      Serial.print("Time drift = ");
+      Serial.println(timeDrift);
+    }
+    if (timeDrift > (10 * 60))
+    {
+      correctRTCTime(timeDrift);
+    }
+  }
 }
 
 // blinks the on board led
