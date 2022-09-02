@@ -28,7 +28,7 @@ const int pirPowerPin = 2;
 const int usedPins[] = {LED_BUILTIN, counterInterruptPin, debugSwitchPin, configSwitchPin, batteryVoltagePin, pirPowerPin};
 
 // Debug sleep interval (ms)
-const u_int32_t debugSleepTime = 300000ul; // 5*60*1000
+const uint32_t debugSleepTime = 300000ul; // 5*60*1000
 
 // ----------------------------------------------------
 // -------------- Declaration section -----------------
@@ -75,6 +75,8 @@ int debugFlag = 0;
 int configFlag = 0;
 // Last call of main loop in debug mode
 unsigned long lastMillis = 0;
+// Status (See DataPackage.xlsx)
+uint8_t deviceStatus = 7;
 
 // Blink method prototype
 void blinkLED(int times = 1);
@@ -196,7 +198,8 @@ void loop()
     // Check if a motion was detected or the sleep time expired
     // (Implemented in a nested if-statement to give the compiler the opportunity
     // to remove the whole outer statement depending on the constexpr debugFlag.)
-    if ((motionDetected) || ((millis() - lastMillis) >= debugSleepTime))
+    uint32_t sleepTime = deviceStatus != 7 ? debugSleepTime : 60 * 1000; // sync call interval
+    if ((motionDetected) || ((millis() - lastMillis) >= sleepTime))
     {
       // Run the main loop once
       lastMillis = millis();
@@ -307,9 +310,12 @@ void loop()
 
   if (!debugFlag)
   {
-    delay(200);
-    time_t nextAlarm = timeHandler.getNextIntervalTime(currentTime);
-    uint32_t sleepTime = difftime(nextAlarm, currentTime);
+    uint32_t sleepTime = 60;
+    if (deviceStatus != 7)
+    {
+      time_t nextAlarm = timeHandler.getNextIntervalTime(currentTime);
+      sleepTime = difftime(nextAlarm, currentTime);
+    }
     LowPower.deepSleep(sleepTime * 1000);
   }
 }
@@ -373,7 +379,7 @@ void sendData()
   // data is transmitted as Ascii chars
   modem.beginPacket();
 
-  dataHandler.setStatus(0);
+  dataHandler.setStatus(deviceStatus);
   dataHandler.setHwVersion(hwVersion);
   dataHandler.setSwVersion(swVersion);
   dataHandler.setMotionCount(counter);
@@ -459,6 +465,10 @@ void sendData()
     if (timeDrift > (10 * 60))
     {
       correctRTCTime(timeDrift);
+      if (deviceStatus = 7)
+      {
+        deviceStatus = 0;
+      }
     }
   }
 }
