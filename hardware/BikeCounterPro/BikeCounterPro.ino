@@ -208,7 +208,8 @@ void loop()
     }
   }
 
-  DateTime currentTime = DateTime(rtc.getEpoch());
+  time_t currentTime = time_t(rtc.getEpoch());
+  tm *currentTimeStruct = gmtime(&currentTime);
   int timerCalled = 0;
 
   // check if a motion was detected.
@@ -218,9 +219,9 @@ void loop()
 
     if (counter == 0)
     {
-      hourOfDay = currentTime.hour();
+      hourOfDay = currentTimeStruct->tm_hour;
     }
-    timeArray[counter] = (currentTime.hour() - hourOfDay) * 60 + currentTime.minute();
+    timeArray[counter] = (currentTimeStruct->tm_hour - hourOfDay) * 60 + currentTimeStruct->tm_min;
 
     ++counter;
     ++totalCounter;
@@ -232,11 +233,11 @@ void loop()
       Serial.print("Motion detected (current count = ");
       Serial.print(counter);
       Serial.print(" / time: ");
-      Serial.print(currentTime.hour(), DEC);
+      Serial.print(currentTimeStruct->tm_hour, DEC);
       Serial.print(':');
-      Serial.print(currentTime.minute(), DEC);
+      Serial.print(currentTimeStruct->tm_min, DEC);
       Serial.print(':');
-      Serial.print(currentTime.second(), DEC);
+      Serial.print(currentTimeStruct->tm_sec, DEC);
       Serial.println(')');
     }
   }
@@ -307,9 +308,9 @@ void loop()
   if (!debugFlag)
   {
     delay(200);
-    DateTime nextAlarm = timeHandler.getNextIntervalTime(currentTime);
-    TimeSpan sleepTime = nextAlarm - currentTime;
-    LowPower.deepSleep((int)sleepTime.totalseconds() * 1000);
+    time_t nextAlarm = timeHandler.getNextIntervalTime(currentTime);
+    uint32_t sleepTime = difftime(nextAlarm, currentTime);
+    LowPower.deepSleep(sleepTime * 1000);
   }
 }
 

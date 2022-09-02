@@ -3,7 +3,6 @@
 
 #include <math.h>
 #include <stdint.h>
-#include <Arduino.h>
 
 class DataPackage
 {

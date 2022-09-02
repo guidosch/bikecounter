@@ -1,22 +1,20 @@
 #ifndef TIMERSCHEDULE_H
 #define TIMERSCHEDULE_H
 
-#ifndef UNITTEST
-#include <RTClib.h>
-#else
-#include "mock/RTClib_mock.h"
-#endif
+#include <ctime>
+#include <stdint.h>
 
 class TimerSchedule
 {
 public:
-    DateTime getNextIntervalTime(DateTime &currentDateTime);
-    TimeSpan getCurrentInterval(DateTime &currentDateTime);
-    unsigned int getCurrentIntervalMinutes(DateTime &currentDateTime);
+    time_t getNextIntervalTime(time_t currentDateTime);
+    uint32_t getCurrentIntervalSeconds(time_t currentDateTime);
+    uint32_t getCurrentIntervalMinutes(time_t currentDateTime);
 
 private:
     static const int intervalCount = 3;
-    TimeSpan timeSpanIntervals[intervalCount] = {TimeSpan(0, 6, 0, 0), TimeSpan(0, 2, 0, 0), TimeSpan(0, 6, 0, 0)}; // {dayInterval, nightInterval}
+    // TimeSpan timeSpanIntervals[intervalCount] = {TimeSpan(0, 6, 0, 0), TimeSpan(0, 2, 0, 0), TimeSpan(0, 6, 0, 0)}; // {dayInterval, nightInterval}
+    uint32_t timeSpanIntervals[intervalCount] = {uint32_t(6 * 60 * 60), uint32_t(2 * 60 * 60), uint32_t(6 * 60 * 60)}; // seconds
     int IntervalStartUTC[intervalCount][12] = {
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
         {7, 6, 5, 5, 5, 5, 5, 5, 6, 6, 6, 7},              // ZRH (+1) { 8,  7,  6,  6,  6,  6,  6,  6,  7,  7,  7,  8} start day interval
@@ -25,4 +23,4 @@ private:
     int getIntervalId(int currentHour, int currentMonth);
 };
 
-#endif //TIMERSCHEDULE_H
+#endif // TIMERSCHEDULE_H

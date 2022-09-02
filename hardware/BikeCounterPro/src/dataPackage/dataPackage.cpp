@@ -1,5 +1,10 @@
 #include "dataPackage.hpp"
 
+#define bitSet(value, bit) ((value) |= (1UL << (bit)))
+#define bitClear(value, bit) ((value) &= ~(1UL << (bit)))
+#define bitWrite(value, bit, bitValue) (bitValue ? bitSet(value, bit) : bitClear(value, bit))
+#define bitRead(value, bit) (((value) >> (bit)) & 0x01)
+
 DataPackage::DataPackage(unsigned int intervalTime,
                          uint8_t count,
                          uint8_t s,
