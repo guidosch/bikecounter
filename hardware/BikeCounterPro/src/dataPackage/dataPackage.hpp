@@ -62,7 +62,7 @@ public:
     void setTimeArray(unsigned int *arr) { timeVector = arr; }
     unsigned int *getTimeArray() const { return timeVector; }
     // payload operations
-    int getPayloadLength() const { return 3 + 1 + (int)ceil(((float)(motionCount * minuteBits[selectedInterval])) / 8.0f); }
+    int getPayloadLength() const { return (int)(offsetBits / 8) + (int)ceil(((float)(motionCount * minuteBits[selectedInterval])) / 8.0f); }
     uint8_t *getPayload();
     int getMaxCount(unsigned int intervalTime);
 
@@ -100,6 +100,7 @@ private:
     unsigned int *timeVector;
 
     uint8_t payload[51] = {0};
+    unsigned int offsetBits = 8 * 8;
 
     uint8_t reduceFloat(float value, float min, float max, unsigned int bitCount);
     float expandFloat(uint8_t value, float min, float max, unsigned int bitCount) const;

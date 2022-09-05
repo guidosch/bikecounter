@@ -119,13 +119,12 @@ uint8_t *DataPackage::getPayload()
     payload[4] = indexAndHOD;
 
     // 6. - 8. byte - device time
-    uint32_t deviceTimeMinutes = deviceTime / 60;
+    uint32_t deviceTimeMinutes = (deviceTime - startEpoch) / 60;
     payload[5] = (uint8_t)(deviceTimeMinutes & 0xff);
     payload[6] = (uint8_t)((deviceTimeMinutes >> 8) & 0xff);
     payload[7] = (uint8_t)((deviceTimeMinutes >> 16) & 0xff);
 
     // 9. - 51. byte - detected minutes
-    unsigned int offsetBits = 8 * 8;
     for (int payloadBit = offsetBits; payloadBit < ((motionCount * minuteBits[selectedInterval]) + offsetBits); ++payloadBit)
     {
         unsigned int currentMotionByte = (payloadBit - offsetBits) / minuteBits[selectedInterval];

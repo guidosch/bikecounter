@@ -1,7 +1,6 @@
 #include <MKRWAN.h>
 #include <RTCZero.h>
 #include "ArduinoLowPower.h"
-#include "RTClib.h"
 #include "Adafruit_AM2320.h"
 #include "arduino_secrets.h"
 #include "versionConfig.h"
@@ -28,7 +27,10 @@ const int pirPowerPin = 2;
 const int usedPins[] = {LED_BUILTIN, counterInterruptPin, debugSwitchPin, configSwitchPin, batteryVoltagePin, pirPowerPin};
 
 // Debug sleep interval (ms)
-const uint32_t debugSleepTime = 300000ul; // 5*60*1000
+const uint32_t debugSleepTime = 300000ul; // 5*60*1000 ms
+
+// Sync time interval
+const uint32_t syncTimeInterval = 60000ul; // 2*60*1000 ms
 
 // ----------------------------------------------------
 // -------------- Declaration section -----------------
@@ -74,7 +76,7 @@ int debugFlag = 0;
 // Holds the config state of the dip switch
 int configFlag = 0;
 // Last call of main loop in debug mode
-unsigned long lastMillis = 0;
+unsigned long lastMillis = millis() - 10 * 60 * 1000;
 // Status (See DataPackage.xlsx)
 uint8_t deviceStatus = 7;
 
@@ -125,7 +127,7 @@ void setup()
 
   // setup rtc
   rtc.begin();
-  // rtc.setEpoch(1640995200); // default startup date 01.01.2022
+  rtc.setEpoch(1640995200); // default startup date 01.01.2022 (1640995200)
 
   if (debugFlag)
   {
@@ -144,8 +146,6 @@ void setup()
     Serial.println(rtc.getYear(), DEC);
     Serial.print("RTC epoch: ");
     Serial.println(rtc.getEpoch(), DEC);
-    Serial.print("RTC epoch Y2k: ");
-    Serial.println(rtc.getY2kEpoch(), DEC);
     Serial.println("Temp. sensor setup started");
   }
 
@@ -198,7 +198,7 @@ void loop()
     // Check if a motion was detected or the sleep time expired
     // (Implemented in a nested if-statement to give the compiler the opportunity
     // to remove the whole outer statement depending on the constexpr debugFlag.)
-    uint32_t sleepTime = deviceStatus != 7 ? debugSleepTime : 60 * 1000; // sync call interval
+    uint32_t sleepTime = deviceStatus != 7 ? debugSleepTime : syncTimeInterval; // sync call interval
     if ((motionDetected) || ((millis() - lastMillis) >= sleepTime))
     {
       // Run the main loop once
@@ -214,6 +214,12 @@ void loop()
   time_t currentTime = time_t(rtc.getEpoch());
   tm *currentTimeStruct = gmtime(&currentTime);
   int timerCalled = 0;
+
+  if (debugFlag)
+  {
+    Serial.print("Device status = ");
+    Serial.println(deviceStatus);
+  }
 
   // check if a motion was detected.
   if (motionDetected)
@@ -326,7 +332,7 @@ void loop()
 
 void onMotionDetected()
 {
-  if (!isSending)
+  if (!isSending && !(deviceStatus == 7))
   {
     motionDetected = 1;
   }
@@ -404,7 +410,16 @@ void sendData()
       Serial.print(dataHandler.getHumidity());
       Serial.print("% / battery voltage = ");
       Serial.print(dataHandler.getBatteryVoltage());
-      Serial.println(" V)");
+      Serial.print(" V / DeviceEpoch = ");
+      Serial.print(dataHandler.getDeviceTime());
+      Serial.println(" )");
+      Serial.print("Payload = ");
+      for (int i = 0; i < dataHandler.getPayloadLength(); ++i)
+      {
+        Serial.print(dataHandler.getPayload()[i], HEX);
+        Serial.print(" ");
+      }
+      Serial.println();
     }
     counter = 0;
     for (int i = 0; i < timeArraySize; ++i)
@@ -462,7 +477,7 @@ void sendData()
       Serial.print("Time drift = ");
       Serial.println(timeDrift);
     }
-    if (timeDrift > (10 * 60))
+    if (abs(timeDrift) > (10 * 60))
     {
       correctRTCTime(timeDrift);
       if (deviceStatus = 7)
@@ -525,4 +540,22 @@ void correctRTCTime(int32_t delta)
 {
   uint32_t currentEpoch = rtc.getEpoch();
   rtc.setEpoch(currentEpoch + delta);
+
+  if (debugFlag)
+  {
+    Serial.print("RTC correction applied, current time: ");
+    Serial.print(rtc.getHours(), DEC);
+    Serial.print(':');
+    Serial.print(rtc.getMinutes(), DEC);
+    Serial.print(':');
+    Serial.println(rtc.getSeconds(), DEC);
+    Serial.print("RTC current date: ");
+    Serial.print(rtc.getDay(), DEC);
+    Serial.print('.');
+    Serial.print(rtc.getMonth(), DEC);
+    Serial.print('.');
+    Serial.println(rtc.getYear(), DEC);
+    Serial.print("RTC epoch: ");
+    Serial.println(rtc.getEpoch(), DEC);
+  }
 }

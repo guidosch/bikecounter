@@ -1,2 +1,2 @@
-const uint8_t hwVersion = 1;
-const uint8_t swVersion = 0;
+const uint8_t hwVersion = 2;
+const uint8_t swVersion = 1;

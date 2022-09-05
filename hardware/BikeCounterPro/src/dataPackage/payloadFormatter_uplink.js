@@ -10,12 +10,14 @@ function decodeUplink(input) {
     3: "3",
     4: "4",
     5: "5",
-    6: "sync call",
+    6: "6",
+    7: "sync call"
   };
 
   data.swVersion = input.bytes[1] & 0x0f;
   data.hwVersion = input.bytes[1] >> 4;
-  data.stat = statusCode[input.bytes[2] & 0x07];
+  data.statId = input.bytes[2] & 0x07;
+  data.stat = statusCode[data.statId];
   // battery level
   let batteryIndex = input.bytes[2] >> 3;
   data.batteryVoltage =
@@ -45,10 +47,11 @@ function decodeUplink(input) {
   data.deviceTime = (data.deviceTime << 8) | input.bytes[6];
   data.deviceTime = (data.deviceTime << 8) | input.bytes[5];
   data.deviceTime *= 60; // device sends the epoch time in minutes
+  data.deviceTime += 1640995200; //start offset 01.01.2022
   //calculate time drift in seconds
   var today = new Date();
   var serverEpoch = (today.getTime() / 1000) >> 0; // seconds since 1 Jan 1970
-  data.timeDrift = data.deviceTime - serverEpoch;
+  data.timeDrift = serverEpoch - data.deviceTime;
 
   // decode payload time array
   var offsetBits = 8 * 8;
