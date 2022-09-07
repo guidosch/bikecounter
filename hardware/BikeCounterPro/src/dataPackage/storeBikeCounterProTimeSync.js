@@ -23,6 +23,7 @@ exports.storeBikecounterData = (req, res) => {
     const batteryVoltage = devicePayload.batteryVoltage;
     const humidity = devicePayload.humidity;
     const temperature = devicePayload.temperature;
+    const statId = devicePayload.statId;
     const stat = devicePayload.stat;
     const swVersion = devicePayload.swVersion;
     const hwVersion = devicePayload.hwVersion;
@@ -46,7 +47,7 @@ exports.storeBikecounterData = (req, res) => {
         map.set(t, map.get(t) + 1);
       }
     });
-    if (app_id == "bikecounter") {
+    if (app_id == "bikecounter" && statId != 7) {
       try {
         firestore.collection(`${deviceId}`).add({
           counter: 0,
