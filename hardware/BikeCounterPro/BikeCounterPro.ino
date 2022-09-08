@@ -149,6 +149,7 @@ void setup()
   // turn off LORA module to not interrupt the flash communication
   digitalWrite(LORA_RESET, LOW);
   delay(500);
+  // begin flash communication
   if (flash.begin(PIN_FLASH_CS, 2000000, SPI1) == false)
   {
     if (debugFlag)
@@ -158,10 +159,15 @@ void setup()
     while (1)
       ;
   }
+  // first byte in memory contains the length of the config array
   uint8_t readSize = flash.readByte(0);
+  // read buffer
   uint8_t rBuffer[255];
+  // read bytes from flash
   flash.readBlock(1, rBuffer, readSize);
+  // cast buffer to string array
   String config = String((char *)rBuffer);
+  // split and assign config string
   appEui = config.substring(config.indexOf(':') + 1, config.indexOf(';'));
   appKey = config.substring(config.indexOf(';') + 1).substring(config.indexOf(':') + 1);
   // digitalWrite(LORA_RESET, HIGH);
@@ -176,7 +182,8 @@ void setup()
 
   // setup rtc
   rtc.begin();
-  rtc.setEpoch(1640995200); // default startup date 01.01.2022 (1640995200)
+  // default startup date 01.01.2022 (1640995200)
+  rtc.setEpoch(1640995200);
 
   if (debugFlag)
   {
@@ -257,6 +264,7 @@ void loop()
     }
   }
 
+  // get current time
   time_t currentTime = time_t(rtc.getEpoch());
   tm *currentTimeStruct = gmtime(&currentTime);
   int timerCalled = 0;
@@ -272,6 +280,7 @@ void loop()
   {
     motionDetected = 0;
 
+    // set hour of the day if this was the first call
     if (counter == 0)
     {
       hourOfDay = currentTimeStruct->tm_hour;
@@ -298,8 +307,11 @@ void loop()
   }
   else
   {
+    // if no motion was detected it means that the timer caused the wakeup.
     timerCalled = 1;
   }
+
+  // check if the data should be sent.
   int currentThreshold = dataHandler.getMaxCount(timeHandler.getCurrentIntervalMinutes(currentTime));
   if (((counter >= currentThreshold) || (timerCalled)) && (!isSending))
   {
@@ -365,6 +377,7 @@ void loop()
 
   if (!debugFlag)
   {
+    // determine the sleep time if we're not in debug mode
     uint32_t sleepTime = syncTimeInterval;
     if (deviceStatus != sync_call)
     {
@@ -527,11 +540,15 @@ void sendData()
       Serial.print("Time drift = ");
       Serial.println(timeDrift);
     }
-   
+
+    // check if the timeDrift should be applied
     if ((abs(timeDrift) > (10 * 60)) && !skipTimeSync)
     {
+      // apply time correction
       correctRTCTime(timeDrift);
+      // skip the next downlinks to avoid multiple corrections with the same value (due to the network delay)
       skipTimeSync = 1;
+      // change the status and power on the PIR sensor
       if (deviceStatus == sync_call)
       {
         deviceStatus = no_error;
@@ -543,6 +560,7 @@ void sendData()
   }
   else
   {
+    // set the flag to stat listening to the downlink messages again.
     skipTimeSync = 0;
     if (debugFlag)
     {
@@ -593,15 +611,19 @@ void disableUnusedPins(const int *const activePins, int size)
   }
 }
 
+// reads the analog value and calculates the battery voltage.
 float getBatteryVoltage()
 {
   // read the input on analog pin 0 (A1) and calculate the voltage
   return analogRead(batteryVoltagePin) * 3.3f / 1023.0f / 1.2f * (1.2f + 0.33f);
 }
 
+// apply the given correction to the rtc time
 void correctRTCTime(int32_t delta)
 {
+  // get the current time
   uint32_t currentEpoch = rtc.getEpoch();
+  // set the new time
   rtc.setEpoch(currentEpoch + delta);
 
   if (debugFlag)
