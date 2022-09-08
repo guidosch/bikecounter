@@ -79,13 +79,6 @@ int configFlag = 0;
 // Last call of main loop in debug mode
 unsigned long lastMillis = millis() - 10 * 60 * 1000;
 // Status (See DataPackage.xlsx)
-<<<<<<< HEAD
-uint8_t deviceStatus = 7;
-// SPI serial flash parameter
-const byte PIN_FLASH_CS = 32;
-// SPI serial flash object
-SFE_SPI_FLASH flash;
-=======
 enum status
 {
   no_error,
@@ -100,7 +93,10 @@ enum status
 enum status deviceStatus = sync_call;
 // Time sync skip flag (Prevents that the time correction is applied multiple times due to network lag and multiple enqueued downlinks with the same timeDrift information)
 int skipTimeSync = 0;
->>>>>>> rtc-dev
+// SPI serial flash parameter
+const byte PIN_FLASH_CS = 32;
+// SPI serial flash object
+SFE_SPI_FLASH flash;
 
 // Blink method prototype
 void blinkLED(int times = 1);
@@ -148,8 +144,10 @@ void setup()
   }
 
   // load config from flash
-  pinMode(LORA_RESET, OUTPUT);   // LORA reset pin declaration as output
-  digitalWrite(LORA_RESET, LOW); // turn off LORA module
+  // LORA reset pin declaration as output
+  pinMode(LORA_RESET, OUTPUT);
+  // turn off LORA module to not interrupt the flash communication
+  digitalWrite(LORA_RESET, LOW);
   delay(500);
   if (flash.begin(PIN_FLASH_CS, 2000000, SPI1) == false)
   {
@@ -373,7 +371,7 @@ void loop()
       time_t nextAlarm = timeHandler.getNextIntervalTime(currentTime);
       sleepTime = difftime(nextAlarm, currentTime) * 1000;
     }
-    LowPower.sleep(sleepTime);
+    LowPower.deepSleep(sleepTime);
   }
 }
 
@@ -529,8 +527,7 @@ void sendData()
       Serial.print("Time drift = ");
       Serial.println(timeDrift);
     }
-
-    // int32_t timeDrift = 21573324;
+   
     if ((abs(timeDrift) > (10 * 60)) && !skipTimeSync)
     {
       correctRTCTime(timeDrift);
