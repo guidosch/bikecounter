@@ -11,11 +11,13 @@ function decodeUplink(input) {
     4: "4",
     5: "5",
     6: "6",
+    7: "sync call"
   };
 
   data.swVersion = input.bytes[1] & 0x0f;
   data.hwVersion = input.bytes[1] >> 4;
-  data.stat = statusCode[input.bytes[2] & 0x07];
+  data.statId = input.bytes[2] & 0x07;
+  data.stat = statusCode[data.statId];
   // battery level
   let batteryIndex = input.bytes[2] >> 3;
   data.batteryVoltage =
@@ -40,8 +42,19 @@ function decodeUplink(input) {
   data.selectedInterval = intervalTime[data.intervalId];
   // start hour of day
   data.hourOfDay = input.bytes[4] >> 3;
+  // device time (epoch)
+  data.deviceTime = input.bytes[7] >> 0;
+  data.deviceTime = (data.deviceTime << 8) | input.bytes[6];
+  data.deviceTime = (data.deviceTime << 8) | input.bytes[5];
+  data.deviceTime *= 60; // device sends the epoch time in minutes
+  data.deviceTime += 1640995200; //start offset 01.01.2022
+  //calculate time drift in seconds
+  var today = new Date();
+  var serverEpoch = (today.getTime() / 1000) >> 0; // seconds since 1 Jan 1970
+  data.timeDrift = serverEpoch - data.deviceTime;
+
   // decode payload time array
-  var offsetBits = 5 * 8;
+  var offsetBits = 8 * 8;
   var buffer = new ArrayBuffer(data.count);
   var absMinArray = new Int8Array(buffer);
   for (var j = 0; j < data.count; j++) {
@@ -98,28 +111,3 @@ function decodeUplink(input) {
     errors: [],
   };
 }
-
-/*
-// Motion detected (current count = 1 / time: 19:56:57)
-// Motion detected (current count = 2 / time: 19:57:9)
-// Motion detected (current count = 3 / time: 19:58:13)
-// Motion detected (current count = 4 / time: 19:58:17)
-// Motion detected (current count = 5 / time: 19:58:20)
-// Motion detected (current count = 6 / time: 19:58:24)
-// Motion detected (current count = 7 / time: 19:58:27)
-// Motion detected (current count = 8 / time: 19:58:31)
-// Motion detected (current count = 9 / time: 19:58:34)
-// Motion detected (current count = 10 / time: 19:58:37)
-// Message sent correctly! (count = 10 / temperature = 22.90°C / humidity = 42.86% / battery level = 25.81 % / 2.96 V)
-*/
-var input = {};
-//input.bytes = [0x0A, 0x40, 0x73, 0x98, 0x78, 0xAE, 0xEB, 0xBA, 0xAE, 0xEB, 0xBA, 0x0E];
-input.bytes = [
-  0x0a, 0x40, 0x73, 0xa8, 0x59, 0x96, 0x65, 0x9a, 0xa6, 0x69, 0x9a, 0x06,
-];
-var test = decodeUplink(input);
-
-console.log(test.data.batteryVoltage);
-console.log(test.data.batteryLevel);
-console.log(test.data.timeArray);
-console.log(JSON.stringify(test));

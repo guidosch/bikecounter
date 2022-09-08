@@ -112,3 +112,5 @@ hardware/BikeCounterPro/.vscode/
 hardware/build/
 hardware/BikeCounterPro/arduino_secrets_C1.h
 hardware/BikeCounterPro/build/
+hardware/BikeCounterPro/flash/writeConfigToFlash/.vscode/
+hardware/BikeCounterPro/flash/writeConfigToFlash/arduino_secrets.h

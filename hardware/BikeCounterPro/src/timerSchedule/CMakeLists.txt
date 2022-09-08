@@ -4,8 +4,6 @@ project("unittestproject")
 # GoogleTest requires at least C++11
 set(CMAKE_CXX_STANDARD 11)
 
-
-
 include(FetchContent)
 FetchContent_Declare(
   googletest
@@ -20,14 +18,10 @@ enable_testing()
 
 add_compile_definitions(UNITTEST)
 
-add_subdirectory(mock)
 add_library(timerSchedule timerSchedule.cpp timerSchedule.hpp)
 
-
-
 add_executable(unittest unitTests.cc)
-target_link_libraries(unittest rtclib timerSchedule gtest_main)
-
+target_link_libraries(unittest timerSchedule gtest_main)
 
 include(GoogleTest)
 gtest_discover_tests(unittest)

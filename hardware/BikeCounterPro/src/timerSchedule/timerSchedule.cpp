@@ -1,14 +1,22 @@
 #include "timerSchedule.hpp"
 
-DateTime TimerSchedule::getNextIntervalTime(DateTime &cDT)
+time_t TimerSchedule::getNextIntervalTime(time_t currentDateTime)
 {
-    int cId = getIntervalId(cDT.hour(), cDT.month());
+    tm *cDT = gmtime(&currentDateTime);
+    int cId = getIntervalId(cDT->tm_hour, cDT->tm_mon);
 
-    DateTime nDT = cDT + timeSpanIntervals[cId];
+    tm nDTr = *cDT;
+    nDTr.tm_sec += timeSpanIntervals[cId];
+    mktime(&nDTr);
     // Check if next call is inside same day
-    if ((nDT.day() != cDT.day()) && !isLastCall)
+    if ((nDTr.tm_mday != cDT->tm_mday) && !isLastCall)
     {
-        nDT = DateTime(cDT.year(), cDT.month(), cDT.day(), 23, 59, 59) - TimeSpan(0, 0, 10, 0);
+        nDTr.tm_year = cDT->tm_year;
+        nDTr.tm_mon = cDT->tm_mon;
+        nDTr.tm_mday = cDT->tm_mday;
+        nDTr.tm_hour = 23;
+        nDTr.tm_min = 50;
+        nDTr.tm_sec = 0;
         isLastCall = true;
     }
     else
@@ -17,25 +25,30 @@ DateTime TimerSchedule::getNextIntervalTime(DateTime &cDT)
 
         // Check if next call is inside same interval
         // if not change the next call to the start of the new interval to sync the timing
-        int nId = getIntervalId(nDT.hour(), nDT.month());
+        int nId = getIntervalId(nDTr.tm_hour, nDTr.tm_mon);
         if (nId != cId)
         {
-            nDT = DateTime(cDT.year(), cDT.month(), cDT.day(), IntervalStartUTC[nId][nDT.month() - 1], 0, 0) + TimeSpan(0, 0, 1, 0);
+            nDTr.tm_year = cDT->tm_year;
+            nDTr.tm_mon = cDT->tm_mon;
+            nDTr.tm_mday = cDT->tm_mday;
+            nDTr.tm_hour = IntervalStartUTC[nId][nDTr.tm_mon];
+            nDTr.tm_min = 1;
+            nDTr.tm_sec = 0;
         }
     }
-    return nDT;
+    return mktime(&nDTr) - _timezone;
 };
 
-TimeSpan TimerSchedule::getCurrentInterval(DateTime &cDT)
+uint32_t TimerSchedule::getCurrentIntervalSeconds(time_t cDT)
 {
-    int cId = getIntervalId(cDT.hour(), cDT.month());
+    tm *gmTm = gmtime(&cDT);
+    int cId = getIntervalId(gmTm->tm_hour, gmTm->tm_mon);
     return timeSpanIntervals[cId];
 };
 
-unsigned int TimerSchedule::getCurrentIntervalMinutes(DateTime &cDT)
+uint32_t TimerSchedule::getCurrentIntervalMinutes(time_t cDT)
 {
-    int cId = getIntervalId(cDT.hour(), cDT.month());
-    return timeSpanIntervals[cId].totalseconds() / 60;
+    return (uint32_t)(TimerSchedule::getCurrentIntervalSeconds(cDT) / 60);
 };
 
 int TimerSchedule::getIntervalId(int currentHour, int currentMonth)
@@ -43,7 +56,7 @@ int TimerSchedule::getIntervalId(int currentHour, int currentMonth)
     int intervalId = 0;
     for (int i = 0; i < intervalCount; ++i)
     {
-        if (currentHour >= IntervalStartUTC[i][currentMonth - 1])
+        if (currentHour >= IntervalStartUTC[i][currentMonth])
         {
             intervalId = i;
         }

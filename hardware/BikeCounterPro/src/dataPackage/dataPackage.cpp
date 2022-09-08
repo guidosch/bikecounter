@@ -1,5 +1,10 @@
 #include "dataPackage.hpp"
 
+#define bitSet(value, bit) ((value) |= (1UL << (bit)))
+#define bitClear(value, bit) ((value) &= ~(1UL << (bit)))
+#define bitWrite(value, bit, bitValue) (bitValue ? bitSet(value, bit) : bitClear(value, bit))
+#define bitRead(value, bit) (((value) >> (bit)) & 0x01)
+
 DataPackage::DataPackage(unsigned int intervalTime,
                          uint8_t count,
                          uint8_t s,
@@ -9,6 +14,7 @@ DataPackage::DataPackage(unsigned int intervalTime,
                          uint8_t temp,
                          uint8_t hum,
                          uint8_t hotd,
+                         uint32_t t,
                          unsigned int *tVec) : motionCount(count),
                                                status(s),
                                                hwVersion(hwV),
@@ -16,7 +22,8 @@ DataPackage::DataPackage(unsigned int intervalTime,
                                                batteryVoltage(batVoltage),
                                                temperature(temp),
                                                humidity(hum),
-                                               houreOfTheDay(hotd),
+                                               hourOfTheDay(hotd),
+                                               deviceTime(t),
                                                timeVector(tVec)
 {
     setTimerInterval(intervalTime);
@@ -61,7 +68,7 @@ uint8_t *DataPackage::getPayload()
     }
 
     // 1. byte - counter value
-    payload[0] = lowByte(motionCount);
+    payload[0] = (uint8_t)(motionCount & 0xff);
 
     // 2. byte - software and hardware version
     uint8_t swAndHwVersion;
@@ -99,20 +106,25 @@ uint8_t *DataPackage::getPayload()
     bitWrite(tempAndHum, 7, bitRead(humidity, 2));
     payload[3] = tempAndHum;
 
-    // 5. byte - intervall index and hour of the day
+    // 5. byte - interval index and hour of the day
     uint8_t indexAndHOD;
     bitWrite(indexAndHOD, 0, bitRead(selectedInterval, 0));
     bitWrite(indexAndHOD, 1, bitRead(selectedInterval, 1));
     bitWrite(indexAndHOD, 2, bitRead(selectedInterval, 2));
-    bitWrite(indexAndHOD, 3, bitRead(houreOfTheDay, 0));
-    bitWrite(indexAndHOD, 4, bitRead(houreOfTheDay, 1));
-    bitWrite(indexAndHOD, 5, bitRead(houreOfTheDay, 2));
-    bitWrite(indexAndHOD, 6, bitRead(houreOfTheDay, 3));
-    bitWrite(indexAndHOD, 7, bitRead(houreOfTheDay, 4));
+    bitWrite(indexAndHOD, 3, bitRead(hourOfTheDay, 0));
+    bitWrite(indexAndHOD, 4, bitRead(hourOfTheDay, 1));
+    bitWrite(indexAndHOD, 5, bitRead(hourOfTheDay, 2));
+    bitWrite(indexAndHOD, 6, bitRead(hourOfTheDay, 3));
+    bitWrite(indexAndHOD, 7, bitRead(hourOfTheDay, 4));
     payload[4] = indexAndHOD;
 
-    // 6. - 51. byte - detected minutes
-    unsigned int offsetBits = 5 * 8;
+    // 6. - 8. byte - device time
+    uint32_t deviceTimeMinutes = (deviceTime - startEpoch) / 60;
+    payload[5] = (uint8_t)(deviceTimeMinutes & 0xff);
+    payload[6] = (uint8_t)((deviceTimeMinutes >> 8) & 0xff);
+    payload[7] = (uint8_t)((deviceTimeMinutes >> 16) & 0xff);
+
+    // 9. - 51. byte - detected minutes
     for (int payloadBit = offsetBits; payloadBit < ((motionCount * minuteBits[selectedInterval]) + offsetBits); ++payloadBit)
     {
         unsigned int currentMotionByte = (payloadBit - offsetBits) / minuteBits[selectedInterval];
