@@ -31,7 +31,7 @@ const int usedPins[] = {LED_BUILTIN, counterInterruptPin, debugSwitchPin, config
 const uint32_t debugSleepTime = 300000ul; // 5*60*1000 ms
 
 // Sync time interval
-const uint32_t syncTimeInterval = 60000ul; // 2*60*1000 ms
+const uint32_t syncTimeInterval = 120000ul; // 2*60*1000 ms
 
 // ----------------------------------------------------
 // -------------- Declaration section -----------------
@@ -79,11 +79,28 @@ int configFlag = 0;
 // Last call of main loop in debug mode
 unsigned long lastMillis = millis() - 10 * 60 * 1000;
 // Status (See DataPackage.xlsx)
+<<<<<<< HEAD
 uint8_t deviceStatus = 7;
 // SPI serial flash parameter
 const byte PIN_FLASH_CS = 32;
 // SPI serial flash object
 SFE_SPI_FLASH flash;
+=======
+enum status
+{
+  no_error,
+  na1,
+  na2,
+  na3,
+  na4,
+  na5,
+  na6,
+  sync_call
+};
+enum status deviceStatus = sync_call;
+// Time sync skip flag (Prevents that the time correction is applied multiple times due to network lag and multiple enqueued downlinks with the same timeDrift information)
+int skipTimeSync = 0;
+>>>>>>> rtc-dev
 
 // Blink method prototype
 void blinkLED(int times = 1);
@@ -207,9 +224,6 @@ void setup()
   pinMode(counterInterruptPin, INPUT_PULLDOWN);
   LowPower.attachInterruptWakeup(counterInterruptPin, onMotionDetected, RISING);
 
-  // power the pir sensor
-  digitalWrite(pirPowerPin, HIGH);
-
   if (debugFlag)
   {
     Serial.println("Setup finished");
@@ -232,7 +246,7 @@ void loop()
     // Check if a motion was detected or the sleep time expired
     // (Implemented in a nested if-statement to give the compiler the opportunity
     // to remove the whole outer statement depending on the constexpr debugFlag.)
-    uint32_t sleepTime = deviceStatus != 7 ? debugSleepTime : syncTimeInterval; // sync call interval
+    uint32_t sleepTime = deviceStatus != sync_call ? debugSleepTime : syncTimeInterval; // sync call interval
     if ((motionDetected) || ((millis() - lastMillis) >= sleepTime))
     {
       // Run the main loop once
@@ -339,7 +353,10 @@ void loop()
     delay(200);
 
     // enable the pir sensor
-    digitalWrite(pirPowerPin, HIGH);
+    if (deviceStatus != sync_call)
+    {
+      digitalWrite(pirPowerPin, HIGH);
+    }
 
     delay(200);
 
@@ -350,13 +367,13 @@ void loop()
 
   if (!debugFlag)
   {
-    uint32_t sleepTime = 60;
-    if (deviceStatus != 7)
+    uint32_t sleepTime = syncTimeInterval;
+    if (deviceStatus != sync_call)
     {
       time_t nextAlarm = timeHandler.getNextIntervalTime(currentTime);
-      sleepTime = difftime(nextAlarm, currentTime);
+      sleepTime = difftime(nextAlarm, currentTime) * 1000;
     }
-    LowPower.deepSleep(sleepTime * 1000);
+    LowPower.sleep(sleepTime);
   }
 }
 
@@ -366,7 +383,7 @@ void loop()
 
 void onMotionDetected()
 {
-  if (!isSending && !(deviceStatus == 7))
+  if (!isSending)
   {
     motionDetected = 1;
   }
@@ -480,11 +497,11 @@ void sendData()
   }
 
   // wait for all data transmission to finish (up- and downlink)
-  delay(1000);
+  delay(10000);
   // receive and decode downlink message
   if (modem.available())
   {
-    char rcv[64];
+    char rcv[64] = "";
     int i = 0;
     while (modem.available())
     {
@@ -501,6 +518,7 @@ void sendData()
       }
       Serial.println();
     }
+
     // decode time drift
     int32_t timeDrift = rcv[3];
     timeDrift = (timeDrift << 8) | rcv[2];
@@ -511,13 +529,27 @@ void sendData()
       Serial.print("Time drift = ");
       Serial.println(timeDrift);
     }
-    if (abs(timeDrift) > (10 * 60))
+
+    // int32_t timeDrift = 21573324;
+    if ((abs(timeDrift) > (10 * 60)) && !skipTimeSync)
     {
       correctRTCTime(timeDrift);
-      if (deviceStatus = 7)
+      skipTimeSync = 1;
+      if (deviceStatus == sync_call)
       {
-        deviceStatus = 0;
+        deviceStatus = no_error;
+
+        // power the pir sensor
+        digitalWrite(pirPowerPin, HIGH);
       }
+    }
+  }
+  else
+  {
+    skipTimeSync = 0;
+    if (debugFlag)
+    {
+      Serial.println("No downlink massage received.");
     }
   }
 }

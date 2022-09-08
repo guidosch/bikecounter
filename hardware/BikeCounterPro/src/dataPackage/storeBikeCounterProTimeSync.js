@@ -1,5 +1,5 @@
 const functions = require("firebase-functions"),
-  admin = require("firebase-admin");
+admin = require("firebase-admin");
 const https = require("https");
 
 const app = admin.initializeApp();
@@ -9,10 +9,10 @@ var num = 0;
 firestore.settings({ timestampsInSnapshots: true });
 
 const auth = app.auth();
-
 const ttnWebhookId = "google-cloud-function";
 
 exports.storeBikecounterData = (req, res) => {
+  
   let payload = req.body;
   let deviceId;
   const app_id = payload.end_device_ids.application_ids.application_id;
@@ -23,6 +23,7 @@ exports.storeBikecounterData = (req, res) => {
     const batteryVoltage = devicePayload.batteryVoltage;
     const humidity = devicePayload.humidity;
     const temperature = devicePayload.temperature;
+    const statId = devicePayload.statId;
     const stat = devicePayload.stat;
     const swVersion = devicePayload.swVersion;
     const hwVersion = devicePayload.hwVersion;
@@ -46,7 +47,7 @@ exports.storeBikecounterData = (req, res) => {
         map.set(t, map.get(t) + 1);
       }
     });
-    if (app_id == "bikecounter") {
+    if (app_id == "bikecounter" && statId != 7) {
       try {
         firestore.collection(`${deviceId}`).add({
           counter: 0,
@@ -92,24 +93,21 @@ exports.storeBikecounterData = (req, res) => {
       });
 
       // POST request options
+      const replaceURL = req.headers["x-downlink-replace"];
+
       const options = {
         hostname: "eu1.cloud.thethings.network",
         port: 443,
-        path:
-          "/api/v3/as/applications/" +
-          app_id +
-          "/webhooks/" +
-          ttnWebhookId +
-          "/devices/" +
-          deviceId +
-          "/down/replace",
+        path: replaceURL,
         method: "POST",
         headers: {
-          Authorization: "Bearer " + res.header.x_downlink_apikey,
+          Authorization: "Bearer " + req.headers["x-downlink-apikey"],
           "Content-Type": "application/json",
           "Content-Length": data.length,
         },
       };
+
+      //console.log("options: "+JSON.stringify(options));
 
       // perform the post request to the ttn webhook
       const reqDown = https.request(options, (resDown) => {
@@ -130,7 +128,7 @@ exports.storeBikecounterData = (req, res) => {
 
     res.status(200).send(deviceId);
   } else {
-    console.error("payload not valid: " + JSON.stringify(payload));
+    //console.error("payload not valid: " + JSON.stringify(payload));
     res.status(404).send(deviceId);
   }
 };
