@@ -1,94 +1,80 @@
-#include <SerialFlash.h>
 #include <SPI.h>
-#include <MKRWAN.h>
 #include "arduino_secrets.h"
+#include <SparkFun_SPI_SerialFlash.h>
 
-const int FlashChipSelect = 32; // the 2MB flash CS pin is connected to pin 32
-int FCstate = 8;                // to see the state of the function
-char filename[] = "bikeCounterConfig";
-uint32_t size = 256;
+const byte PIN_FLASH_CS = 32;
+SFE_SPI_FLASH flash;
 
 void setup()
 {
-    pinMode(LORA_RESET, OUTPUT);   // LORA reset pin declaration as output
-    digitalWrite(LORA_RESET, LOW); // turn off LORA module
     Serial.begin(115200);
     while (!Serial)
-        ;                        // wait for serial monitor to connect
-    Serial.println("Serial ok"); // just a test to see the sketch has started
+        ;
+    Serial.println("Serial ok");
     delay(500);
 
-    FCstate = SerialFlash.begin(SPI1, FlashChipSelect); // SerialFlash initialization on SPI1 bus, CS is on 32
-    Serial.println(FCstate);                            // to see the return of the SerialFlash.begin function on serial
-    if (FCstate == 1)
+    pinMode(LORA_RESET, OUTPUT);   // LORA reset pin declaration as output
+    digitalWrite(LORA_RESET, LOW); // turn off LORA module
+    Serial.println("LoRa Off.");
+    delay(500);
+
+    if (flash.begin(PIN_FLASH_CS, 2000000, SPI1) == false)
     {
-
-        if (!SerialFlash.exists(filename))
-        {
-            Serial.println("File does not exist. (will be created)");
-            SerialFlash.create(filename, size);
-            if (SerialFlash.exists(filename))
-            {
-                Serial.println("File successfully created.");
-            }
-            else
-            {
-                Serial.println("Was not able to create the file. Will erase full flash and try again.");
-                // SerialFlash.eraseAll();
-                while (SerialFlash.ready() == false)
-                {
-                    // wait, 30 seconds to 2 minutes for most chips
-                }
-                SerialFlash.create(filename, size);
-                if (SerialFlash.ready() == false)
-                {
-                    Serial.println("File successfully created.");
-                }
-                else
-                {
-                    Serial.println("Still not able to create the file!");
-                    while (1)
-                    {
-                    }
-                }
-            }
-        }
-
-        SerialFlashFile file;
-        file = SerialFlash.open(filename);
-        if (file)
-        {
-            char wBuffer[size] = "appeui:SECRET_APPEUI;appkey:SECRET_APPKEY";
-            file.write(wBuffer, size);
-        }
-
-        char rBuffer[size];
-        file.read(rBuffer, size);
-        Serial.print("Read from flash: ");
-        for (int i = 0; i < size; ++i)
-        {
-            Serial.print(rBuffer[i]);
-        }
-        Serial.println("");
-
-        /*
-        uint32_t startAddr = 0;
-        char wBuffer[size] = "appeui:SECRET_APPEUI;appkey:SECRET_APPKEY";
-        SerialFlash.write(startAddr, wBuffer, size);
-
-        char rBuffer[size] = "";
-        SerialFlash.read(startAddr, rBuffer, size);
-        Serial.print("Read from flash: ");
-        for (int i = 0; i < size; ++i)
-        {
-            Serial.print(rBuffer[i]);
-        }
-        Serial.println("");
-        */
+        Serial.println(F("SPI Flash not detected. Check wiring. Maybe you need to pull up WP/IO2 and HOLD/IO3? Freezing..."));
+        while (1)
+            ;
     }
 
-    Serial.println("Something went wrong with the flash!");
-    delay(1500);
+    Serial.println(F("SPI Flash detected"));
+
+    sfe_flash_manufacturer_e mfgID = flash.getManufacturerID();
+    if (mfgID != SFE_FLASH_MFG_UNKNOWN)
+    {
+        Serial.print(F("Manufacturer: "));
+        Serial.println(flash.manufacturerIDString(mfgID));
+    }
+    else
+    {
+        uint8_t unknownID = flash.getRawManufacturerID(); // Read the raw manufacturer ID
+        Serial.print(F("Unknown manufacturer ID: 0x"));
+        if (unknownID < 0x10)
+            Serial.print(F("0")); // Pad the zero
+        Serial.println(unknownID, HEX);
+    }
+
+    Serial.print(F("Device ID: 0x"));
+    Serial.println(flash.getDeviceID(), HEX);
+
+    //
+    Serial.println("Erasing entire chip");
+    flash.erase();
+
+    Serial.println("Writing config to flash");
+    char wBuffer[256] = "appeui:";
+    strcat(wBuffer, SECRET_APPEUI);
+    strcat(wBuffer, ";appkey:");
+    strcat(wBuffer, SECRET_APPKEY);
+    uint8_t wBufferSize = (uint8_t)strlen(wBuffer) + 1;
+    // write size to first byte
+    flash.writeBlock(0, &wBufferSize, 1);
+    // write eui and key to flash
+    flash.writeBlock(1, (uint8_t *)wBuffer, wBufferSize);
+
+    //
+    Serial.println("Read config from flash");
+    uint8_t readSize = flash.readByte(0);
+    Serial.print(readSize);
+    uint8_t rBuffer[255];
+    flash.readBlock(1, rBuffer, readSize);
+    String config = String((char *)rBuffer);
+    Serial.println(config);
+
+    String appEui = config.substring(config.indexOf(':') + 1, config.indexOf(';'));
+    String appKey = config.substring(config.indexOf(';') + 1).substring(config.indexOf(':') + 1);
+    Serial.print("appEui = ");
+    Serial.println(appEui);
+    Serial.print("appKey = ");
+    Serial.println(appKey);
 }
 
 void loop()

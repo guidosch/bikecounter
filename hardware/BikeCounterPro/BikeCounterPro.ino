@@ -1,8 +1,9 @@
 #include <MKRWAN.h>
 #include <RTCZero.h>
-#include "ArduinoLowPower.h"
-#include "Adafruit_AM2320.h"
-#include "arduino_secrets.h"
+#include <SPI.h>
+#include <SparkFun_SPI_SerialFlash.h>
+#include <ArduinoLowPower.h>
+#include <Adafruit_AM2320.h>
 #include "versionConfig.h"
 #include "src/dataPackage/dataPackage.hpp"
 #include "src/timerSchedule/timerSchedule.hpp"
@@ -38,8 +39,8 @@ const uint32_t syncTimeInterval = 60000ul; // 2*60*1000 ms
 
 // lora modem object and application properties
 LoRaModem modem(Serial1);
-String appEui = SECRET_APPEUI;
-String appKey = SECRET_APPKEY;
+String appEui;
+String appKey;
 
 // Internal RTC object
 RTCZero rtc;
@@ -79,6 +80,10 @@ int configFlag = 0;
 unsigned long lastMillis = millis() - 10 * 60 * 1000;
 // Status (See DataPackage.xlsx)
 uint8_t deviceStatus = 7;
+// SPI serial flash parameter
+const byte PIN_FLASH_CS = 32;
+// SPI serial flash object
+SFE_SPI_FLASH flash;
 
 // Blink method prototype
 void blinkLED(int times = 1);
@@ -122,6 +127,35 @@ void setup()
     {
     };
 
+    Serial.println("Load config from flash");
+  }
+
+  // load config from flash
+  pinMode(LORA_RESET, OUTPUT);   // LORA reset pin declaration as output
+  digitalWrite(LORA_RESET, LOW); // turn off LORA module
+  delay(500);
+  if (flash.begin(PIN_FLASH_CS, 2000000, SPI1) == false)
+  {
+    if (debugFlag)
+    {
+      Serial.println(F("SPI Flash not detected"));
+    }
+    while (1)
+      ;
+  }
+  uint8_t readSize = flash.readByte(0);
+  uint8_t rBuffer[255];
+  flash.readBlock(1, rBuffer, readSize);
+  String config = String((char *)rBuffer);
+  appEui = config.substring(config.indexOf(':') + 1, config.indexOf(';'));
+  appKey = config.substring(config.indexOf(';') + 1).substring(config.indexOf(':') + 1);
+  // digitalWrite(LORA_RESET, HIGH);
+  if (debugFlag)
+  {
+    Serial.print("appEui = ");
+    Serial.println(appEui);
+    Serial.print("appKey = ");
+    Serial.println(appKey);
     Serial.println("RTC setup started");
   }
 
