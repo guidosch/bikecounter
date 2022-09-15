@@ -11,7 +11,7 @@ function decodeUplink(input) {
     4: "4",
     5: "5",
     6: "6",
-    7: "sync call"
+    7: "sync call",
   };
 
   data.swVersion = input.bytes[1] & 0x0f;
@@ -42,19 +42,28 @@ function decodeUplink(input) {
   data.selectedInterval = intervalTime[data.intervalId];
   // start hour of day
   data.hourOfDay = input.bytes[4] >> 3;
-  // device time (epoch)
-  data.deviceTime = input.bytes[7] >> 0;
-  data.deviceTime = (data.deviceTime << 8) | input.bytes[6];
-  data.deviceTime = (data.deviceTime << 8) | input.bytes[5];
-  data.deviceTime *= 60; // device sends the epoch time in minutes
-  data.deviceTime += 1640995200; //start offset 01.01.2022
-  //calculate time drift in seconds
-  var today = new Date();
-  var serverEpoch = (today.getTime() / 1000) >> 0; // seconds since 1 Jan 1970
-  data.timeDrift = serverEpoch - data.deviceTime;
+  if (data.swVersion > 0) {
+    // device time (epoch)
+    data.deviceTime = input.bytes[7] >> 0;
+    data.deviceTime = (data.deviceTime << 8) | input.bytes[6];
+    data.deviceTime = (data.deviceTime << 8) | input.bytes[5];
+    data.deviceTime *= 60; // device sends the epoch time in minutes
+    data.deviceTime += 1640995200; //start offset 01.01.2022
+    //calculate time drift in seconds
+    var today = new Date();
+    var serverEpoch = (today.getTime() / 1000) >> 0; // seconds since 1 Jan 1970
+    data.timeDrift = serverEpoch - data.deviceTime;
+  } else {
+    data.timeDrift = 0;
+  }
 
   // decode payload time array
-  var offsetBits = 8 * 8;
+  var offsetBits;
+  if (data.swVersion > 0) {
+    offsetBits = 8 * 8;
+  } else {
+    offsetBits = 5 * 8;
+  }
   var buffer = new ArrayBuffer(data.count);
   var absMinArray = new Int8Array(buffer);
   for (var j = 0; j < data.count; j++) {
