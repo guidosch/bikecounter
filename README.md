@@ -1,12 +1,3 @@
-# LORA data to Google Chart
-Using Google cloud functions to publish [LORA](https://en.wikipedia.org/wiki/LoRa) data to a firestore database and also offer the data over a second cloud function to be visualized in a chart. Data is recoreded with a LORA module and sent to the things network and there forwared to a the Google Cloud Function.
+# BikeCounter
 
-## Dataflow
-1. Recodring data with a [Arduino MKRWAN 1310](https://www.arduino.cc/en/Guide/MKRWAN1310) LORA modul and sending over [TTN network](https://www.thethingsnetwork.org/)
-2. Using TTN [HTTP integration](https://www.thethingsnetwork.org/docs/applications/http/) to forward TTN data to my Google [Cloud Function](https://console.cloud.google.com/functions/list?project=bikecounter)
-3. Google Cloud Function pushes data from TTN to a firestore database
-    * https://us-central1-bikecounter.cloudfunctions.net/storeBikeCounterData
-4. Using a second Google Cloud Function to offer an API which can be used with [Google Chart API](https://developers.google.com/chart/interactive/docs).
-5. Display data in a HTML page with chart served over github pages
-
-The repo contains all the code from the steps above.
+This repository contains the hardware and software components of a [PIR](https://en.wikipedia.org/wiki/Passive_infrared_sensor) based tracking device to monitor the usage of local bike trails. The data is sent over [LoraWAN](https://de.wikipedia.org/wiki/Long_Range_Wide_Area_Network) to [TTN](https://www.thethingsnetwork.org/) and from there to a [Google cloud](https://console.cloud.google.com) backend which stores the data and provides api endpoints for the data visualization web UI ([bikeCounterUI](https://github.com/guidosch/bikecounterUI)).
