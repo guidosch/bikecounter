@@ -78,6 +78,8 @@ int debugFlag = 0;
 int configFlag = 0;
 // Last call of main loop in debug mode
 unsigned long lastMillis = millis() - 10 * 60 * 1000;
+// default startup date 01.01.2022 (1640995200)
+uint32_t defaultRTCEpoch = 1640995200ul;
 // Status (See DataPackage.xlsx)
 enum status
 {
@@ -97,6 +99,9 @@ int skipTimeSync = 0;
 const byte PIN_FLASH_CS = 32;
 // SPI serial flash object
 SFE_SPI_FLASH flash;
+// Flags to trigger the initial sleep period and reset the rtc (prevent rtc bug)
+int firstLoop = 1;
+int firstWakeUp = 1;
 
 // Blink method prototype
 void blinkLED(int times = 1);
@@ -122,6 +127,7 @@ void setup()
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(pirPowerPin, OUTPUT);
   disableUnusedPins(usedPins, sizeof(usedPins) / sizeof(usedPins[0]));
+  blinkLED(2);
 
   // disable the pir sensor
   digitalWrite(pirPowerPin, LOW);
@@ -177,13 +183,34 @@ void setup()
     Serial.println(appEui);
     Serial.print("appKey = ");
     Serial.println(appKey);
+    Serial.println("Temp. sensor setup started");
+  }
+
+  delay(500);
+
+  // initialize temperature and humidity sensor
+  am2320.begin();
+
+  if (debugFlag)
+  {
+    Serial.println("Temp. sensor setup finished");
+    Serial.println("Lora setup started");
+  }
+
+  delay(500);
+
+  // connect to lora network
+  doConnect();
+
+  if (debugFlag)
+  {
+    Serial.println("Lora setup finished");
     Serial.println("RTC setup started");
   }
 
   // setup rtc
-  rtc.begin();
-  // default startup date 01.01.2022 (1640995200)
-  rtc.setEpoch(1640995200);
+  rtc.begin(true);
+  rtc.setEpoch(defaultRTCEpoch);
 
   if (debugFlag)
   {
@@ -202,24 +229,6 @@ void setup()
     Serial.println(rtc.getYear(), DEC);
     Serial.print("RTC epoch: ");
     Serial.println(rtc.getEpoch(), DEC);
-    Serial.println("Temp. sensor setup started");
-  }
-
-  // initialize temperature and humidity sensor
-  am2320.begin();
-
-  if (debugFlag)
-  {
-    Serial.println("Temp. sensor setup finished");
-    Serial.println("Lora setup started");
-  }
-
-  // connect to lora network
-  doConnect();
-
-  if (debugFlag)
-  {
-    Serial.println("Lora setup finished");
   }
 
   // delay to avoid interference with interrupt pin setup
@@ -251,7 +260,7 @@ void loop()
     // Check if a motion was detected or the sleep time expired
     // (Implemented in a nested if-statement to give the compiler the opportunity
     // to remove the whole outer statement depending on the constexpr debugFlag.)
-    uint32_t sleepTime = deviceStatus != sync_call ? debugSleepTime : syncTimeInterval; // sync call interval
+    uint32_t sleepTime = ((deviceStatus != sync_call) && !skipTimeSync) ? debugSleepTime : syncTimeInterval; // sync call interval
     if ((motionDetected) || ((millis() - lastMillis) >= sleepTime))
     {
       // Run the main loop once
@@ -261,6 +270,22 @@ void loop()
     {
       // Noting happened, continue with the next cycle
       return;
+    }
+  }
+  else
+  {
+    // RTC bug prevention
+    // If the device runs on battery the rtc seems to reinitialize it's register after the first sleep period.
+    // To avoid this a sleep is triggered in the first loop and the rtc time will be reset after waking up.
+    if (firstLoop)
+    {
+      firstLoop = 0;
+      LowPower.deepSleep(2000);
+    }
+    if (firstWakeUp)
+    {
+      firstWakeUp = 0;
+      rtc.setEpoch(defaultRTCEpoch);
     }
   }
 
@@ -379,7 +404,7 @@ void loop()
   {
     // determine the sleep time if we're not in debug mode
     uint32_t sleepTime = syncTimeInterval;
-    if (deviceStatus != sync_call)
+    if ((deviceStatus != sync_call) && !skipTimeSync)
     {
       time_t nextAlarm = timeHandler.getNextIntervalTime(currentTime);
       sleepTime = difftime(nextAlarm, currentTime) * 1000;
@@ -459,7 +484,7 @@ void sendData()
   dataHandler.setTimeArray(timeArray);
 
   modem.write(dataHandler.getPayload(), dataHandler.getPayloadLength());
-  err = modem.endPacket(true);
+  err = modem.endPacket(false);
   if (err > 0)
   {
     if (debugFlag)
@@ -512,11 +537,11 @@ void sendData()
   // receive and decode downlink message
   if (modem.available())
   {
-    char rcv[64] = "";
+    int rcv[64] = {0};
     int i = 0;
     while (modem.available())
     {
-      rcv[i++] = (char)modem.read();
+      rcv[i++] = modem.read();
     }
     if (debugFlag)
     {
@@ -531,7 +556,8 @@ void sendData()
     }
 
     // decode time drift
-    int32_t timeDrift = rcv[3];
+    int32_t timeDrift = 0;
+    timeDrift = rcv[3];
     timeDrift = (timeDrift << 8) | rcv[2];
     timeDrift = (timeDrift << 8) | rcv[1];
     timeDrift = (timeDrift << 8) | rcv[0];
@@ -560,7 +586,7 @@ void sendData()
   }
   else
   {
-    // set the flag to stat listening to the downlink messages again.
+    // set the flag to start listening to the downlink messages again.
     skipTimeSync = 0;
     if (debugFlag)
     {
@@ -643,4 +669,5 @@ void correctRTCTime(int32_t delta)
     Serial.print("RTC epoch: ");
     Serial.println(rtc.getEpoch(), DEC);
   }
+  delay(500);
 }
