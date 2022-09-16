@@ -1,13 +1,20 @@
-# BikeCounter
+# BikeCounter  <!-- omit in toc -->
 
-This repository contains the hardware and software components of a [PIR](https://en.wikipedia.org/wiki/Passive_infrared_sensor) based tracking device to monitor the usage of local bike trails. The data is sent over [LoraWAN](https://de.wikipedia.org/wiki/Long_Range_Wide_Area_Network) to [TTN](https://www.thethingsnetwork.org/) and from there to a [Google cloud](https://console.cloud.google.com) backend which stores the data and provides api endpoints for the data visualization web UI ([bikeCounterUI](https://github.com/guidosch/bikecounterUI)).
+This repository contains the hardware and software components of a [PIR](https://en.wikipedia.org/wiki/Passive_infrared_sensor) based tracking device to monitor the usage of local bike trails. The data is sent over [LoRaWAN](https://de.wikipedia.org/wiki/Long_Range_Wide_Area_Network) to [TTN](https://www.thethingsnetwork.org/) and from there to a [Google cloud](https://console.cloud.google.com) backend which stores the data and provides api endpoints for the data visualization web UI ([bikeCounterUI](https://github.com/guidosch/bikecounterUI)).
 
 <img src="hardware/img/BikeCounter_v0.1_1.png" width="400"> <img src="hardware/img/BikeCounter_v0.1_2.png" width="400">
 <img src="hardware/img/BikeCounter_v0.1_3.png" width="400"> <img src="hardware/img/BikeCounter_v0.1_4.png" width="400">
 
-The repository is divided into two main sections. The first one contains all the data regarding the hardware components and the second one holds the whole software code.
+The repository is divided into two main sections. The first one contains all the data regarding the hardware components and the second one holds the software code.
 
-## Hardware
+- [Hardware](#hardware)
+- [Software](#software)
+  - [BikeCounter](#bikecounter)
+    - [Overall state machine](#overall-state-machine)
+  - [TTN](#ttn)
+  - [Google Cloud](#google-cloud)
+
+# Hardware
 The core component of the device is an [Arduino MRKWAN 1310](https://docs.arduino.cc/hardware/mkr-wan-1310) which sits on the "logic layer" PCB. This PCB connects the micro controller to the sensors, the dip switches and the "power layer" PCB.
 
 To detect the movement a PIR sensor from [Seeed Studio](https://www.seeedstudio.com/Grove-PIR-Motion-Sensor.html) is used and to monitor the internal environment of the device a temperature and humidity sensor from [Adafruit](https://www.adafruit.com/product/3721) was chosen. 
@@ -16,7 +23,7 @@ The "power layer" PCB holds up to two rechargeable lithium-ion batteries (18650)
 
 The schematics and layout files of the PCBs as well as the BOM of the whole device can be found in the corresponding subfolder.
 
-## Software
+# Software
 This Repository contains the code for the tracking device as well as the scripts running on the backend.
 
 **Overview**
@@ -32,8 +39,27 @@ graph LR;
   subgraph TTN;   
     Arduino-MKRWAN-1310 -->|LoRaWAN| PayloadFormatter;
   end;  
-  subgraph Google cloud;
+  subgraph Google Cloud;
     PayloadFormatter -->|webhook| Cloud-function;
     Cloud-function --> firebase;
   end;
 ```
+## BikeCounter
+There are two versions of the main BikeCounter software. The **light** version is a simple and basic implementation of the needed functionality. The **pro** version has extended features that allow it to take track of time as well as its environnement conditions.
+
+(Due to the fact that the light version is allmost obsolet only the pro version will be explained in more detail.)
+
+### Overall state machine
+
+
+## TTN
+The message from the device gets over LoRaWAN to the TTN server where a uplink payload formatter parses the data bytes to a human readable JavaScript object. The server then triggers a webhook and passes the data object to the Google Cloud function API endpoint.
+
+The downlink message with the time drift information will also be parsed by the payload formatter defined in TTN.
+
+The up/down-link payload formatter scripts are stored in the TTN subfolder.
+
+## Google Cloud
+The triggered cloud function evaluates the data object sent from TTN and saves it to the Firebase database. Depending on the difference between the local time of the device and the server time it schedules a downlink message to correct the internal device time.
+
+There are also cloud functions that provide an API endpoint for the web UI ([bikeCounterUI](https://github.com/guidosch/bikecounterUI)) to visualize the stored data.
