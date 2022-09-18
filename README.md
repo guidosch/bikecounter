@@ -11,6 +11,8 @@ The repository is divided into two main sections. The first one contains all the
 - [Software](#software)
   - [BikeCounter](#bikecounter)
     - [Overall state machine](#overall-state-machine)
+    - [dataPackage](#datapackage)
+    - [timeScheduler](#timescheduler)
   - [TTN](#ttn)
   - [Google Cloud](#google-cloud)
 
@@ -29,7 +31,7 @@ This Repository contains the code for the tracking device as well as the scripts
 **Overview**
 
 ```mermaid
-graph LR;
+flowchart LR;
   subgraph BikeCounter;
     Biker(Round) -->|infrared radiation| PIR-sensor;
     PIR-sensor -->|DIO| Arduino-MKRWAN-1310;
@@ -50,6 +52,46 @@ There are two versions of the main BikeCounter software. The **light** version i
 (Due to the fact that the light version is allmost obsolet only the pro version will be explained in more detail.)
 
 ### Overall state machine
+
+```mermaid
+stateDiagram-v2
+    m1: main loop
+    [*] --> Setup
+    Setup --> m1
+    state m1 {
+      state if_motion <<choice>>
+      s0: motion detected ?
+      s1: store information in variable      
+      s2: timer called
+      s3: threshold reached ?
+      state if_threshold <<choice>>
+      s4: send data
+      state if_downlink <<choice>>
+      s5: downlink received ?
+      s6: correct rtc drift
+      
+      [*] --> s0
+      s0 --> if_motion
+      if_motion --> s1: true
+      if_motion --> s2: false
+      s2 --> s4
+      s1 --> s3
+      s3 --> if_threshold
+      if_threshold --> deepSleep: false
+      if_threshold --> s4: true
+      s4 --> s5
+      s5 --> if_downlink
+      if_downlink --> deepSleep: false
+      if_downlink --> s6: true
+      s6 --> deepSleep
+      deepSleep --> [*]
+    }
+```
+After the main loop finishes the device goes into a deepSleep mode. From there the PIR sensor or the rtc timer can wake up the device and trigger the main loop again.
+
+### dataPackage
+
+### timeScheduler
 
 
 ## TTN
