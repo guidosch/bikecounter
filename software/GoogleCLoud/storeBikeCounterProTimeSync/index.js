@@ -1,5 +1,5 @@
 const functions = require("firebase-functions"),
-admin = require("firebase-admin");
+  admin = require("firebase-admin");
 const https = require("https");
 
 const app = admin.initializeApp();
@@ -12,7 +12,6 @@ const auth = app.auth();
 const ttnWebhookId = "google-cloud-function";
 
 exports.storeBikecounterData = (req, res) => {
-  
   let payload = req.body;
   let deviceId;
   const app_id = payload.end_device_ids.application_ids.application_id;
@@ -47,6 +46,7 @@ exports.storeBikecounterData = (req, res) => {
         map.set(t, map.get(t) + 1);
       }
     });
+    // statId == 7 is the time sync call
     if (app_id == "bikecounter" && statId != 7) {
       try {
         firestore.collection(`${deviceId}`).add({

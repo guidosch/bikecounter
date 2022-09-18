@@ -1,7 +1,6 @@
 const https = require("https");
 
-const bearerToken =
-  "NNSXS.AQOK6SJ6WS4M35KPRLVYTAQ52PE3LC2UJFUR37A.5TJEMDNKGJFJ3VTX27VYRAKJBEBO7G2VOHX5RLDCSJ3ZGGZEG7IQ";
+const bearerToken = "xxx";
 const appId = "bikecounter-dev";
 const webhookId = "google-cloud-function";
 const deviceId = "test-device-1";

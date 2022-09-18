@@ -1,0 +1,8 @@
+{
+  "firebase": {
+    "projectId": "bikecounter",
+    "databaseURL": "https://bikecounter.firebaseio.com",
+    "storageBucket": "bikecounter.appspot.com",
+    "locationId": "europe-west6"
+  }
+}
