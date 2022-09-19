@@ -1,6 +1,6 @@
 # BikeCounter  <!-- omit in toc -->
 
-This repository contains the hardware and software components of a [PIR](https://en.wikipedia.org/wiki/Passive_infrared_sensor) based tracking device to monitor the usage of local bike trails. The data is sent over [LoRaWAN](https://de.wikipedia.org/wiki/Long_Range_Wide_Area_Network) to [TTN](https://www.thethingsnetwork.org/) and from there to a [Google cloud](https://console.cloud.google.com) backend which stores the data and provides api endpoints for the data visualization web UI ([bikeCounterUI](https://github.com/guidosch/bikecounterUI)).
+This repository contains the hardware and software components of a [PIR](https://en.wikipedia.org/wiki/Passive_infrared_sensor) based tracking device to monitor the usage of local bike trails. The data is sent over [LoRaWAN](https://de.wikipedia.org/wiki/Long_Range_Wide_Area_Network) to [TTN](https://www.thethingsnetwork.org/) and from there to a [Google Cloud](https://console.cloud.google.com) backend which stores the data and provides api endpoints for the data visualization web UI ([bikeCounterUI](https://github.com/guidosch/bikecounterUI)).
 
 <img src="hardware/img/BikeCounter_v0.1_1.png" width="400"> <img src="hardware/img/BikeCounter_v0.1_2.png" width="400">
 <img src="hardware/img/BikeCounter_v0.1_3.png" width="400"> <img src="hardware/img/BikeCounter_v0.1_4.png" width="400">
@@ -28,7 +28,7 @@ The core component of the device is an [Arduino MRKWAN 1310](https://docs.arduin
 
 To detect the movement a PIR sensor from [Seeed Studio](https://www.seeedstudio.com/Grove-PIR-Motion-Sensor.html) is used and to monitor the internal environment of the device a temperature and humidity sensor from [Adafruit](https://www.adafruit.com/product/3721) was chosen.
 
-The "power layer" PCB holds up to two rechargeable lithium-ion batteries (18650). This allows the device to run up to one year without exchanging the batteries.
+The "power layer" PCB holds two rechargeable lithium-ion batteries (18650). This allows the device to run up to one year without exchanging the batteries.
 
 The schematics and layout files of the PCBs as well as the BOM of the whole device can be found in the corresponding subfolder.
 
@@ -59,7 +59,7 @@ flowchart LR;
 
 There are two versions of the main BikeCounter software. The **light** version is a simple and basic implementation of the needed functionality. The **pro** version has extended features that allow it to take track of time as well as its environnement conditions.
 
-(Due to the fact that the light version is allmost obsolet only the pro version will be explained in more detail.)
+(Due to the fact that the light version is almost obsolete only the pro version will be explained in more detail.)
 
 ### Overall state machine
 
@@ -98,7 +98,7 @@ stateDiagram-v2
     }
 ```
 
-After the main loop finishes the device goes into a deepSleep mode. From there the PIR sensor or the rtc timer can wake up the device and trigger the main loop again.
+After the main loop finishes the device goes into a deepSleep mode. From there the PIR sensor or the rtc timer can wake it back up and trigger the main loop again.
 
 ### Data package
 
@@ -128,9 +128,9 @@ This repository contains serval unit tests for the dataPackage and the timeSched
 
 ### To be aware of
 
-The LoRa module is very timing sensitive that is the reason there are so many delays in the code to give it enough time to wait for messages and to response.
+- The LoRa module is very timing sensitive. That is the reason there are so many delays in the code to give it enough time to wait for messages and to response.
 
-The first time the (deep)sleep method is called, it re-initializes the RTC to a wrong value. To fix this issue the first iteration of the main loop sets the device into the sleep mode for a short period of time and resets the RTC in the next loop.
+- The first time the (deep)sleep method is called, it re-initializes the RTC to a wrong value. To fix this issue the first iteration of the main loop puts the device into the sleep mode for a short period of time and resets the RTC in the next loop.
 
 ## TTN
 
@@ -150,7 +150,7 @@ There are also cloud functions that provide an API endpoint for the web UI ([bik
 
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
-Please make sure to update tests as appropriate.
+Please make sure to update the tests as appropriate.
 
 # License
 
