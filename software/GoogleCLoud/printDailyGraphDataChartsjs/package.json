@@ -1,0 +1,10 @@
+{
+  "name": "sample-http",
+  "version": "0.0.1",
+  "dependencies": {
+    "eslint": "^6.8.0",
+    "firebase-admin": "^10.0.1",
+    "firebase-functions": "^3.16.0",
+    "moment": "^2.29.1"
+  }
+}
