@@ -31,7 +31,7 @@ const int usedPins[] = {LED_BUILTIN, counterInterruptPin, debugSwitchPin, config
 const uint32_t debugSleepTime = 300000ul; // 5*60*1000 ms
 
 // Sync time interval
-const uint32_t syncTimeInterval = 120000ul; // 2*60*1000 ms
+const uint32_t syncTimeInterval = 120ul; // 2*60 s
 
 // ----------------------------------------------------
 // -------------- Declaration section -----------------
@@ -102,6 +102,8 @@ SFE_SPI_FLASH flash;
 // Flags to trigger the initial sleep period and reset the rtc (prevent rtc bug)
 int firstLoop = 1;
 int firstWakeUp = 1;
+// Next wakeup time (epoch)
+time_t nextAlarm = 0;
 
 // Blink method prototype
 void blinkLED(int times = 1);
@@ -260,7 +262,7 @@ void loop()
     // Check if a motion was detected or the sleep time expired
     // (Implemented in a nested if-statement to give the compiler the opportunity
     // to remove the whole outer statement depending on the constexpr debugFlag.)
-    uint32_t sleepTime = ((deviceStatus != sync_call) && !skipTimeSync) ? debugSleepTime : syncTimeInterval; // sync call interval
+    uint32_t sleepTime = ((deviceStatus != sync_call) && !skipTimeSync) ? debugSleepTime : (syncTimeInterval * 1000); // sync call interval
     if ((motionDetected) || ((millis() - lastMillis) >= sleepTime))
     {
       // Run the main loop once
@@ -353,8 +355,6 @@ void loop()
       }
     }
 
-    timerCalled = 0;
-
     // check if the floating interrupt pin bug occurred
     // method 1: check if the totalCount exceeds the maxCount between the timer calls.
     // method 2: detect if the count goes up very quickly. (faster then the board is able to send)
@@ -402,15 +402,22 @@ void loop()
 
   if (!debugFlag)
   {
-    // determine the sleep time if we're not in debug mode
-    uint32_t sleepTime = syncTimeInterval;
-    if ((deviceStatus != sync_call) && !skipTimeSync)
+    if (timerCalled)
     {
-      time_t nextAlarm = timeHandler.getNextIntervalTime(currentTime);
-      sleepTime = difftime(nextAlarm, currentTime) * 1000;
+      // determine the sleep time if we're not in debug mode
+      if ((deviceStatus != sync_call) && !skipTimeSync)
+      {
+        nextAlarm = timeHandler.getNextIntervalTime(currentTime);
+      }
+      else
+      {
+        nextAlarm = currentTime + syncTimeInterval;
+      }
     }
-    LowPower.deepSleep(sleepTime);
+    timerCalled = 0;
+    LowPower.deepSleep((uint32_t)(difftime(nextAlarm, currentTime) * 1000));
   }
+  timerCalled = 0;
 }
 
 // ----------------------------------------------------
