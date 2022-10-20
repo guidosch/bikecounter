@@ -22,7 +22,7 @@ const int counterInterruptPin = 1;
 const int debugSwitchPin = 8;
 const int configSwitchPin = 9;
 const int batteryVoltagePin = A0;
-// PIR sensor power pin
+// PIR sensor power pin !!! not implemented in PCB v0.1
 const int pirPowerPin = 2;
 // Used pins (not defined pins will be disabled to save power)
 const int usedPins[] = {LED_BUILTIN, counterInterruptPin, debugSwitchPin, configSwitchPin, batteryVoltagePin, pirPowerPin};
@@ -93,6 +93,7 @@ enum status
   sync_call
 };
 enum status deviceStatus = sync_call;
+enum status lastDeviceStatus = sync_call;
 // Time sync skip flag (Prevents that the time correction is applied multiple times due to network lag and multiple enqueued downlinks with the same timeDrift information)
 int skipTimeSync = 0;
 // SPI serial flash parameter
@@ -299,7 +300,9 @@ void loop()
   if (debugFlag)
   {
     Serial.print("Device status = ");
-    Serial.println(deviceStatus);
+    Serial.print(deviceStatus);
+    Serial.print(" / Last device status = ");
+    Serial.println(lastDeviceStatus);
   }
 
   // check if a motion was detected.
@@ -336,6 +339,7 @@ void loop()
   {
     // if no motion was detected it means that the timer caused the wakeup.
     timerCalled = 1;
+    lastDeviceStatus = deviceStatus;
   }
 
   // check if the data should be sent.
@@ -378,7 +382,6 @@ void loop()
       }
       digitalWrite(pirPowerPin, LOW);
       delay(2000);
-      digitalWrite(pirPowerPin, HIGH);
       totalCounter = 0;
     }
 
@@ -405,7 +408,7 @@ void loop()
     if (timerCalled)
     {
       // determine the sleep time if we're not in debug mode
-      if ((deviceStatus != sync_call) && !skipTimeSync)
+      if ((deviceStatus != sync_call) && (lastDeviceStatus != sync_call))
       {
         nextAlarm = timeHandler.getNextIntervalTime(currentTime);
       }
@@ -415,7 +418,7 @@ void loop()
       }
     }
     timerCalled = 0;
-    LowPower.deepSleep((uint32_t)(difftime(nextAlarm, currentTime) * 1000));
+    LowPower.deepSleep((uint32_t)(difftime(nextAlarm, currentTime)) * 1000);
   }
   timerCalled = 0;
 }
@@ -426,7 +429,7 @@ void loop()
 
 void onMotionDetected()
 {
-  if (!isSending)
+  if ((!isSending) && (deviceStatus != sync_call))
   {
     motionDetected = 1;
   }
@@ -585,9 +588,6 @@ void sendData()
       if (deviceStatus == sync_call)
       {
         deviceStatus = no_error;
-
-        // power the pir sensor
-        digitalWrite(pirPowerPin, HIGH);
       }
     }
   }
