@@ -54,11 +54,11 @@ DataPackage dataHandler = DataPackage();
 // TimerSchedule object to determine the next timer call
 TimerSchedule timeHandler = TimerSchedule();
 
-// Motion counter value (must be volatile as incremented in IRS)
+// Motion counter value
 int counter = 0;
 // total counts between timer calls
 int totalCounter = 0;
-// motion detected flag
+// motion detected flag (must be volatile as changed in IRS)
 volatile bool motionDetected = 0;
 // time array size
 const int timeArraySize = 62;
@@ -66,7 +66,7 @@ const int timeArraySize = 62;
 unsigned int timeArray[timeArraySize];
 // hour of the day for next package
 unsigned int hourOfDay = 0;
-// Lora data transmission flag
+// Lora data transmission flag (must be volatile as changed in IRS)
 volatile bool isSending = 0;
 // Error counter for connection
 int errorCounter = 0;
@@ -263,7 +263,7 @@ void loop()
     // Check if a motion was detected or the sleep time expired
     // (Implemented in a nested if-statement to give the compiler the opportunity
     // to remove the whole outer statement depending on the constexpr debugFlag.)
-    uint32_t sleepTime = ((deviceStatus != sync_call) && !skipTimeSync) ? debugSleepTime : (syncTimeInterval * 1000); // sync call interval
+    uint32_t sleepTime = ((deviceStatus != sync_call) && (lastDeviceStatus != sync_call)) ? debugSleepTime : (syncTimeInterval * 1000); // sync call interval
     if ((motionDetected) || ((millis() - lastMillis) >= sleepTime))
     {
       // Run the main loop once
@@ -403,24 +403,29 @@ void loop()
 
   delay(200);
 
-  if (!debugFlag)
+  if (timerCalled)
   {
-    if (timerCalled)
+    // determine the sleep time if we're not in debug mode
+    if ((deviceStatus != sync_call) && (lastDeviceStatus != sync_call))
     {
-      // determine the sleep time if we're not in debug mode
-      if ((deviceStatus != sync_call) && (lastDeviceStatus != sync_call))
-      {
-        nextAlarm = timeHandler.getNextIntervalTime(currentTime);
-      }
-      else
-      {
-        nextAlarm = currentTime + syncTimeInterval;
-      }
+      nextAlarm = timeHandler.getNextIntervalTime(currentTime);
+    }
+    else
+    {
+      nextAlarm = currentTime + syncTimeInterval;
     }
     timerCalled = 0;
-    LowPower.deepSleep((uint32_t)(difftime(nextAlarm, currentTime)) * 1000);
   }
-  timerCalled = 0;
+  if (!debugFlag)
+  {
+    LowPower.deepSleep((uint32_t)(difftime(nextAlarm, currentTime)) * 1000ul);
+  }
+  else
+  {
+    Serial.print("next non-debug wake up in: ");
+    Serial.print((uint32_t)(difftime(nextAlarm, currentTime)));
+    Serial.println(" seconds.");
+  }
 }
 
 // ----------------------------------------------------
@@ -429,7 +434,7 @@ void loop()
 
 void onMotionDetected()
 {
-  if ((!isSending) && (deviceStatus != sync_call))
+  if (!isSending)
   {
     motionDetected = 1;
   }
