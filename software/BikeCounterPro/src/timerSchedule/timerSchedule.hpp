@@ -23,4 +23,9 @@ private:
     int getIntervalId(int currentHour, int currentMonth);
 };
 
+/// @brief Takes a tm struct and returns the epoch time without timezone or daytime saving applied
+/// @param _timeptr pointer to the tm struct
+/// @return epoch time
+time_t mktimeutc(tm *timeptr);
+
 #endif // TIMERSCHEDULE_H

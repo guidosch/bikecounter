@@ -1,5 +1,11 @@
 #include "timerSchedule.hpp"
 
+#ifdef __linux__
+#define TIMEZONE timezone;
+#else
+#define TIMEZONE _timezone;
+#endif
+
 time_t TimerSchedule::getNextIntervalTime(time_t currentDateTime)
 {
     tm *cDT = gmtime(&currentDateTime);
@@ -7,7 +13,7 @@ time_t TimerSchedule::getNextIntervalTime(time_t currentDateTime)
 
     tm nDTr = *cDT;
     nDTr.tm_sec += timeSpanIntervals[cId];
-    mktime(&nDTr);
+    mktimeutc(&nDTr);
     // Check if next call is inside same day
     if ((nDTr.tm_mday != cDT->tm_mday) && !isLastCall)
     {
@@ -36,7 +42,7 @@ time_t TimerSchedule::getNextIntervalTime(time_t currentDateTime)
             nDTr.tm_sec = 0;
         }
     }
-    return mktime(&nDTr) - _timezone;
+    return mktimeutc(&nDTr);
 };
 
 uint32_t TimerSchedule::getCurrentIntervalSeconds(time_t cDT)
@@ -62,4 +68,37 @@ int TimerSchedule::getIntervalId(int currentHour, int currentMonth)
         }
     }
     return intervalId;
+}
+
+time_t mktimeutc(tm *timeptr)
+{
+    // apply the inverse procedure as in ANSI mktime to remove the local time attributes.
+
+    // remove timezone
+    unsigned long seconds = mktime(timeptr);
+    seconds -= TIMEZONE;
+
+    // remove day light saving
+    unsigned dst;
+    if (timeptr->tm_isdst > 0)
+    {
+        // day light saving was applied
+        dst = 60 * 60;
+    }
+    else if (timeptr->tm_isdst == 0)
+    {
+        // no day light saving was applied
+        dst = 0;
+    }
+    else
+    {
+        // information not valid
+        dst = 0;
+    }
+
+    seconds += dst;
+
+    if ((time_t)seconds != seconds)
+        return (time_t)-1;
+    return (time_t)seconds;
 }
