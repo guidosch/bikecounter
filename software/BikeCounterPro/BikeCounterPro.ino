@@ -22,7 +22,7 @@ const int counterInterruptPin = 1;
 const int debugSwitchPin = 8;
 const int configSwitchPin = 9;
 const int batteryVoltagePin = A0;
-// PIR sensor power pin
+// PIR sensor power pin !!! not implemented in PCB v0.1
 const int pirPowerPin = 2;
 // Used pins (not defined pins will be disabled to save power)
 const int usedPins[] = {LED_BUILTIN, counterInterruptPin, debugSwitchPin, configSwitchPin, batteryVoltagePin, pirPowerPin};
@@ -54,11 +54,11 @@ DataPackage dataHandler = DataPackage();
 // TimerSchedule object to determine the next timer call
 TimerSchedule timeHandler = TimerSchedule();
 
-// Motion counter value (must be volatile as incremented in IRS)
+// Motion counter value
 int counter = 0;
 // total counts between timer calls
 int totalCounter = 0;
-// motion detected flag
+// motion detected flag (must be volatile as changed in IRS)
 volatile bool motionDetected = 0;
 // time array size
 const int timeArraySize = 62;
@@ -66,7 +66,7 @@ const int timeArraySize = 62;
 unsigned int timeArray[timeArraySize];
 // hour of the day for next package
 unsigned int hourOfDay = 0;
-// Lora data transmission flag
+// Lora data transmission flag (must be volatile as changed in IRS)
 volatile bool isSending = 0;
 // Error counter for connection
 int errorCounter = 0;
@@ -93,6 +93,7 @@ enum status
   sync_call
 };
 enum status deviceStatus = sync_call;
+enum status lastDeviceStatus = sync_call;
 // Time sync skip flag (Prevents that the time correction is applied multiple times due to network lag and multiple enqueued downlinks with the same timeDrift information)
 int skipTimeSync = 0;
 // SPI serial flash parameter
@@ -262,7 +263,7 @@ void loop()
     // Check if a motion was detected or the sleep time expired
     // (Implemented in a nested if-statement to give the compiler the opportunity
     // to remove the whole outer statement depending on the constexpr debugFlag.)
-    uint32_t sleepTime = ((deviceStatus != sync_call) && !skipTimeSync) ? debugSleepTime : (syncTimeInterval * 1000); // sync call interval
+    uint32_t sleepTime = ((deviceStatus != sync_call) && (lastDeviceStatus != sync_call)) ? debugSleepTime : (syncTimeInterval * 1000); // sync call interval
     if ((motionDetected) || ((millis() - lastMillis) >= sleepTime))
     {
       // Run the main loop once
@@ -299,7 +300,9 @@ void loop()
   if (debugFlag)
   {
     Serial.print("Device status = ");
-    Serial.println(deviceStatus);
+    Serial.print(deviceStatus);
+    Serial.print(" / Last device status = ");
+    Serial.println(lastDeviceStatus);
   }
 
   // check if a motion was detected.
@@ -336,6 +339,7 @@ void loop()
   {
     // if no motion was detected it means that the timer caused the wakeup.
     timerCalled = 1;
+    lastDeviceStatus = deviceStatus;
   }
 
   // check if the data should be sent.
@@ -378,7 +382,6 @@ void loop()
       }
       digitalWrite(pirPowerPin, LOW);
       delay(2000);
-      digitalWrite(pirPowerPin, HIGH);
       totalCounter = 0;
     }
 
@@ -400,24 +403,29 @@ void loop()
 
   delay(200);
 
-  if (!debugFlag)
+  if (timerCalled)
   {
-    if (timerCalled)
+    // determine the sleep time if we're not in debug mode
+    if ((deviceStatus != sync_call) && (lastDeviceStatus != sync_call))
     {
-      // determine the sleep time if we're not in debug mode
-      if ((deviceStatus != sync_call) && !skipTimeSync)
-      {
-        nextAlarm = timeHandler.getNextIntervalTime(currentTime);
-      }
-      else
-      {
-        nextAlarm = currentTime + syncTimeInterval;
-      }
+      nextAlarm = timeHandler.getNextIntervalTime(currentTime);
+    }
+    else
+    {
+      nextAlarm = currentTime + syncTimeInterval;
     }
     timerCalled = 0;
-    LowPower.deepSleep((uint32_t)(difftime(nextAlarm, currentTime) * 1000));
   }
-  timerCalled = 0;
+  if (!debugFlag)
+  {
+    LowPower.deepSleep((uint32_t)(difftime(nextAlarm, currentTime)) * 1000ul);
+  }
+  else
+  {
+    Serial.print("next non-debug wake up in: ");
+    Serial.print((uint32_t)(difftime(nextAlarm, currentTime)));
+    Serial.println(" seconds.");
+  }
 }
 
 // ----------------------------------------------------
@@ -585,9 +593,6 @@ void sendData()
       if (deviceStatus == sync_call)
       {
         deviceStatus = no_error;
-
-        // power the pir sensor
-        digitalWrite(pirPowerPin, HIGH);
       }
     }
   }
