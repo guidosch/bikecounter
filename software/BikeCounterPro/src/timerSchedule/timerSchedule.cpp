@@ -27,8 +27,6 @@ time_t TimerSchedule::getNextIntervalTime(time_t currentDateTime)
     }
     else
     {
-        isLastCall = false;
-
         // Check if next call is inside same interval
         // if not change the next call to the start of the new interval to sync the timing
         int nId = getIntervalId(nDTr.tm_hour, nDTr.tm_mon);
@@ -41,6 +39,12 @@ time_t TimerSchedule::getNextIntervalTime(time_t currentDateTime)
             nDTr.tm_min = 1;
             nDTr.tm_sec = 0;
         }
+
+        if (isLastCall)
+        {
+            nDTr.tm_mday++;
+        }
+        isLastCall = false;
     }
     return mktimeutc(&nDTr);
 };

@@ -155,6 +155,28 @@ TEST_F(TimerScheduleTest, LastCallOfTheDayTests)
     tmR11.tm_sec = 0;
     time_t tR11 = mktimeutc(&tmR11);
     ASSERT_EQ(ts1.getNextIntervalTime(t1), tR11);
+
+    // last call of the month
+    // DateTime t1 = DateTime(2022, 3, 25, 21, 47, 39);
+    tm tm2 = {0};
+    tm2.tm_year = 122; // 2022 - 1900
+    tm2.tm_mon = 2;
+    tm2.tm_mday = 31;
+    tm2.tm_hour = 21;
+    tm2.tm_min = 47;
+    tm2.tm_sec = 39;
+    tm2.tm_isdst = 0;
+    time_t t2 = mktimeutc(&tm2);
+
+    // DateTime(2022, 3, 25, 23, 49, 59)
+    tm tmR21 = tm2;
+    tmR21.tm_mon = 3;
+    tmR21.tm_mday = 1;
+    tmR21.tm_hour = 0;
+    tmR21.tm_min = 1;
+    tmR21.tm_sec = 0;
+    time_t tR21 = mktimeutc(&tmR21);
+    ASSERT_EQ(ts1.getNextIntervalTime(t2), tR21);
 }
 
 TEST_F(TimerScheduleTest, CurrentIntervalTests)

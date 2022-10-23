@@ -390,6 +390,9 @@ void loop()
 
     delay(200);
 
+    // update time
+    currentTime = time_t(rtc.getEpoch());
+
     // enable the pir sensor
     if (deviceStatus != sync_call)
     {
@@ -406,7 +409,7 @@ void loop()
   if (timerCalled)
   {
     // determine the sleep time if we're not in debug mode
-    if ((deviceStatus != sync_call) && (lastDeviceStatus != sync_call))
+    if (((deviceStatus != sync_call) && (lastDeviceStatus != sync_call)) || currentTime > nextAlarm)
     {
       nextAlarm = timeHandler.getNextIntervalTime(currentTime);
     }
@@ -416,14 +419,16 @@ void loop()
     }
     timerCalled = 0;
   }
+  double sdt = difftime(nextAlarm, currentTime);
+  uint32_t sleepTime = sdt > 0 ? (uint32_t)sdt : syncTimeInterval;
   if (!debugFlag)
   {
-    LowPower.deepSleep((uint32_t)(difftime(nextAlarm, currentTime)) * 1000ul);
+    LowPower.deepSleep(sleepTime * 1000ul);
   }
   else
   {
     Serial.print("next non-debug wake up in: ");
-    Serial.print((uint32_t)(difftime(nextAlarm, currentTime)));
+    Serial.print(sleepTime);
     Serial.println(" seconds.");
   }
 }
