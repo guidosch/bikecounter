@@ -409,7 +409,7 @@ void loop()
   if (timerCalled)
   {
     // determine the sleep time if we're not in debug mode
-    if (((deviceStatus != sync_call) && (lastDeviceStatus != sync_call)) || currentTime > nextAlarm)
+    if ((deviceStatus != sync_call) && (lastDeviceStatus != sync_call))
     {
       nextAlarm = timeHandler.getNextIntervalTime(currentTime);
     }
