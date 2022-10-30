@@ -146,6 +146,27 @@ The triggered cloud function evaluates the data object sent from TTN and saves i
 
 There are also cloud functions that provide an API endpoint for the web UI ([bikeCounterUI](https://github.com/guidosch/bikecounterUI)) to visualize the stored data.
 
+# Setup IDE and compile code
+Download and install: `arduino-cli` which is available for brew or apt-get. Install the `arduino` extension for VSCode and adjust the `arduino.path` in the extension settings and point to your arduino-cli installation folder.
+
+Add the following libraries to your installation: `arduino-cli lib install [libName]`
+
+- Needed libraries:
+  - MKRWAN@1.1.0
+  - RTCZero@1.6.0
+  - SPI.h --> already preinstalled
+  - SparkFun SPI SerialFlash Arduino Library@1.0.3
+  - Arduino Low Power@1.2.2
+  - Adafruit Unified Sensor@1.1.6
+
+Copy and adjust the `.vscode/c_cpp_properties.json_example` for your platform. You have to adjust the place where arduino-cli downloads the libraries as they are needed by the IDE
+
+Compile: `arduino-cli compile --fqbn arduino:samd:mkrwan1310 BikeCounterPro.ino`
+
+Deploy: `arduino-cli upload -p [/dev/yourdevice] --fqbn arduino:samd:mkrwan1310 BikeCounterPro.ino`
+
+Hint: `arduino-cli board list` will show the USB port, where the device is connected
+
 # Contributing
 
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
