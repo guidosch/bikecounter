@@ -421,6 +421,15 @@ void loop()
   }
   double sdt = difftime(nextAlarm, currentTime);
   uint32_t sleepTime = sdt > 0 ? (uint32_t)sdt : syncTimeInterval;
+  // sanity check
+  if (sleepTime < syncTimeInterval)
+  {
+    sleepTime = syncTimeInterval;
+  }
+  if (sleepTime > (12ul * 60ul * 60ul))
+  {
+    sleepTime = 12ul * 60ul * 60ul;
+  }
   if (!debugFlag)
   {
     LowPower.deepSleep(sleepTime * 1000ul);
