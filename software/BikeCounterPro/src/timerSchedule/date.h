@@ -1314,7 +1314,7 @@ namespace date
     >::type>
         CONSTCD11
         std::chrono::duration<Rep, Period>
-        abs(std::chrono::duration<Rep, Period> d)
+        date_abs(std::chrono::duration<Rep, Period> d)
     {
         return d >= d.zero() ? d : static_cast<decltype(d)>(-d);
     }
@@ -4040,7 +4040,7 @@ namespace date
             std::numeric_limits<Rep>::is_signed,
             std::chrono::duration<Rep, Period>
             >::type
-            abs(std::chrono::duration<Rep, Period> d)
+            date_abs(std::chrono::duration<Rep, Period> d)
         {
             return d >= d.zero() ? +d : -d;
         }
@@ -4053,7 +4053,7 @@ namespace date
             !std::numeric_limits<Rep>::is_signed,
             std::chrono::duration<Rep, Period>
             >::type
-            abs(std::chrono::duration<Rep, Period> d)
+            date_abs(std::chrono::duration<Rep, Period> d)
         {
             return d;
         }
@@ -4080,9 +4080,9 @@ namespace date
         {}
 
         CONSTCD11 explicit hh_mm_ss(Duration d) NOEXCEPT
-            : h_(std::chrono::duration_cast<std::chrono::hours>(detail::abs(d)))
-            , m_(std::chrono::duration_cast<std::chrono::minutes>(detail::abs(d)) - h_)
-            , s_(detail::abs(d) - h_ - m_)
+            : h_(std::chrono::duration_cast<std::chrono::hours>(detail::date_abs(d)))
+            , m_(std::chrono::duration_cast<std::chrono::minutes>(detail::date_abs(d)) - h_)
+            , s_(detail::date_abs(d) - h_ - m_)
             , neg_(d < Duration::zero())
         {}
 
@@ -5359,7 +5359,7 @@ namespace date
                             os.fill('0');
                             os.flags(std::ios::dec | std::ios::right);
                             os.width(2);
-                            os << std::abs(static_cast<int>(y)) % 100;
+                            os << abs(static_cast<int>(y)) % 100;
                         }
                     }
                     else
@@ -5959,7 +5959,7 @@ namespace date
                     if (modified == CharT{})
                     {
 #endif
-                        y = std::abs(y) % 100;
+                        y = abs(y) % 100;
                         if (y < 10)
                             os << CharT{ '0' };
                         os << y;
@@ -6022,7 +6022,7 @@ namespace date
                     }
                     auto m = duration_cast<minutes>(*offset_sec);
                     auto neg = m < minutes{ 0 };
-                    m = date::abs(m);
+                    m = date::date_abs(m);
                     auto h = duration_cast<hours>(m);
                     m -= h;
                     if (neg)
@@ -7525,7 +7525,7 @@ namespace date
                         {
                             read(is, rs{ tH, 2, 2 });
                             if (!is.fail())
-                                toff = hours{ std::abs(tH) };
+                                toff = hours{ abs(tH) };
                             if (is.good())
                             {
                                 ic = is.peek();
@@ -7545,7 +7545,7 @@ namespace date
                         {
                             read(is, rs{ tH, 1, 2 });
                             if (!is.fail())
-                                toff = hours{ std::abs(tH) };
+                                toff = hours{ abs(tH) };
                             if (is.good())
                             {
                                 ic = is.peek();

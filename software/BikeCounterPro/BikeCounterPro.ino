@@ -7,6 +7,7 @@
 #include "versionConfig.h"
 #include "src/dataPackage/dataPackage.hpp"
 #include "src/timerSchedule/timerSchedule.hpp"
+#include "src/timerSchedule/date.h"
 
 // ----------------------------------------------------
 // ------------- Configuration section ----------------
@@ -104,7 +105,7 @@ SFE_SPI_FLASH flash;
 int firstLoop = 1;
 int firstWakeUp = 1;
 // Next wakeup time (epoch)
-time_t nextAlarm = 0;
+std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> nextAlarm{std::chrono::seconds{0}};
 
 // Blink method prototype
 void blinkLED(int times = 1);
@@ -293,8 +294,8 @@ void loop()
   }
 
   // get current time
-  time_t currentTime = time_t(rtc.getEpoch());
-  tm *currentTimeStruct = gmtime(&currentTime);
+  std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> currentTime{std::chrono::seconds{rtc.getEpoch()}};
+  date::hh_mm_ss<std::chrono::seconds> currentTime_hms = date::make_time(currentTime.time_since_epoch() - date::floor<date::days>(currentTime).time_since_epoch());
   int timerCalled = 0;
 
   if (debugFlag)
@@ -313,9 +314,9 @@ void loop()
     // set hour of the day if this was the first call
     if (counter == 0)
     {
-      hourOfDay = currentTimeStruct->tm_hour;
+      hourOfDay = currentTime_hms.hours().count();
     }
-    timeArray[counter] = (currentTimeStruct->tm_hour - hourOfDay) * 60 + currentTimeStruct->tm_min;
+    timeArray[counter] = (currentTime_hms.hours().count() - hourOfDay) * 60 + currentTime_hms.minutes().count();
 
     ++counter;
     ++totalCounter;
@@ -327,11 +328,11 @@ void loop()
       Serial.print("Motion detected (current count = ");
       Serial.print(counter);
       Serial.print(" / time: ");
-      Serial.print(currentTimeStruct->tm_hour, DEC);
+      Serial.print(currentTime_hms.hours().count(), DEC);
       Serial.print(':');
-      Serial.print(currentTimeStruct->tm_min, DEC);
+      Serial.print(currentTime_hms.minutes().count(), DEC);
       Serial.print(':');
-      Serial.print(currentTimeStruct->tm_sec, DEC);
+      Serial.print(currentTime_hms.seconds().count(), DEC);
       Serial.println(')');
     }
   }
@@ -391,7 +392,7 @@ void loop()
     delay(200);
 
     // update time
-    currentTime = time_t(rtc.getEpoch());
+    currentTime = std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds>(std::chrono::seconds{rtc.getEpoch()});
 
     // enable the pir sensor
     if (deviceStatus != sync_call)
@@ -415,11 +416,11 @@ void loop()
     }
     else
     {
-      nextAlarm = currentTime + syncTimeInterval;
+      nextAlarm = currentTime + std::chrono::seconds{syncTimeInterval};
     }
     timerCalled = 0;
   }
-  double sdt = difftime(nextAlarm, currentTime);
+  int64_t sdt = (nextAlarm.time_since_epoch().count() - currentTime.time_since_epoch().count());
   uint32_t sleepTime = sdt > 0 ? (uint32_t)sdt : syncTimeInterval;
   // sanity check
   if (sleepTime < syncTimeInterval)

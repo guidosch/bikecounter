@@ -6,13 +6,13 @@ using namespace std::chrono;
 time_point<system_clock, seconds> TimerSchedule::getNextIntervalTime(time_point<system_clock, seconds> currentDateTime)
 {
     year_month_day cdt_ymd{floor<days>(currentDateTime)};
-    hh_mm_ss<duration<int64_t, std::ratio<1L, 1L>>> cdt_hms = make_time(currentDateTime.time_since_epoch() - floor<days>(currentDateTime).time_since_epoch());
+    hh_mm_ss<seconds> cdt_hms = make_time(currentDateTime.time_since_epoch() - floor<days>(currentDateTime).time_since_epoch());
     int cId = getIntervalId(cdt_hms.hours().count(), unsigned{cdt_ymd.month()});
 
     time_point<system_clock, seconds> new_dt = currentDateTime + seconds{timeSpanIntervals[cId]};
 
     year_month_day new_dt_ymd{floor<days>(new_dt)};
-    hh_mm_ss<duration<int64_t, std::ratio<1L, 1L>>> new_dt_hms = make_time(new_dt.time_since_epoch() - floor<days>(new_dt).time_since_epoch());
+    hh_mm_ss<seconds> new_dt_hms = make_time(new_dt.time_since_epoch() - floor<days>(new_dt).time_since_epoch());
 
     // Check if next call is inside same day
     if ((floor<days>(new_dt) != floor<days>(currentDateTime)) && !isLastCall)
@@ -44,7 +44,7 @@ time_point<system_clock, seconds> TimerSchedule::getNextIntervalTime(time_point<
 uint32_t TimerSchedule::getCurrentIntervalSeconds(time_point<system_clock, seconds> cDT)
 {
     year_month_day cdt_ymd{floor<days>(cDT)};
-    hh_mm_ss<duration<int64_t, std::ratio<1L, 1L>>> cdt_hms = make_time(cDT.time_since_epoch() - floor<days>(cDT).time_since_epoch());
+    hh_mm_ss<seconds> cdt_hms = make_time(cDT.time_since_epoch() - floor<days>(cDT).time_since_epoch());
     int cId = getIntervalId(cdt_hms.hours().count(), unsigned{cdt_ymd.month()});
     return timeSpanIntervals[cId];
 };
