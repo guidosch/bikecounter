@@ -1,15 +1,16 @@
 #ifndef TIMERSCHEDULE_H
 #define TIMERSCHEDULE_H
 
-#include <ctime>
+#include <chrono>
 #include <stdint.h>
+#include "date.h"
 
 class TimerSchedule
 {
 public:
-    time_t getNextIntervalTime(time_t currentDateTime);
-    uint32_t getCurrentIntervalSeconds(time_t currentDateTime);
-    uint32_t getCurrentIntervalMinutes(time_t currentDateTime);
+    std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> getNextIntervalTime(std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> currentDateTime);
+    uint32_t getCurrentIntervalSeconds(std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> currentDateTime);
+    uint32_t getCurrentIntervalMinutes(std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> currentDateTime);
 
 private:
     static const int intervalCount = 3;

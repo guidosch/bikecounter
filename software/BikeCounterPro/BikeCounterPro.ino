@@ -7,6 +7,7 @@
 #include "versionConfig.h"
 #include "src/dataPackage/dataPackage.hpp"
 #include "src/timerSchedule/timerSchedule.hpp"
+#include "src/timerSchedule/date.h"
 
 // ----------------------------------------------------
 // ------------- Configuration section ----------------
@@ -22,7 +23,7 @@ const int counterInterruptPin = 1;
 const int debugSwitchPin = 8;
 const int configSwitchPin = 9;
 const int batteryVoltagePin = A0;
-// PIR sensor power pin
+// PIR sensor power pin !!! not implemented in PCB v0.1
 const int pirPowerPin = 2;
 // Used pins (not defined pins will be disabled to save power)
 const int usedPins[] = {LED_BUILTIN, counterInterruptPin, debugSwitchPin, configSwitchPin, batteryVoltagePin, pirPowerPin};
@@ -31,7 +32,7 @@ const int usedPins[] = {LED_BUILTIN, counterInterruptPin, debugSwitchPin, config
 const uint32_t debugSleepTime = 300000ul; // 5*60*1000 ms
 
 // Sync time interval
-const uint32_t syncTimeInterval = 120000ul; // 2*60*1000 ms
+const uint32_t syncTimeInterval = 120ul; // 2*60 s
 
 // ----------------------------------------------------
 // -------------- Declaration section -----------------
@@ -54,11 +55,11 @@ DataPackage dataHandler = DataPackage();
 // TimerSchedule object to determine the next timer call
 TimerSchedule timeHandler = TimerSchedule();
 
-// Motion counter value (must be volatile as incremented in IRS)
+// Motion counter value
 int counter = 0;
 // total counts between timer calls
 int totalCounter = 0;
-// motion detected flag
+// motion detected flag (must be volatile as changed in IRS)
 volatile bool motionDetected = 0;
 // time array size
 const int timeArraySize = 62;
@@ -66,7 +67,7 @@ const int timeArraySize = 62;
 unsigned int timeArray[timeArraySize];
 // hour of the day for next package
 unsigned int hourOfDay = 0;
-// Lora data transmission flag
+// Lora data transmission flag (must be volatile as changed in IRS)
 volatile bool isSending = 0;
 // Error counter for connection
 int errorCounter = 0;
@@ -93,6 +94,7 @@ enum status
   sync_call
 };
 enum status deviceStatus = sync_call;
+enum status lastDeviceStatus = sync_call;
 // Time sync skip flag (Prevents that the time correction is applied multiple times due to network lag and multiple enqueued downlinks with the same timeDrift information)
 int skipTimeSync = 0;
 // SPI serial flash parameter
@@ -102,6 +104,8 @@ SFE_SPI_FLASH flash;
 // Flags to trigger the initial sleep period and reset the rtc (prevent rtc bug)
 int firstLoop = 1;
 int firstWakeUp = 1;
+// Next wakeup time (epoch)
+std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> nextAlarm{std::chrono::seconds{0}};
 
 // Blink method prototype
 void blinkLED(int times = 1);
@@ -260,7 +264,7 @@ void loop()
     // Check if a motion was detected or the sleep time expired
     // (Implemented in a nested if-statement to give the compiler the opportunity
     // to remove the whole outer statement depending on the constexpr debugFlag.)
-    uint32_t sleepTime = ((deviceStatus != sync_call) && !skipTimeSync) ? debugSleepTime : syncTimeInterval; // sync call interval
+    uint32_t sleepTime = ((deviceStatus != sync_call) && (lastDeviceStatus != sync_call)) ? debugSleepTime : (syncTimeInterval * 1000); // sync call interval
     if ((motionDetected) || ((millis() - lastMillis) >= sleepTime))
     {
       // Run the main loop once
@@ -290,14 +294,16 @@ void loop()
   }
 
   // get current time
-  time_t currentTime = time_t(rtc.getEpoch());
-  tm *currentTimeStruct = gmtime(&currentTime);
+  std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> currentTime{std::chrono::seconds{rtc.getEpoch()}};
+  date::hh_mm_ss<std::chrono::seconds> currentTime_hms = date::make_time(currentTime.time_since_epoch() - date::floor<date::days>(currentTime).time_since_epoch());
   int timerCalled = 0;
 
   if (debugFlag)
   {
     Serial.print("Device status = ");
-    Serial.println(deviceStatus);
+    Serial.print(deviceStatus);
+    Serial.print(" / Last device status = ");
+    Serial.println(lastDeviceStatus);
   }
 
   // check if a motion was detected.
@@ -308,9 +314,9 @@ void loop()
     // set hour of the day if this was the first call
     if (counter == 0)
     {
-      hourOfDay = currentTimeStruct->tm_hour;
+      hourOfDay = currentTime_hms.hours().count();
     }
-    timeArray[counter] = (currentTimeStruct->tm_hour - hourOfDay) * 60 + currentTimeStruct->tm_min;
+    timeArray[counter] = (currentTime_hms.hours().count() - hourOfDay) * 60 + currentTime_hms.minutes().count();
 
     ++counter;
     ++totalCounter;
@@ -322,11 +328,11 @@ void loop()
       Serial.print("Motion detected (current count = ");
       Serial.print(counter);
       Serial.print(" / time: ");
-      Serial.print(currentTimeStruct->tm_hour, DEC);
+      Serial.print(currentTime_hms.hours().count(), DEC);
       Serial.print(':');
-      Serial.print(currentTimeStruct->tm_min, DEC);
+      Serial.print(currentTime_hms.minutes().count(), DEC);
       Serial.print(':');
-      Serial.print(currentTimeStruct->tm_sec, DEC);
+      Serial.print(currentTime_hms.seconds().count(), DEC);
       Serial.println(')');
     }
   }
@@ -334,6 +340,7 @@ void loop()
   {
     // if no motion was detected it means that the timer caused the wakeup.
     timerCalled = 1;
+    lastDeviceStatus = deviceStatus;
   }
 
   // check if the data should be sent.
@@ -352,8 +359,6 @@ void loop()
         Serial.println("Timer called");
       }
     }
-
-    timerCalled = 0;
 
     // check if the floating interrupt pin bug occurred
     // method 1: check if the totalCount exceeds the maxCount between the timer calls.
@@ -378,7 +383,6 @@ void loop()
       }
       digitalWrite(pirPowerPin, LOW);
       delay(2000);
-      digitalWrite(pirPowerPin, HIGH);
       totalCounter = 0;
     }
 
@@ -386,6 +390,9 @@ void loop()
     sendData();
 
     delay(200);
+
+    // update time
+    currentTime = std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds>(std::chrono::seconds{rtc.getEpoch()});
 
     // enable the pir sensor
     if (deviceStatus != sync_call)
@@ -400,16 +407,39 @@ void loop()
 
   delay(200);
 
-  if (!debugFlag)
+  if (timerCalled)
   {
     // determine the sleep time if we're not in debug mode
-    uint32_t sleepTime = syncTimeInterval;
-    if ((deviceStatus != sync_call) && !skipTimeSync)
+    if ((deviceStatus != sync_call) && (lastDeviceStatus != sync_call))
     {
-      time_t nextAlarm = timeHandler.getNextIntervalTime(currentTime);
-      sleepTime = difftime(nextAlarm, currentTime) * 1000;
+      nextAlarm = timeHandler.getNextIntervalTime(currentTime);
     }
-    LowPower.deepSleep(sleepTime);
+    else
+    {
+      nextAlarm = currentTime + std::chrono::seconds{syncTimeInterval};
+    }
+    timerCalled = 0;
+  }
+  int64_t sdt = (nextAlarm.time_since_epoch().count() - currentTime.time_since_epoch().count());
+  uint32_t sleepTime = sdt > 0 ? (uint32_t)sdt : syncTimeInterval;
+  // sanity check
+  if (sleepTime < syncTimeInterval)
+  {
+    sleepTime = syncTimeInterval;
+  }
+  if (sleepTime > (12ul * 60ul * 60ul))
+  {
+    sleepTime = 12ul * 60ul * 60ul;
+  }
+  if (!debugFlag)
+  {
+    LowPower.deepSleep(sleepTime * 1000ul);
+  }
+  else
+  {
+    Serial.print("next non-debug wake up in: ");
+    Serial.print(sleepTime);
+    Serial.println(" seconds.");
   }
 }
 
@@ -578,9 +608,6 @@ void sendData()
       if (deviceStatus == sync_call)
       {
         deviceStatus = no_error;
-
-        // power the pir sensor
-        digitalWrite(pirPowerPin, HIGH);
       }
     }
   }

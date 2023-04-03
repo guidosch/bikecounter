@@ -1,0 +1,21 @@
+{
+    "env": {
+      "myDefaultIncludePath": ["${workspaceFolder}", "${workspaceFolder}/include"],
+      "myCompilerPath": "/usr/local/bin/gcc-7"
+    },
+    "configurations": [
+      {
+        "name": "Mac",
+        "intelliSenseMode": "clang-x64",
+        "includePath": ["${myDefaultIncludePath}",
+        "/Users/guidoschnider/Documents/Arduino/**",
+        "/Users/guidoschnider/Library/Arduino15/packages/arduino/hardware/samd/1.8.13/**"],
+        "macFrameworkPath": ["/System/Library/Frameworks"],
+        "compilerPath": "/usr/bin/clang",
+        "cStandard": "c11",
+        "cppStandard": "c++17"
+      }
+    ],
+    "version": 4
+  }
+  

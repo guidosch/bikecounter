@@ -22,7 +22,13 @@ function decodeUplink(input) {
   let batteryIndex = input.bytes[2] >> 3;
   data.batteryVoltage =
     Math.round(((1.5 / (32 - 1)) * batteryIndex + 3) * 100) / 100;
-  data.batteryLevel = 0; // needs to be implemented
+  let coef = [-35946.107099583, 52310.9370900473, -29962.8071041224, 8431.4105127835, -1164.3507315616, 63.1475757459];
+  let b = data.batteryVoltage;
+  data.batteryLevel = Math.round(coef[5]*b*b*b*b*b + coef[4]*b*b*b*b + coef[3]*b*b*b + coef[2]*b*b + coef[1]*b + coef[0]);
+  // temp. fix for batteryLevel undefined
+  if (!data.batteryLevel){
+     data.batteryLevel = 0;
+  }
   // temperature
   let tempIndex = input.bytes[3] & 0x1f;
   data.temperature = Math.round(((70 / (32 - 1)) * tempIndex - 20) * 10) / 10;
