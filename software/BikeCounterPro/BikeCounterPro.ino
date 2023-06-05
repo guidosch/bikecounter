@@ -423,10 +423,6 @@ void loop()
   int64_t sdt = (nextAlarm.time_since_epoch().count() - currentTime.time_since_epoch().count());
   uint32_t sleepTime = sdt > 0 ? (uint32_t)sdt : syncTimeInterval;
   // sanity check
-  if (sleepTime < syncTimeInterval)
-  {
-    sleepTime = syncTimeInterval;
-  }
   if (sleepTime > (12ul * 60ul * 60ul))
   {
     sleepTime = 12ul * 60ul * 60ul;
