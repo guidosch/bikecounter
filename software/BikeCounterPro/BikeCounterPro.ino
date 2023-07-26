@@ -1,13 +1,13 @@
-#include <MKRWAN.h>
 #include <RTCZero.h>
 #include <SPI.h>
 #include <SparkFun_SPI_SerialFlash.h>
 #include <ArduinoLowPower.h>
 #include <Adafruit_AM2320.h>
-#include "versionConfig.h"
+#include "config.h"
 #include "src/dataPackage/dataPackage.hpp"
 #include "src/timerSchedule/timerSchedule.hpp"
 #include "src/timerSchedule/date.h"
+#include "src/LoRaConnector/LoRaConnector.hpp"
 
 // ----------------------------------------------------
 // ------------- Configuration section ----------------
@@ -39,9 +39,7 @@ const uint32_t syncTimeInterval = 120ul; // 2*60 s
 // ----------------------------------------------------
 
 // lora modem object and application properties
-LoRaModem modem(Serial1);
-String appEui;
-String appKey;
+LoRaConnector connector = LoRaConnector();
 
 // Internal RTC object
 RTCZero rtc;
@@ -178,8 +176,10 @@ void setup()
   // cast buffer to string array
   String config = String((char *)rBuffer);
   // split and assign config string
-  appEui = config.substring(config.indexOf(':') + 1, config.indexOf(';'));
-  appKey = config.substring(config.indexOf(';') + 1).substring(config.indexOf(':') + 1);
+  String appEui = config.substring(config.indexOf(':') + 1, config.indexOf(';'));
+  String appKey = config.substring(config.indexOf(';') + 1).substring(config.indexOf(':') + 1);
+  connector.setAppEui(appEui);
+  connector.setAppKey(appKey);
   // digitalWrite(LORA_RESET, HIGH);
   if (debugFlag)
   {
