@@ -39,7 +39,7 @@ const uint32_t syncTimeInterval = 120ul; // 2*60 s
 // ----------------------------------------------------
 
 // lora modem object and application properties
-LoRaConnector connector = LoRaConnector();
+LoRaConnector loRaConnector = LoRaConnector();
 
 // Internal RTC object
 RTCZero rtc;
@@ -178,8 +178,6 @@ void setup()
   // split and assign config string
   String appEui = config.substring(config.indexOf(':') + 1, config.indexOf(';'));
   String appKey = config.substring(config.indexOf(';') + 1).substring(config.indexOf(':') + 1);
-  connector.setAppEui(appEui);
-  connector.setAppKey(appKey);
   // digitalWrite(LORA_RESET, HIGH);
   if (debugFlag)
   {
@@ -204,7 +202,12 @@ void setup()
   delay(500);
 
   // connect to lora network
-  doConnect();
+  loRaConnector.setup(appEui, appKey);
+  while (loRaConnector.getStatus() != LoRaConnector::Status::connected)
+  {
+    loRaConnector.loop();
+    delay(100);
+  }
 
   if (debugFlag)
   {
@@ -449,47 +452,6 @@ void onMotionDetected()
   {
     motionDetected = 1;
   }
-}
-
-// Connects to LoRa network
-void doConnect()
-{
-  if (!modem.begin(EU868))
-  {
-    if (debugFlag)
-    {
-      Serial.println("Failed to start module");
-    }
-    blinkLED(5);
-    while (1)
-    {
-    }
-  };
-  if (debugFlag)
-  {
-    Serial.print("Your module version is: ");
-    Serial.println(modem.version());
-    Serial.print("Your device EUI is: ");
-    Serial.println(modem.deviceEUI());
-  }
-  delay(4000); // increase up to 10s if connection does not work
-  int connected = modem.joinOTAA(appEui, appKey);
-  if (!connected)
-  {
-    if (debugFlag)
-    {
-      Serial.println("Something went wrong; are you indoor? Move near a window and retry");
-    }
-    while (1)
-    {
-      blinkLED();
-    }
-  }
-  modem.minPollInterval(60);
-  blinkLED(3);
-
-  // wait for all data transmission to finish
-  delay(500);
 }
 
 void sendData()
