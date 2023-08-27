@@ -4,6 +4,7 @@
 #include <ArduinoLowPower.h>
 #include <Adafruit_AM2320.h>
 #include "config.h"
+#include "src/statusLogger/statusLogger.hpp"
 #include "src/dataPackage/dataPackage.hpp"
 #include "src/timerSchedule/timerSchedule.hpp"
 #include "src/timerSchedule/date.h"
@@ -37,6 +38,9 @@ const uint32_t syncTimeInterval = 120ul; // 2*60 s
 // ----------------------------------------------------
 // -------------- Declaration section -----------------
 // ----------------------------------------------------
+
+// Object to log the status of the device
+StatusLogger logger = StatusLogger();
 
 // lora modem object and application properties
 LoRaConnector loRaConnector = LoRaConnector();
@@ -140,18 +144,13 @@ void setup()
   // initialize the I2C communication
   Wire.begin();
 
-  if (debugFlag)
-  {
-    // open serial connection and wait
-    Serial.begin(115200);
-    while (!Serial)
-    {
-    };
-
-    Serial.println("Load config from flash");
-  }
+  // inizialize the logging instance
+  StatusLogger::Output outputType = debugFlag ? StatusLogger::Output::toSerial : StatusLogger::Output::noOutput;
+  logger.setup(outputType);
 
   // load config from flash
+  logger.push("Load config from flash");
+  logger.loop();
   // LORA reset pin declaration as output
   pinMode(LORA_RESET, OUTPUT);
   // turn off LORA module to not interrupt the flash communication
@@ -160,10 +159,9 @@ void setup()
   // begin flash communication
   if (flash.begin(PIN_FLASH_CS, 2000000, SPI1) == false)
   {
-    if (debugFlag)
-    {
-      Serial.println(F("SPI Flash not detected"));
-    }
+    logger.push("SPI Flash not detected");
+    logger.loop();
+
     while (1)
       ;
   }
@@ -179,25 +177,19 @@ void setup()
   String appEui = config.substring(config.indexOf(':') + 1, config.indexOf(';'));
   String appKey = config.substring(config.indexOf(';') + 1).substring(config.indexOf(':') + 1);
   // digitalWrite(LORA_RESET, HIGH);
-  if (debugFlag)
-  {
-    Serial.print("appEui = ");
-    Serial.println(appEui);
-    Serial.print("appKey = ");
-    Serial.println(appKey);
-    Serial.println("Temp. sensor setup started");
-  }
+  logger.push(String("appEui = ") + appEui);
+  logger.push(String("appKey = ") + appKey);
+  logger.push("Temp. sensor setup started");
+  logger.loop();
 
   delay(500);
 
   // initialize temperature and humidity sensor
   am2320.begin();
 
-  if (debugFlag)
-  {
-    Serial.println("Temp. sensor setup finished");
-    Serial.println("Lora setup started");
-  }
+  logger.push("Temp. sensor setup finished");
+  logger.push("Lora setup started");
+  logger.loop();
 
   delay(500);
 
@@ -209,34 +201,29 @@ void setup()
     delay(100);
   }
 
-  if (debugFlag)
-  {
-    Serial.println("Lora setup finished");
-    Serial.println("RTC setup started");
-  }
+  logger.push("Lora setup finished");
+  logger.push("RTC setup started");
+  logger.loop();
 
   // setup rtc
   rtc.begin(true);
   rtc.setEpoch(defaultRTCEpoch);
 
-  if (debugFlag)
-  {
-    // DateTime currentTime = rtc.now();
-    Serial.print("RTC current time: ");
-    Serial.print(rtc.getHours(), DEC);
-    Serial.print(':');
-    Serial.print(rtc.getMinutes(), DEC);
-    Serial.print(':');
-    Serial.println(rtc.getSeconds(), DEC);
-    Serial.print("RTC current date: ");
-    Serial.print(rtc.getDay(), DEC);
-    Serial.print('.');
-    Serial.print(rtc.getMonth(), DEC);
-    Serial.print('.');
-    Serial.println(rtc.getYear(), DEC);
-    Serial.print("RTC epoch: ");
-    Serial.println(rtc.getEpoch(), DEC);
-  }
+  logger.push(String("RTC current time: ") +
+              String(rtc.getHours()) +
+              String(':') +
+              String(rtc.getMinutes()) +
+              String(':') +
+              String(rtc.getSeconds()));
+  logger.push(String("RTC current date: ") +
+              String(rtc.getDay()) +
+              String('.') +
+              String(rtc.getMonth()) +
+              String('.') +
+              String(rtc.getYear()));
+  logger.push(String("RTC epoch: ") +
+              String(rtc.getEpoch()));
+  logger.loop();
 
   // delay to avoid interference with interrupt pin setup
   delay(200);
@@ -245,10 +232,8 @@ void setup()
   pinMode(counterInterruptPin, INPUT_PULLDOWN);
   LowPower.attachInterruptWakeup(counterInterruptPin, onMotionDetected, RISING);
 
-  if (debugFlag)
-  {
-    Serial.println("Setup finished");
-  }
+  logger.push("Setup finished");
+  logger.loop();
 }
 
 // ----------------------------------------------------

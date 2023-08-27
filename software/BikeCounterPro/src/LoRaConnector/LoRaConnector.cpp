@@ -28,11 +28,20 @@ void LoRaConnector::loop()
     switch (currentStatus)
     {
     case disconnected:
-        // try to connect
-
-        currentStatus = connecting;
+        if (errorCount < 5){
+            // try to connect
+            currentStatus = connecting;
+        }        
         break;
     case connecting:
+        int stat = connectToNetwork();
+        if (!stat){
+            errorId = 2;
+            currentStatus = error;
+        }
+        else{
+            currentStatus = connected;
+        }
         break;
     case connected: // and ready/idle
         break;
@@ -51,26 +60,18 @@ void LoRaConnector::loop()
     }
 };
 
-// Connects to LoRa network
-void doConnect()
+/// @brief Tries to connect to the LoRa WAN network
+/// @return error code
+int LoRaConnector::connectToNetwork()
 {
-
-    delay(4000); // increase up to 10s if connection does not work
-    int connected = modem.joinOTAA(appEui, appKey);
-    if (!connected)
+    int status = modem.joinOTAA(eui, key);
+    if (!status)
     {
-        if (debugFlag)
-        {
-            Serial.println("Something went wrong; are you indoor? Move near a window and retry");
-        }
-        while (1)
-        {
-            blinkLED();
-        }
+        return status;
     }
-    modem.minPollInterval(60);
-    blinkLED(3);
 
+    modem.minPollInterval(120);
     // wait for all data transmission to finish
     delay(500);
+    return 0;
 }

@@ -25,7 +25,7 @@ public:
     // error messages corresponding to the errorId
     char *errorMsg[4] = {"No error",
                          "Failed to start module", 
-                         "Geekfor"};
+                         "Failed to connect to LoRa network"};
 
 private:
     LoRaModem modem = LoRaModem(Serial1);
@@ -35,6 +35,7 @@ private:
     int df = 0;
     int errorId = 0;
     int errorCount = 0;
+    int connectToNetwork();
 };
 
 #endif // LORACONNECTOR_H
