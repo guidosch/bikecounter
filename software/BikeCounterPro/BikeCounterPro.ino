@@ -194,7 +194,7 @@ void setup()
   delay(500);
 
   // connect to lora network
-  loRaConnector.setup(appEui, appKey, );
+  loRaConnector.setup(appEui, appKey, logger);
   while (loRaConnector.getStatus() != LoRaConnector::Status::connected)
   {
     loRaConnector.loop();

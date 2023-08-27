@@ -26,11 +26,8 @@ void LoRaConnector::loop()
     switch (currentStatus)
     {
     case disconnected:
-        if (errorCount < 5)
-        {
-            // try to connect
-            currentStatus = connecting;
-        }
+        // try to connect
+        currentStatus = connecting;
         break;
     case connecting:
         int stat = connectToNetwork();
@@ -45,8 +42,12 @@ void LoRaConnector::loop()
         }
         break;
     case connected: // and ready/idle
+        if (sendRequested){
+            currentStatus = transmitting;
+        }
         break;
     case transmitting: // uplink
+        sendData();
         break;
     case waiting: // downlink
         break;
@@ -55,6 +56,17 @@ void LoRaConnector::loop()
         logger.loop();
         ++errorCount;
 
+        if (errorCount < 5)
+        {
+            currentStatus = disconnected;
+        }
+        else
+        {
+            currentStatus = fatalError;
+        }
+        break;
+
+    case fatalError:
         break;
     }
 };
@@ -73,4 +85,22 @@ int LoRaConnector::connectToNetwork()
     // wait for all data transmission to finish
     delay(500);
     return 0;
+}
+
+int LoRaConnector::sendMessage(const uint8_t *buffer, size_t size)
+{
+    if (sendRequested)
+    {
+        return 1;
+    }
+    if (currentStatus == connected)
+    {
+        return 2;
+    }
+    msgSize = size;
+    for (int i = 0; i < msgSize; ++i)
+    {
+        msgBuffer[i] = buffer[i];
+    }
+    sendRequested = 1;
 }
