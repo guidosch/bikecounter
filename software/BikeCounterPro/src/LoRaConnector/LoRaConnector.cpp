@@ -1,10 +1,10 @@
 #include "LoRaConnector.hpp"
 
-void LoRaConnector::setup(String appEui, String appKey, int debugFlag)
+void LoRaConnector::setup(String appEui, String appKey, StatusLogger &statusLogger)
 {
     eui = appEui;
     key = appKey;
-    df = debugFlag;
+    logger = statusLogger;
 
     if (!modem.begin(EU868))
     {
@@ -13,13 +13,11 @@ void LoRaConnector::setup(String appEui, String appKey, int debugFlag)
         return;
     };
 
-    if (df)
-    {
-        Serial.print("Your module version is: ");
-        Serial.println(modem.version());
-        Serial.print("Your device EUI is: ");
-        Serial.println(modem.deviceEUI());
-    }
+    logger.push(String("Your module version is: ") +
+                String(modem.version()));
+    logger.push(String("Your device EUI is: ") +
+                String(modem.deviceEUI()));
+    logger.loop();
 }
 
 void LoRaConnector::loop()
@@ -28,18 +26,21 @@ void LoRaConnector::loop()
     switch (currentStatus)
     {
     case disconnected:
-        if (errorCount < 5){
+        if (errorCount < 5)
+        {
             // try to connect
             currentStatus = connecting;
-        }        
+        }
         break;
     case connecting:
         int stat = connectToNetwork();
-        if (!stat){
+        if (!stat)
+        {
             errorId = 2;
             currentStatus = error;
         }
-        else{
+        else
+        {
             currentStatus = connected;
         }
         break;
@@ -50,10 +51,8 @@ void LoRaConnector::loop()
     case waiting: // downlink
         break;
     case error:
-        if (!errorCount && df)
-        {
-            Serial.println(errorMsg[errorId]);
-        }
+        logger.push(errorMsg[errorId]);
+        logger.loop();
         ++errorCount;
 
         break;

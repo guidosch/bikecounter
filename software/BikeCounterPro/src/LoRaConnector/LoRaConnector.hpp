@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <MKRWAN.h>
+#include "../statusLogger/statusLogger.hpp"
 
 class LoRaConnector
 {
@@ -20,19 +21,19 @@ public:
     int getErrorId() { return errorId; }
     void setAppEui(String appEui) { eui = appEui; }
     void setAppKey(String appKey) { key = appKey; }
-    void setup(String appEui, String appKey, int debugFlag);
+    void setup(String appEui, String appKey, StatusLogger &statusLogger);
     void loop();
     // error messages corresponding to the errorId
     char *errorMsg[4] = {"No error",
-                         "Failed to start module", 
+                         "Failed to start module",
                          "Failed to connect to LoRa network"};
 
 private:
+    StatusLogger &logger;
     LoRaModem modem = LoRaModem(Serial1);
     Status currentStatus = disconnected;
     String eui;
     String key;
-    int df = 0;
     int errorId = 0;
     int errorCount = 0;
     int connectToNetwork();

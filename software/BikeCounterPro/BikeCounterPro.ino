@@ -194,7 +194,7 @@ void setup()
   delay(500);
 
   // connect to lora network
-  loRaConnector.setup(appEui, appKey);
+  loRaConnector.setup(appEui, appKey, );
   while (loRaConnector.getStatus() != LoRaConnector::Status::connected)
   {
     loRaConnector.loop();
@@ -286,13 +286,11 @@ void loop()
   date::hh_mm_ss<std::chrono::seconds> currentTime_hms = date::make_time(currentTime.time_since_epoch() - date::floor<date::days>(currentTime).time_since_epoch());
   int timerCalled = 0;
 
-  if (debugFlag)
-  {
-    Serial.print("Device status = ");
-    Serial.print(deviceStatus);
-    Serial.print(" / Last device status = ");
-    Serial.println(lastDeviceStatus);
-  }
+  logger.push(String("Device status = ") +
+              String(deviceStatus) +
+              String(" / Last device status = ") +
+              String(lastDeviceStatus));
+  logger.loop();
 
   // check if a motion was detected.
   if (motionDetected)
@@ -311,18 +309,16 @@ void loop()
 
     blinkLED();
 
-    if (debugFlag)
-    {
-      Serial.print("Motion detected (current count = ");
-      Serial.print(counter);
-      Serial.print(" / time: ");
-      Serial.print(currentTime_hms.hours().count(), DEC);
-      Serial.print(':');
-      Serial.print(currentTime_hms.minutes().count(), DEC);
-      Serial.print(':');
-      Serial.print(currentTime_hms.seconds().count(), DEC);
-      Serial.println(')');
-    }
+    logger.push(String("Motion detected (current count = ") +
+                String(counter) +
+                String(" / time: ") +
+                String(static_cast<int>(currentTime_hms.hours().count())) +
+                String(':') +
+                String(static_cast<int>(currentTime_hms.minutes().count())) +
+                String(':') +
+                String(static_cast<int>(currentTime_hms.seconds().count())) +
+                String(')'));
+    logger.loop();
   }
   else
   {
@@ -342,10 +338,8 @@ void loop()
     if (timerCalled)
     {
       totalCounter = 0;
-      if (debugFlag)
-      {
-        Serial.println("Timer called");
-      }
+      logger.push("Timer called");
+      logger.loop();
     }
 
     // check if the floating interrupt pin bug occurred
@@ -356,19 +350,16 @@ void loop()
       ++pirError;
       if (pirError > 2)
       {
-        if (debugFlag)
-        {
-          Serial.println("PIR-sensor error could not be fixed.");
-        }
+        logger.push("PIR-sensor error could not be fixed.");
+        logger.loop();
         while (1)
         {
         }
       }
-      if (debugFlag)
-      {
-        Serial.println("Floating interrupt pin detected.");
-        Serial.println("Resetting PIR-sensor");
-      }
+      logger.push("Floating interrupt pin detected.");
+      logger.push("Resetting PIR-sensor");
+      logger.loop();
+
       digitalWrite(pirPowerPin, LOW);
       delay(2000);
       totalCounter = 0;
@@ -421,9 +412,10 @@ void loop()
   }
   else
   {
-    Serial.print("next non-debug wake up in: ");
-    Serial.print(sleepTime);
-    Serial.println(" seconds.");
+    logger.push(String("next non-debug wake up in: ") +
+                String(sleepTime) +
+                String(" seconds."));
+    logger.loop();
   }
 }
 
@@ -622,22 +614,20 @@ void correctRTCTime(int32_t delta)
   // set the new time
   rtc.setEpoch(currentEpoch + delta);
 
-  if (debugFlag)
-  {
-    Serial.print("RTC correction applied, current time: ");
-    Serial.print(rtc.getHours(), DEC);
-    Serial.print(':');
-    Serial.print(rtc.getMinutes(), DEC);
-    Serial.print(':');
-    Serial.println(rtc.getSeconds(), DEC);
-    Serial.print("RTC current date: ");
-    Serial.print(rtc.getDay(), DEC);
-    Serial.print('.');
-    Serial.print(rtc.getMonth(), DEC);
-    Serial.print('.');
-    Serial.println(rtc.getYear(), DEC);
-    Serial.print("RTC epoch: ");
-    Serial.println(rtc.getEpoch(), DEC);
-  }
+  logger.push(String("RTC correction applied, current time: ") +
+              String(rtc.getHours()) + 
+              String(':') + 
+              String(rtc.getMinutes()) + 
+              String(':') + 
+              String(rtc.getSeconds()));
+  logger.push(String("RTC current date: ") +
+              String(rtc.getDay()) + 
+              String('.') + 
+              String(rtc.getMonth()) + 
+              String('.') + 
+              String(rtc.getYear()));
+  logger.push(String("RTC epoch: ") +
+              String(rtc.getEpoch()));
+  logger.loop();
   delay(500);
 }
