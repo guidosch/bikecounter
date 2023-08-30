@@ -15,6 +15,7 @@ public:
         connected,    // and ready/idle
         transmitting, // uplink
         waiting,      // downlink
+        reading,      // downlink
         error,
         fatalError
     };
@@ -23,7 +24,7 @@ public:
     String getErrorMsg() { return String(errorMsg[errorId]); }
     void setAppEui(String appEui) { eui = appEui; }
     void setAppKey(String appKey) { key = appKey; }
-    void setup(String appEui, String appKey, StatusLogger &statusLogger);
+    void setup(String appEui, String appKey, StatusLogger &statusLogger, int (*downlinkCallbackFunction)(int*, int));
     void loop();
     /// @brief
     /// @param buffer
@@ -45,10 +46,15 @@ private:
     uint8_t msgBuffer[51] = {0};
     size_t msgSize = 0;
     int connectToNetwork();
+    int sendData();
+    unsigned long t;
+    unsigned long downlinkTimeout = 10000;
+    int (*downlinkCallback)(int*, int);
     // error messages corresponding to the errorId
     char *errorMsg[4] = {"No error",
                          "Failed to start module",
-                         "Failed to connect to LoRa network"};
+                         "Failed to connect to LoRa network",
+                         "Error sending message"};
 };
 
 #endif // LORACONNECTOR_H

@@ -431,131 +431,131 @@ void onMotionDetected()
   }
 }
 
-void sendData()
-{
-  int err;
-  // data is transmitted as Ascii chars
-  modem.beginPacket();
+//void sendData()
+//{
+//  int err;
+//  // data is transmitted as Ascii chars
+//  modem.beginPacket();
+//
+//  dataHandler.setStatus(deviceStatus);
+//  dataHandler.setHwVersion(hwVersion);
+//  dataHandler.setSwVersion(swVersion);
+//  dataHandler.setMotionCount(counter);
+//  dataHandler.setBatteryVoltage(getBatteryVoltage());
+//  dataHandler.setTemperature(am2320.readTemperature());
+//  dataHandler.setHumidity(am2320.readHumidity());
+//  dataHandler.setHourOfTheDay(hourOfDay);
+//  dataHandler.setDeviceTime(rtc.getEpoch());
+//  dataHandler.setTimeArray(timeArray);
+//
+//  modem.write(dataHandler.getPayload(), dataHandler.getPayloadLength());
+//  err = modem.endPacket(false);
+//  if (err > 0)
+//  {
+//    if (debugFlag)
+//    {
+//      Serial.print("Message sent correctly! (count = ");
+//      Serial.print(counter);
+//      Serial.print(" / temperature = ");
+//      Serial.print(dataHandler.getTemperature());
+//      Serial.print("°C / humidity = ");
+//      Serial.print(dataHandler.getHumidity());
+//      Serial.print("% / battery voltage = ");
+//      Serial.print(dataHandler.getBatteryVoltage());
+//      Serial.print(" V / DeviceEpoch = ");
+//      Serial.print(dataHandler.getDeviceTime());
+//      Serial.println(" )");
+//      Serial.print("Payload = ");
+//      for (int i = 0; i < dataHandler.getPayloadLength(); ++i)
+//      {
+//        Serial.print(dataHandler.getPayload()[i], HEX);
+//        Serial.print(" ");
+//      }
+//      Serial.println();
+//    }
+//    counter = 0;
+//    for (int i = 0; i < timeArraySize; ++i)
+//    {
+//      timeArray[i] = 0;
+//    }
+//  }
+//  else
+//  {
+//    if (debugFlag)
+//    {
+//      Serial.println("Error sending message :(");
+//    }
+//    errorCounter++;
+//    if (errorCounter > 1)
+//    {
+//      digitalWrite(LORA_RESET, LOW);
+//      if (debugFlag)
+//      {
+//        Serial.println("Trying to reconnect");
+//      }
+//      doConnect();
+//    }
+//  }
 
-  dataHandler.setStatus(deviceStatus);
-  dataHandler.setHwVersion(hwVersion);
-  dataHandler.setSwVersion(swVersion);
-  dataHandler.setMotionCount(counter);
-  dataHandler.setBatteryVoltage(getBatteryVoltage());
-  dataHandler.setTemperature(am2320.readTemperature());
-  dataHandler.setHumidity(am2320.readHumidity());
-  dataHandler.setHourOfTheDay(hourOfDay);
-  dataHandler.setDeviceTime(rtc.getEpoch());
-  dataHandler.setTimeArray(timeArray);
-
-  modem.write(dataHandler.getPayload(), dataHandler.getPayloadLength());
-  err = modem.endPacket(false);
-  if (err > 0)
-  {
-    if (debugFlag)
-    {
-      Serial.print("Message sent correctly! (count = ");
-      Serial.print(counter);
-      Serial.print(" / temperature = ");
-      Serial.print(dataHandler.getTemperature());
-      Serial.print("°C / humidity = ");
-      Serial.print(dataHandler.getHumidity());
-      Serial.print("% / battery voltage = ");
-      Serial.print(dataHandler.getBatteryVoltage());
-      Serial.print(" V / DeviceEpoch = ");
-      Serial.print(dataHandler.getDeviceTime());
-      Serial.println(" )");
-      Serial.print("Payload = ");
-      for (int i = 0; i < dataHandler.getPayloadLength(); ++i)
-      {
-        Serial.print(dataHandler.getPayload()[i], HEX);
-        Serial.print(" ");
-      }
-      Serial.println();
-    }
-    counter = 0;
-    for (int i = 0; i < timeArraySize; ++i)
-    {
-      timeArray[i] = 0;
-    }
-  }
-  else
-  {
-    if (debugFlag)
-    {
-      Serial.println("Error sending message :(");
-    }
-    errorCounter++;
-    if (errorCounter > 1)
-    {
-      digitalWrite(LORA_RESET, LOW);
-      if (debugFlag)
-      {
-        Serial.println("Trying to reconnect");
-      }
-      doConnect();
-    }
-  }
-
-  // wait for all data transmission to finish (up- and downlink)
-  delay(10000);
-  // receive and decode downlink message
-  if (modem.available())
-  {
-    int rcv[64] = {0};
-    int i = 0;
-    while (modem.available())
-    {
-      rcv[i++] = modem.read();
-    }
-    if (debugFlag)
-    {
-      Serial.print("Received: ");
-      for (unsigned int j = 0; j < i; j++)
-      {
-        Serial.print(rcv[j] >> 4, HEX);
-        Serial.print(rcv[j] & 0xF, HEX);
-        Serial.print(" ");
-      }
-      Serial.println();
-    }
-
-    // decode time drift
-    int32_t timeDrift = 0;
-    timeDrift = rcv[3];
-    timeDrift = (timeDrift << 8) | rcv[2];
-    timeDrift = (timeDrift << 8) | rcv[1];
-    timeDrift = (timeDrift << 8) | rcv[0];
-    if (debugFlag)
-    {
-      Serial.print("Time drift = ");
-      Serial.println(timeDrift);
-    }
-
-    // check if the timeDrift should be applied
-    if ((abs(timeDrift) > (10 * 60)) && !skipTimeSync)
-    {
-      // apply time correction
-      correctRTCTime(timeDrift);
-      // skip the next downlinks to avoid multiple corrections with the same value (due to the network delay)
-      skipTimeSync = 1;
-      // change the status and power on the PIR sensor
-      if (deviceStatus == sync_call)
-      {
-        deviceStatus = no_error;
-      }
-    }
-  }
-  else
-  {
-    // set the flag to start listening to the downlink messages again.
-    skipTimeSync = 0;
-    if (debugFlag)
-    {
-      Serial.println("No downlink massage received.");
-    }
-  }
-}
+//    // wait for all data transmission to finish (up- and downlink)
+//    delay(10000);
+//    // receive and decode downlink message
+//    if (modem.available())
+//    {
+//      int rcv[64] = {0};
+//      int i = 0;
+//      while (modem.available())
+//      {
+//        rcv[i++] = modem.read();
+//      }
+//      if (debugFlag)
+//      {
+//        Serial.print("Received: ");
+//        for (unsigned int j = 0; j < i; j++)
+//        {
+//          Serial.print(rcv[j] >> 4, HEX);
+//          Serial.print(rcv[j] & 0xF, HEX);
+//          Serial.print(" ");
+//        }
+//        Serial.println();
+//      }
+//  
+//      // decode time drift
+//      int32_t timeDrift = 0;
+//      timeDrift = rcv[3];
+//      timeDrift = (timeDrift << 8) | rcv[2];
+//      timeDrift = (timeDrift << 8) | rcv[1];
+//      timeDrift = (timeDrift << 8) | rcv[0];
+//      if (debugFlag)
+//      {
+//        Serial.print("Time drift = ");
+//        Serial.println(timeDrift);
+//      }
+//  
+//      // check if the timeDrift should be applied
+//      if ((abs(timeDrift) > (10 * 60)) && !skipTimeSync)
+//      {
+//        // apply time correction
+//        correctRTCTime(timeDrift);
+//        // skip the next downlinks to avoid multiple corrections with the same value (due to the network delay)
+//        skipTimeSync = 1;
+//        // change the status and power on the PIR sensor
+//        if (deviceStatus == sync_call)
+//        {
+//          deviceStatus = no_error;
+//        }
+//      }
+//    }
+//    else
+//    {
+//      // set the flag to start listening to the downlink messages again.
+//      skipTimeSync = 0;
+//      if (debugFlag)
+//      {
+//        Serial.println("No downlink massage received.");
+//      }
+//    }
+//  }
 
 // blinks the on board led
 void blinkLED(int times)

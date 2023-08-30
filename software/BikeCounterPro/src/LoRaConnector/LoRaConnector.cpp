@@ -1,10 +1,12 @@
 #include "LoRaConnector.hpp"
+#include <sstream>
 
-void LoRaConnector::setup(String appEui, String appKey, StatusLogger &statusLogger)
+void LoRaConnector::setup(String appEui, String appKey, StatusLogger &statusLogger, int (*downlinkCallbackFunction)(int *, int))
 {
     eui = appEui;
     key = appKey;
     logger = statusLogger;
+    downlinkCallback = downlinkCallbackFunction;
 
     if (!modem.begin(EU868))
     {
@@ -29,9 +31,10 @@ void LoRaConnector::loop()
         // try to connect
         currentStatus = connecting;
         break;
+
     case connecting:
-        int stat = connectToNetwork();
-        if (!stat)
+        int err = connectToNetwork();
+        if (!err)
         {
             errorId = 2;
             currentStatus = error;
@@ -41,16 +44,71 @@ void LoRaConnector::loop()
             currentStatus = connected;
         }
         break;
+
     case connected: // and ready/idle
-        if (sendRequested){
+        if (sendRequested)
+        {
             currentStatus = transmitting;
         }
         break;
+
     case transmitting: // uplink
-        sendData();
+        int err = sendData();
+        if (!err)
+        {
+            currentStatus = error;
+        }
+        else
+        {
+            currentStatus = waiting;
+            t = millis();
+        }
         break;
+
     case waiting: // downlink
+        if ((millis() - t) > downlinkTimeout)
+        {
+            if (modem.available())
+            {
+                currentStatus = reading;
+            }
+            else
+            {
+                logger.push("No downlink massage received.");
+                logger.loop();
+
+                currentStatus = connected;
+            }
+            sendRequested = 0;
+        }
         break;
+
+    case reading:
+    {
+        int rcv[64] = {0};
+        int i = 0;
+        while (modem.available())
+        {
+            rcv[i++] = modem.read();
+        }
+
+        std::ostringstream os("Received: ");
+        for (unsigned int j = 0; j < i; j++)
+        {
+            os << (rcv[j] >> 4);
+            os << (rcv[j] & 0xF);
+            os << " ";
+        }
+        logger.push(os.str());
+        logger.loop();
+
+        // call the downlink callback function and pass the payload
+        downlinkCallback(rcv, i);
+
+        currentStatus = connected;
+        break;
+    }
+
     case error:
         logger.push(errorMsg[errorId]);
         logger.loop();
@@ -103,4 +161,23 @@ int LoRaConnector::sendMessage(const uint8_t *buffer, size_t size)
         msgBuffer[i] = buffer[i];
     }
     sendRequested = 1;
+}
+
+int LoRaConnector::sendData()
+{
+    modem.beginPacket();
+    modem.write(msgBuffer, msgSize);
+    int err = modem.endPacket(false);
+
+    if (err > 0)
+    {
+        logger.push("Message sent correctly");
+        logger.loop();
+        return 0;
+    }
+    else
+    {
+        errorId = 3;
+        return 1;
+    }
 }
