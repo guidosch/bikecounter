@@ -9,6 +9,12 @@
 #include "src/timerSchedule/timerSchedule.hpp"
 #include "src/timerSchedule/date.h"
 #include "src/LoRaConnector/LoRaConnector.hpp"
+#include "src/bikeCounter/bikeCounter.hpp"
+
+BikeCounter::Config config = BikeCounter::Config();
+config.counterInterruptPin = 1;
+
+BikeCounter bc = BikeCounter(config);
 
 // ----------------------------------------------------
 // ------------- Configuration section ----------------
@@ -431,71 +437,71 @@ void onMotionDetected()
   }
 }
 
-//void sendData()
+// void sendData()
 //{
-//  int err;
-//  // data is transmitted as Ascii chars
-//  modem.beginPacket();
+//   int err;
+//   // data is transmitted as Ascii chars
+//   modem.beginPacket();
 //
-//  dataHandler.setStatus(deviceStatus);
-//  dataHandler.setHwVersion(hwVersion);
-//  dataHandler.setSwVersion(swVersion);
-//  dataHandler.setMotionCount(counter);
-//  dataHandler.setBatteryVoltage(getBatteryVoltage());
-//  dataHandler.setTemperature(am2320.readTemperature());
-//  dataHandler.setHumidity(am2320.readHumidity());
-//  dataHandler.setHourOfTheDay(hourOfDay);
-//  dataHandler.setDeviceTime(rtc.getEpoch());
-//  dataHandler.setTimeArray(timeArray);
+//   dataHandler.setStatus(deviceStatus);
+//   dataHandler.setHwVersion(hwVersion);
+//   dataHandler.setSwVersion(swVersion);
+//   dataHandler.setMotionCount(counter);
+//   dataHandler.setBatteryVoltage(getBatteryVoltage());
+//   dataHandler.setTemperature(am2320.readTemperature());
+//   dataHandler.setHumidity(am2320.readHumidity());
+//   dataHandler.setHourOfTheDay(hourOfDay);
+//   dataHandler.setDeviceTime(rtc.getEpoch());
+//   dataHandler.setTimeArray(timeArray);
 //
-//  modem.write(dataHandler.getPayload(), dataHandler.getPayloadLength());
-//  err = modem.endPacket(false);
-//  if (err > 0)
-//  {
-//    if (debugFlag)
-//    {
-//      Serial.print("Message sent correctly! (count = ");
-//      Serial.print(counter);
-//      Serial.print(" / temperature = ");
-//      Serial.print(dataHandler.getTemperature());
-//      Serial.print("°C / humidity = ");
-//      Serial.print(dataHandler.getHumidity());
-//      Serial.print("% / battery voltage = ");
-//      Serial.print(dataHandler.getBatteryVoltage());
-//      Serial.print(" V / DeviceEpoch = ");
-//      Serial.print(dataHandler.getDeviceTime());
-//      Serial.println(" )");
-//      Serial.print("Payload = ");
-//      for (int i = 0; i < dataHandler.getPayloadLength(); ++i)
-//      {
-//        Serial.print(dataHandler.getPayload()[i], HEX);
-//        Serial.print(" ");
-//      }
-//      Serial.println();
-//    }
-//    counter = 0;
-//    for (int i = 0; i < timeArraySize; ++i)
-//    {
-//      timeArray[i] = 0;
-//    }
-//  }
-//  else
-//  {
-//    if (debugFlag)
-//    {
-//      Serial.println("Error sending message :(");
-//    }
-//    errorCounter++;
-//    if (errorCounter > 1)
-//    {
-//      digitalWrite(LORA_RESET, LOW);
-//      if (debugFlag)
-//      {
-//        Serial.println("Trying to reconnect");
-//      }
-//      doConnect();
-//    }
-//  }
+//   modem.write(dataHandler.getPayload(), dataHandler.getPayloadLength());
+//   err = modem.endPacket(false);
+//   if (err > 0)
+//   {
+//     if (debugFlag)
+//     {
+//       Serial.print("Message sent correctly! (count = ");
+//       Serial.print(counter);
+//       Serial.print(" / temperature = ");
+//       Serial.print(dataHandler.getTemperature());
+//       Serial.print("°C / humidity = ");
+//       Serial.print(dataHandler.getHumidity());
+//       Serial.print("% / battery voltage = ");
+//       Serial.print(dataHandler.getBatteryVoltage());
+//       Serial.print(" V / DeviceEpoch = ");
+//       Serial.print(dataHandler.getDeviceTime());
+//       Serial.println(" )");
+//       Serial.print("Payload = ");
+//       for (int i = 0; i < dataHandler.getPayloadLength(); ++i)
+//       {
+//         Serial.print(dataHandler.getPayload()[i], HEX);
+//         Serial.print(" ");
+//       }
+//       Serial.println();
+//     }
+//     counter = 0;
+//     for (int i = 0; i < timeArraySize; ++i)
+//     {
+//       timeArray[i] = 0;
+//     }
+//   }
+//   else
+//   {
+//     if (debugFlag)
+//     {
+//       Serial.println("Error sending message :(");
+//     }
+//     errorCounter++;
+//     if (errorCounter > 1)
+//     {
+//       digitalWrite(LORA_RESET, LOW);
+//       if (debugFlag)
+//       {
+//         Serial.println("Trying to reconnect");
+//       }
+//       doConnect();
+//     }
+//   }
 
 //    // wait for all data transmission to finish (up- and downlink)
 //    delay(10000);
@@ -519,7 +525,7 @@ void onMotionDetected()
 //        }
 //        Serial.println();
 //      }
-//  
+//
 //      // decode time drift
 //      int32_t timeDrift = 0;
 //      timeDrift = rcv[3];
@@ -531,7 +537,7 @@ void onMotionDetected()
 //        Serial.print("Time drift = ");
 //        Serial.println(timeDrift);
 //      }
-//  
+//
 //      // check if the timeDrift should be applied
 //      if ((abs(timeDrift) > (10 * 60)) && !skipTimeSync)
 //      {
@@ -557,55 +563,6 @@ void onMotionDetected()
 //    }
 //  }
 
-// blinks the on board led
-void blinkLED(int times)
-{
-  // deactivate the onboard LED after the specified amount of blinks
-  static int blinkCount = 0;
-  if (blinkCount < maxBlinks)
-  {
-    ++blinkCount;
-    for (int i = 0; i < times; i++)
-    {
-      delay(100);
-      digitalWrite(LED_BUILTIN, HIGH);
-      delay(100);
-      digitalWrite(LED_BUILTIN, LOW);
-    }
-  }
-}
-
-// Sets all the unused pins to a defined level
-// Output and LOW
-void disableUnusedPins(const int *const activePins, int size)
-{
-  for (int i = 0; i < 22; ++i)
-  {
-    // check if the current pin occurs in the pin array
-    bool isUsed = false;
-    for (int j = 0; j < size; ++j)
-    {
-      if (activePins[j] == i)
-      {
-        isUsed = true;
-      }
-    }
-    // if not, set the pin to output and low
-    if (!isUsed)
-    {
-      pinMode(i, OUTPUT);
-      digitalWrite(i, LOW);
-    }
-  }
-}
-
-// reads the analog value and calculates the battery voltage.
-float getBatteryVoltage()
-{
-  // read the input on analog pin 0 (A1) and calculate the voltage
-  return analogRead(batteryVoltagePin) * 3.3f / 1023.0f / 1.2f * (1.2f + 0.33f);
-}
-
 // apply the given correction to the rtc time
 void correctRTCTime(int32_t delta)
 {
@@ -615,16 +572,16 @@ void correctRTCTime(int32_t delta)
   rtc.setEpoch(currentEpoch + delta);
 
   logger.push(String("RTC correction applied, current time: ") +
-              String(rtc.getHours()) + 
-              String(':') + 
-              String(rtc.getMinutes()) + 
-              String(':') + 
+              String(rtc.getHours()) +
+              String(':') +
+              String(rtc.getMinutes()) +
+              String(':') +
               String(rtc.getSeconds()));
   logger.push(String("RTC current date: ") +
-              String(rtc.getDay()) + 
-              String('.') + 
-              String(rtc.getMonth()) + 
-              String('.') + 
+              String(rtc.getDay()) +
+              String('.') +
+              String(rtc.getMonth()) +
+              String('.') +
               String(rtc.getYear()));
   logger.push(String("RTC epoch: ") +
               String(rtc.getEpoch()));
