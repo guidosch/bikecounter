@@ -33,6 +33,7 @@ void LoRaConnector::loop()
         break;
 
     case connecting:
+    {
         int err = connectToNetwork();
         if (!err)
         {
@@ -44,6 +45,7 @@ void LoRaConnector::loop()
             currentStatus = connected;
         }
         break;
+    }
 
     case connected: // and ready/idle
         if (sendRequested)
@@ -53,6 +55,7 @@ void LoRaConnector::loop()
         break;
 
     case transmitting: // uplink
+    {
         int err = sendData();
         if (!err)
         {
@@ -64,8 +67,10 @@ void LoRaConnector::loop()
             t = millis();
         }
         break;
+    }
 
     case waiting: // downlink
+    {
         if ((millis() - t) > downlinkTimeout)
         {
             if (modem.available())
@@ -82,7 +87,7 @@ void LoRaConnector::loop()
             sendRequested = 0;
         }
         break;
-
+    }
     case reading:
     {
         int rcv[64] = {0};
@@ -110,6 +115,7 @@ void LoRaConnector::loop()
     }
 
     case error:
+    {
         logger.push(errorMsg[errorId]);
         logger.loop();
         ++errorCount;
@@ -123,6 +129,7 @@ void LoRaConnector::loop()
             currentStatus = fatalError;
         }
         break;
+    }
 
     case fatalError:
         break;

@@ -4,7 +4,7 @@ void BikeCounter::loop()
 {
     switch (currentStatus)
     {
-    case Status::setup:
+    case Status::setupStep:
         break;
     case Status::initSleep:
         break;
@@ -31,15 +31,6 @@ void BikeCounter::reset()
 
 void BikeCounter::setup()
 {
-}
-
-void BikeCounter::setUsedPins(const int *const activePins, int size)
-{
-    usedPinCount = size;
-    for (int i = 0; i < usedPinCount; ++i)
-    {
-        usedPins[i] = activePins[i];
-    }
 }
 
 void BikeCounter::blinkLED(int times)

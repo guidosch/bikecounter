@@ -11,35 +11,16 @@
 #include "src/LoRaConnector/LoRaConnector.hpp"
 #include "src/bikeCounter/bikeCounter.hpp"
 
-BikeCounter::Config config = BikeCounter::Config();
-config.counterInterruptPin = 1;
-
-BikeCounter bc = BikeCounter(config);
-
-// ----------------------------------------------------
-// ------------- Configuration section ----------------
-// ----------------------------------------------------
-
-// Max. counts between timer calls (to detect a floating interrupt pin)
-const int maxCount = 1000;
-// deactivate the onboard LED after the specified amount of blinks
-const int maxBlinks = 50;
-
-// Interrupt pins
-const int counterInterruptPin = 1;
-const int debugSwitchPin = 8;
-const int configSwitchPin = 9;
-const int batteryVoltagePin = A0;
-// PIR sensor power pin !!! not implemented in PCB v0.1
-const int pirPowerPin = 2;
-// Used pins (not defined pins will be disabled to save power)
-const int usedPins[] = {LED_BUILTIN, counterInterruptPin, debugSwitchPin, configSwitchPin, batteryVoltagePin, pirPowerPin};
-
-// Debug sleep interval (ms)
-const uint32_t debugSleepTime = 300000ul; // 5*60*1000 ms
-
-// Sync time interval
-const uint32_t syncTimeInterval = 120ul; // 2*60 s
+BikeCounter bc = BikeCounter();
+bc.setCounterInterruptPin(1);
+bc.setDebugSwitchPin(8);
+bc.setConfigSwitchPin(9);
+bc.setBatteryVoltagePin(A0);
+bc.setPowerPin(2);
+bc.setDebugSleepTime(300000ul); // 5*60*1000 ms
+bc.setSyncTimeInterval(120ul);  // 2*60 s
+bc.setMaxBlinks(50);
+bc.setMaxCount(1000);
 
 // ----------------------------------------------------
 // -------------- Declaration section -----------------
@@ -47,9 +28,6 @@ const uint32_t syncTimeInterval = 120ul; // 2*60 s
 
 // Object to log the status of the device
 StatusLogger logger = StatusLogger();
-
-// lora modem object and application properties
-LoRaConnector loRaConnector = LoRaConnector();
 
 // Internal RTC object
 RTCZero rtc;

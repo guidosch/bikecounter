@@ -1,21 +1,22 @@
 #ifndef BIKECOUNTER_H
 #define BIKECOUNTER_H
 
+#include <Arduino.h>
+
 class BikeCounter
 {
 public:
     /// @brief
     enum Status
     {
-        setup,
+        setupStep,
         initSleep,
         connectToLoRa,
         collectData,
         sendPackage,
         waitForDownlink,
         adjustClock,
-        error = 100
-
+        error
     };
     /// @brief
     void loop();
@@ -23,7 +24,7 @@ public:
     void reset();
     /// @brief
     /// @return
-    BikeCounter::Status getStatus() { return currentStatus; }
+    Status getStatus() { return currentStatus; }
     /// @brief Counter interrupt pin
     /// @param pin
     void setCounterInterruptPin(int pin) { counterInterruptPin = pin; }
@@ -39,10 +40,6 @@ public:
     /// @brief PIR power output pin (not implemented in PCB v0.1)
     /// @param pin
     void setPirPowerPin(int pin) { pirPowerPin = pin; }
-    /// @brief Define active pins (not defined pins will be disabled to save power)
-    /// @param activePins
-    /// @param size
-    void setUsedPins(const int *const activePins, int size);
     /// @brief Debug sleep interval
     /// @param ms milliseconds
     void setDebugSleepTime(uint32_t ms) { debugSleepTime = ms; }
@@ -62,14 +59,14 @@ private:
     int configSwitchPin;
     int batteryVoltagePin;
     int pirPowerPin;
-    int usedPins[64];
-    int usedPinCount;
+    int usedPins[6] = {LED_BUILTIN, counterInterruptPin, debugSwitchPin, configSwitchPin, batteryVoltagePin, pirPowerPin};
+    int usedPinCount = 6;
     uint32_t debugSleepTime;
     uint32_t syncTimeInterval;
     int maxCount;
     int maxBlinks;
 
-    BikeCounter::Status currentStatus = BikeCounter::Status::setup;
+    Status currentStatus = setupStep;
     void setup();
     /// @brief blinks the on-board led
     /// @param times number of times to blink
@@ -78,7 +75,7 @@ private:
     void disableUnusedPins();
     /// @brief reads the analog value and calculates the battery voltage.
     /// @return Battery voltage
-    float BikeCounter::getBatteryVoltage();
+    float getBatteryVoltage();
 };
 
 #endif // BIKECOUNTER_H
