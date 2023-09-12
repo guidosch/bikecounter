@@ -14,6 +14,8 @@ void setup()
   bc.setSyncTimeInterval(120ul);  // 2*60 s
   bc.setMaxBlinks(50);
   bc.setMaxCount(1000);
+
+  bc.loop();
 }
 
 // The main loop gets executed after the device wakes up
@@ -199,13 +201,7 @@ void loop()
 // --------- Method implementation section -----------
 // ----------------------------------------------------
 
-void onMotionDetected()
-{
-  if (!isSending)
-  {
-    motionDetected = 1;
-  }
-}
+
 
 // void sendData()
 //{

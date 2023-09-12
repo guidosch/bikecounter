@@ -5,6 +5,8 @@ void BikeCounter::loop()
     switch (currentStatus)
     {
     case Status::setupStep:
+        setup();
+
         break;
     case Status::initSleep:
         break;
@@ -29,7 +31,7 @@ void BikeCounter::reset()
 {
 }
 
-void BikeCounter::setup()
+int BikeCounter::setup()
 {
     // read dip switch states
     pinMode(debugSwitchPin, INPUT);
@@ -73,11 +75,9 @@ void BikeCounter::setup()
     // begin flash communication
     if (flash.begin(PIN_FLASH_CS, 2000000, SPI1) == false)
     {
-        logger.push("SPI Flash not detected");
-        logger.loop();
-
+        errorId = 1;
         currentStatus = error;
-        return;
+        return 1;
     }
 
     // first byte in memory contains the length of the config array
@@ -99,57 +99,58 @@ void BikeCounter::setup()
 
     delay(500);
 
-    
-  // initialize temperature and humidity sensor
-  am2320.begin();
+    // initialize temperature and humidity sensor
+    am2320.begin();
 
-  logger.push("Temp. sensor setup finished");
-  logger.push("Lora setup started");
-  logger.loop();
+    logger.push("Temp. sensor setup finished");
+    logger.push("Lora setup started");
+    logger.loop();
 
-  delay(500);
+    delay(500);
 
-  // connect to lora network
-  loRaConnector.setup(appEui, appKey, logger);
-  while (loRaConnector.getStatus() != LoRaConnector::Status::connected)
-  {
-    loRaConnector.loop();
-    delay(100);
-  }
+    // connect to lora network
+    loRaConnector.setup(appEui, appKey, logger);
+    while (loRaConnector.getStatus() != LoRaConnector::Status::connected)
+    {
+        loRaConnector.loop();
+        delay(100);
+    }
 
-  logger.push("Lora setup finished");
-  logger.push("RTC setup started");
-  logger.loop();
+    logger.push("Lora setup finished");
+    logger.push("RTC setup started");
+    logger.loop();
 
-  // setup rtc
-  rtc.begin(true);
-  rtc.setEpoch(defaultRTCEpoch);
+    // setup rtc
+    rtc.begin(true);
+    rtc.setEpoch(defaultRTCEpoch);
 
-  logger.push(String("RTC current time: ") +
-              String(rtc.getHours()) +
-              String(':') +
-              String(rtc.getMinutes()) +
-              String(':') +
-              String(rtc.getSeconds()));
-  logger.push(String("RTC current date: ") +
-              String(rtc.getDay()) +
-              String('.') +
-              String(rtc.getMonth()) +
-              String('.') +
-              String(rtc.getYear()));
-  logger.push(String("RTC epoch: ") +
-              String(rtc.getEpoch()));
-  logger.loop();
+    logger.push(String("RTC current time: ") +
+                String(rtc.getHours()) +
+                String(':') +
+                String(rtc.getMinutes()) +
+                String(':') +
+                String(rtc.getSeconds()));
+    logger.push(String("RTC current date: ") +
+                String(rtc.getDay()) +
+                String('.') +
+                String(rtc.getMonth()) +
+                String('.') +
+                String(rtc.getYear()));
+    logger.push(String("RTC epoch: ") +
+                String(rtc.getEpoch()));
+    logger.loop();
 
-  // delay to avoid interference with interrupt pin setup
-  delay(200);
+    // delay to avoid interference with interrupt pin setup
+    delay(200);
 
-  // setup counter interrupt
-  pinMode(counterInterruptPin, INPUT_PULLDOWN);
-  LowPower.attachInterruptWakeup(counterInterruptPin, onMotionDetected, RISING);
+    // setup counter interrupt
+    pinMode(counterInterruptPin, INPUT_PULLDOWN);
+    LowPower.attachInterruptWakeup(counterInterruptPin, onMotionDetected(*this), RISING);
 
-  logger.push("Setup finished");
-  logger.loop();
+    logger.push("Setup finished");
+    logger.loop();
+
+    return 0;
 }
 
 void BikeCounter::blinkLED(int times)

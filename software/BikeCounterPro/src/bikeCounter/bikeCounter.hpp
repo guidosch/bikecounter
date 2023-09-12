@@ -131,9 +131,16 @@ private:
     int firstWakeUp = 1;
     // Next wakeup time (epoch)
     std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> nextAlarm{std::chrono::seconds{0}};
-
+    // current state machine state
     Status currentStatus = setupStep;
-    void setup();
+    // error code
+    int errorId = 0;
+    // error messages corresponding to the errorId
+    char *errorMsg[2] = {"No error",
+                         "SPI Flash not detected"};
+    /// @brief
+    /// @return
+    int setup();
     /// @brief blinks the on-board led
     /// @param times number of times to blink
     void blinkLED(int times);
@@ -145,6 +152,14 @@ private:
     /// @brief Blink method prototype
     /// @param times to blink
     void blinkLED(int times = 1);
+    /// @brief
+    static void onMotionDetected()
+    {
+        if (!isSending)
+        {
+            motionDetected = 1;
+        }
+    }
 };
 
 #endif // BIKECOUNTER_H
