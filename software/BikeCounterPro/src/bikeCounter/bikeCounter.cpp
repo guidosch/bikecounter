@@ -1,5 +1,15 @@
 #include "bikeCounter.hpp"
 
+BikeCounter *BikeCounter::GetInstance()
+{
+    std::lock_guard<std::mutex> lock(mutex);
+    if (instance == nullptr)
+    {
+        instance = new BikeCounter();
+    }
+    return instance;
+}
+
 void BikeCounter::loop()
 {
     switch (currentStatus)
@@ -33,6 +43,10 @@ void BikeCounter::reset()
 
 int BikeCounter::setup()
 {
+    // set static fields
+    isSending = 0;
+    motionDetected = 0;
+
     // read dip switch states
     pinMode(debugSwitchPin, INPUT);
     pinMode(configSwitchPin, INPUT);
@@ -145,7 +159,7 @@ int BikeCounter::setup()
 
     // setup counter interrupt
     pinMode(counterInterruptPin, INPUT_PULLDOWN);
-    LowPower.attachInterruptWakeup(counterInterruptPin, onMotionDetected(*this), RISING);
+    LowPower.attachInterruptWakeup(counterInterruptPin, onMotionDetected, RISING);
 
     logger.push("Setup finished");
     logger.loop();

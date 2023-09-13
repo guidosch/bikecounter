@@ -7,6 +7,7 @@
 #include <Adafruit_AM2320.h>
 #include <SPI.h>
 #include <SparkFun_SPI_SerialFlash.h>
+#include <mutex>
 #include "../statusLogger/statusLogger.hpp"
 #include "../LoRaConnector/LoRaConnector.hpp"
 #include "../dataPackage/dataPackage.hpp"
@@ -16,6 +17,12 @@
 class BikeCounter
 {
 public:
+    // Singletons should not be cloneable and not be assignable.
+    BikeCounter(BikeCounter &other) = delete;
+    void operator=(const BikeCounter &) = delete;
+
+    static BikeCounter *GetInstance();
+
     /// @brief
     enum Status
     {
@@ -63,7 +70,14 @@ public:
     /// @param count
     void setMaxCount(int count) { maxCount = count; }
 
+protected:
+    BikeCounter() {}
+    ~BikeCounter() {}
+
 private:
+    static BikeCounter *instance;
+    static std::mutex mutex;
+
     int counterInterruptPin;
     int debugSwitchPin;
     int configSwitchPin;
@@ -99,7 +113,7 @@ private:
     // total counts between timer calls
     int totalCounter = 0;
     // motion detected flag (must be volatile as changed in IRS)
-    volatile bool motionDetected = 0;
+    static volatile bool motionDetected;
     // time array size
     static const int timeArraySize = 62;
     // time array
@@ -107,7 +121,7 @@ private:
     // hour of the day for next package
     unsigned int hourOfDay = 0;
     // Lora data transmission flag (must be volatile as changed in IRS)
-    volatile bool isSending = 0;
+    static volatile bool isSending;
     // Error counter for connection
     int errorCounter = 0;
     // Error counter for pir-sensor
@@ -161,5 +175,8 @@ private:
         }
     }
 };
+
+BikeCounter *BikeCounter::instance{nullptr};
+std::mutex BikeCounter::mutex;
 
 #endif // BIKECOUNTER_H
