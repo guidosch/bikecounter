@@ -1,8 +1,9 @@
 #include "bikeCounter.hpp"
 
-BikeCounter *BikeCounter::GetInstance()
+BikeCounter *BikeCounter::getInstance()
 {
-    std::lock_guard<std::mutex> lock(mutex);
+    // Thread-save Singleton (not needed for Arduino)
+    // std::lock_guard<std::mutex> lock(mutex_);
     if (instance == nullptr)
     {
         instance = new BikeCounter();
@@ -15,23 +16,40 @@ void BikeCounter::loop()
     switch (currentStatus)
     {
     case Status::setupStep:
-        setup();
-
+        int err = setup();
+        currentStatus = (!err) ? Status::initSleep : Status::error;
         break;
     case Status::initSleep:
+        // RTC bug prevention
+        // If the device runs on battery the rtc seems to reinitialize it's register after the first sleep period.
+        // To avoid this a sleep is triggered in the first loop and the rtc time will be reset after waking up.
+        currentStatus = Status::firstWakeUp;
+        sleep(2000);
+        break;
+    case Status::firstWakeUp:
+        rtc.setEpoch(defaultRTCEpoch);
+        currentStatus = Status::connectToLoRa;
         break;
     case Status::connectToLoRa:
         break;
     case Status::collectData:
+        processInput();
         break;
     case Status::sendPackage:
+        int err = sendUplinkMessage();
         break;
     case Status::waitForDownlink:
         break;
     case Status::adjustClock:
         break;
+    case Status::sleep:
+        if (!debugFlag || (debugFlag && (millis() > sleepEndMillis)))
+        {
+            currentStatus = preSleepStatus;
+        }
+        break;
     case Status::error:
-
+        break;
     default:
         break;
     }
@@ -123,10 +141,13 @@ int BikeCounter::setup()
     delay(500);
 
     // connect to lora network
-    loRaConnector.setup(appEui, appKey, logger);
-    while (loRaConnector.getStatus() != LoRaConnector::Status::connected)
+    loRaConnector->setup(appEui, appKey, &logger, &processDownlinkMessage);
+
+    // TODO: This is only temporary to keep the old connection order. This should be removed
+    // and the connection should be attempted in the first normal loop.
+    while (loRaConnector->getStatus() != LoRaConnector::Status::connected)
     {
-        loRaConnector.loop();
+        loRaConnector->loop();
         delay(100);
     }
 
@@ -167,7 +188,67 @@ int BikeCounter::setup()
     return 0;
 }
 
-void BikeCounter::blinkLED(int times)
+int BikeCounter::processInput()
+{
+    // get current time
+    std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> currentTime{std::chrono::seconds{rtc.getEpoch()}};
+    date::hh_mm_ss<std::chrono::seconds> currentTime_hms = date::make_time(currentTime.time_since_epoch() - date::floor<date::days>(currentTime).time_since_epoch());
+    int timerCalled = 0;
+
+    logger.push(String("Device status = ") +
+                String(currentStatus));
+    logger.loop();
+
+    // check if a motion was detected.
+    if (motionDetected)
+    {
+        motionDetected = 0;
+
+        // set hour of the day if this was the first call
+        if (counter == 0)
+        {
+            hourOfDay = currentTime_hms.hours().count();
+        }
+        timeArray[counter] = (currentTime_hms.hours().count() - hourOfDay) * 60 + currentTime_hms.minutes().count();
+
+        ++counter;
+        ++totalCounter;
+
+        blinkLED();
+
+        logger.push(String("Motion detected (current count = ") +
+                    String(counter) +
+                    String(" / time: ") +
+                    String(static_cast<int>(currentTime_hms.hours().count())) +
+                    String(':') +
+                    String(static_cast<int>(currentTime_hms.minutes().count())) +
+                    String(':') +
+                    String(static_cast<int>(currentTime_hms.seconds().count())) +
+                    String(')'));
+        logger.loop();
+
+        // check if the data should be sent.
+        int currentThreshold = dataHandler.getMaxCount(timeHandler.getCurrentIntervalMinutes(currentTime));
+        if (counter >= currentThreshold){
+            currentStatus = Status::sendPackage;
+        }
+    }
+    else
+    {
+        // if no motion was detected it means that the timer caused the wakeup.
+        currentStatus = Status::sendPackage;
+    }
+
+    return 0;
+}
+
+int BikeCounter::sendUplinkMessage(){
+
+    // TODO: Continue here
+    return 0;
+}
+
+void BikeCounter::blinkLED(int times = 1)
 {
     // deactivate the onboard LED after the specified amount of blinks
     static int blinkCount = 0;
@@ -210,4 +291,24 @@ float BikeCounter::getBatteryVoltage()
 {
     // read the analog value and calculate the voltage
     return analogRead(batteryVoltagePin) * 3.3f / 1023.0f / 1.2f * (1.2f + 0.33f);
+}
+
+void BikeCounter::sleep(int m)
+{
+    preSleepStatus = currentStatus;
+    currentStatus = Status::sleep;
+    if (debugFlag)
+    {
+        sleepEndMillis = millis() + m;
+    }
+    else
+    {
+        LowPower.deepSleep(m);
+    }
+}
+
+int BikeCounter::processDownlinkMessage(int *buffer, int length)
+{
+    // TODO: Needs to be implemented
+    return 0;
 }

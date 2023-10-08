@@ -1,112 +1,29 @@
 #include "config.h"
 #include "src/bikeCounter/bikeCounter.hpp"
 
-BikeCounter bc = BikeCounter();
+BikeCounter* bc = BikeCounter::getInstance();
 
 void setup()
 {
-  bc.setCounterInterruptPin(1);
-  bc.setDebugSwitchPin(8);
-  bc.setConfigSwitchPin(9);
-  bc.setBatteryVoltagePin(A0);
-  bc.setPirPowerPin(2);
-  bc.setDebugSleepTime(300000ul); // 5*60*1000 ms
-  bc.setSyncTimeInterval(120ul);  // 2*60 s
-  bc.setMaxBlinks(50);
-  bc.setMaxCount(1000);
+  bc->setCounterInterruptPin(1);
+  bc->setDebugSwitchPin(8);
+  bc->setConfigSwitchPin(9);
+  bc->setBatteryVoltagePin(A0);
+  bc->setPirPowerPin(2);
+  bc->setDebugSleepTime(300000ul); // 5*60*1000 ms
+  bc->setSyncTimeInterval(120ul);  // 2*60 s
+  bc->setMaxBlinks(50);
+  bc->setMaxCount(1000);
 
-  bc.loop();
+  bc->loop();
 }
 
 // The main loop gets executed after the device wakes up
 // (caused by the timer or the motion detection interrupt)
 void loop()
 {
-  // This statement simulates the sleep/deepSleep method in debug mode.
-  // The reason for not using the sleep or deepSleep method is, that it disables
-  // the usb connection which leeds to problems with the serial monitor.
-  if (debugFlag)
-  {
-    // Check if a motion was detected or the sleep time expired
-    // (Implemented in a nested if-statement to give the compiler the opportunity
-    // to remove the whole outer statement depending on the constexpr debugFlag.)
-    uint32_t sleepTime = ((deviceStatus != sync_call) && (lastDeviceStatus != sync_call)) ? debugSleepTime : (syncTimeInterval * 1000); // sync call interval
-    if ((motionDetected) || ((millis() - lastMillis) >= sleepTime))
-    {
-      // Run the main loop once
-      lastMillis = millis();
-    }
-    else
-    {
-      // Noting happened, continue with the next cycle
-      return;
-    }
-  }
-  else
-  {
-    // RTC bug prevention
-    // If the device runs on battery the rtc seems to reinitialize it's register after the first sleep period.
-    // To avoid this a sleep is triggered in the first loop and the rtc time will be reset after waking up.
-    if (firstLoop)
-    {
-      firstLoop = 0;
-      LowPower.deepSleep(2000);
-    }
-    if (firstWakeUp)
-    {
-      firstWakeUp = 0;
-      rtc.setEpoch(defaultRTCEpoch);
-    }
-  }
-
-  // get current time
-  std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> currentTime{std::chrono::seconds{rtc.getEpoch()}};
-  date::hh_mm_ss<std::chrono::seconds> currentTime_hms = date::make_time(currentTime.time_since_epoch() - date::floor<date::days>(currentTime).time_since_epoch());
-  int timerCalled = 0;
-
-  logger.push(String("Device status = ") +
-              String(deviceStatus) +
-              String(" / Last device status = ") +
-              String(lastDeviceStatus));
-  logger.loop();
-
-  // check if a motion was detected.
-  if (motionDetected)
-  {
-    motionDetected = 0;
-
-    // set hour of the day if this was the first call
-    if (counter == 0)
-    {
-      hourOfDay = currentTime_hms.hours().count();
-    }
-    timeArray[counter] = (currentTime_hms.hours().count() - hourOfDay) * 60 + currentTime_hms.minutes().count();
-
-    ++counter;
-    ++totalCounter;
-
-    blinkLED();
-
-    logger.push(String("Motion detected (current count = ") +
-                String(counter) +
-                String(" / time: ") +
-                String(static_cast<int>(currentTime_hms.hours().count())) +
-                String(':') +
-                String(static_cast<int>(currentTime_hms.minutes().count())) +
-                String(':') +
-                String(static_cast<int>(currentTime_hms.seconds().count())) +
-                String(')'));
-    logger.loop();
-  }
-  else
-  {
-    // if no motion was detected it means that the timer caused the wakeup.
-    timerCalled = 1;
-    lastDeviceStatus = deviceStatus;
-  }
-
-  // check if the data should be sent.
-  int currentThreshold = dataHandler.getMaxCount(timeHandler.getCurrentIntervalMinutes(currentTime));
+  bc->loop();
+  
   if (((counter >= currentThreshold) || (timerCalled)) && (!isSending))
   {
     isSending = 1;

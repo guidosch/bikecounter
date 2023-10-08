@@ -8,6 +8,12 @@
 class LoRaConnector
 {
 public:
+    // Singletons should not be cloneable and not be assignable.
+    LoRaConnector(LoRaConnector &other) = delete;
+    void operator=(const LoRaConnector &) = delete;
+
+    static LoRaConnector *getInstance();
+
     enum Status
     {
         disconnected,
@@ -24,7 +30,7 @@ public:
     String getErrorMsg() { return String(errorMsg[errorId]); }
     void setAppEui(String appEui) { eui = appEui; }
     void setAppKey(String appKey) { key = appKey; }
-    void setup(String appEui, String appKey, StatusLogger &statusLogger, int (*downlinkCallbackFunction)(int*, int));
+    void setup(String appEui, String appKey, StatusLogger *statusLogger, int (*downlinkCallbackFunction)(int *, int));
     void loop();
     /// @brief
     /// @param buffer
@@ -34,8 +40,16 @@ public:
     ///         2 = error
     int sendMessage(const uint8_t *buffer, size_t size);
 
+protected:
+    LoRaConnector() {}
+    ~LoRaConnector() {}
+
 private:
-    StatusLogger &logger;
+    static LoRaConnector *instance;
+    // Thread-save Singleton (not needed for Arduino)
+    // static std::mutex mutex_;
+
+    StatusLogger *logger{nullptr};
     LoRaModem modem = LoRaModem(Serial1);
     Status currentStatus = disconnected;
     String eui;
@@ -49,12 +63,16 @@ private:
     int sendData();
     unsigned long t;
     unsigned long downlinkTimeout = 10000;
-    int (*downlinkCallback)(int*, int);
+    int (*downlinkCallback)(int *, int);
     // error messages corresponding to the errorId
     char *errorMsg[4] = {"No error",
                          "Failed to start module",
                          "Failed to connect to LoRa network",
                          "Error sending message"};
 };
+
+LoRaConnector *LoRaConnector::instance{nullptr};
+// Thread-save Singleton (not needed for Arduino)
+// std::mutex LoRaConnector::mutex_;
 
 #endif // LORACONNECTOR_H

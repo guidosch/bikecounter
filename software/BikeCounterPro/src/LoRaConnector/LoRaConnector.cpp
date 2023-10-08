@@ -1,7 +1,18 @@
 #include "LoRaConnector.hpp"
 #include <sstream>
 
-void LoRaConnector::setup(String appEui, String appKey, StatusLogger &statusLogger, int (*downlinkCallbackFunction)(int *, int))
+LoRaConnector *LoRaConnector::getInstance()
+{
+    // Thread-save Singleton (not needed for Arduino)
+    // std::lock_guard<std::mutex> lock(mutex_);
+    if (instance == nullptr)
+    {
+        instance = new LoRaConnector();
+    }
+    return instance;
+}
+
+void LoRaConnector::setup(String appEui, String appKey, StatusLogger *statusLogger, int (*downlinkCallbackFunction)(int *, int))
 {
     eui = appEui;
     key = appKey;
@@ -15,11 +26,11 @@ void LoRaConnector::setup(String appEui, String appKey, StatusLogger &statusLogg
         return;
     };
 
-    logger.push(String("Your module version is: ") +
+    logger->push(String("Your module version is: ") +
                 String(modem.version()));
-    logger.push(String("Your device EUI is: ") +
+    logger->push(String("Your device EUI is: ") +
                 String(modem.deviceEUI()));
-    logger.loop();
+    logger->loop();
 }
 
 void LoRaConnector::loop()
@@ -79,8 +90,8 @@ void LoRaConnector::loop()
             }
             else
             {
-                logger.push("No downlink massage received.");
-                logger.loop();
+                logger->push("No downlink massage received.");
+                logger->loop();
 
                 currentStatus = connected;
             }
@@ -104,8 +115,8 @@ void LoRaConnector::loop()
             os << (rcv[j] & 0xF);
             os << " ";
         }
-        logger.push(os.str());
-        logger.loop();
+        logger->push(os.str());
+        logger->loop();
 
         // call the downlink callback function and pass the payload
         downlinkCallback(rcv, i);
@@ -116,8 +127,8 @@ void LoRaConnector::loop()
 
     case error:
     {
-        logger.push(errorMsg[errorId]);
-        logger.loop();
+        logger->push(errorMsg[errorId]);
+        logger->loop();
         ++errorCount;
 
         if (errorCount < 5)
@@ -178,8 +189,8 @@ int LoRaConnector::sendData()
 
     if (err > 0)
     {
-        logger.push("Message sent correctly");
-        logger.loop();
+        logger->push("Message sent correctly");
+        logger->loop();
         return 0;
     }
     else

@@ -21,18 +21,20 @@ public:
     BikeCounter(BikeCounter &other) = delete;
     void operator=(const BikeCounter &) = delete;
 
-    static BikeCounter *GetInstance();
+    static BikeCounter *getInstance();
 
     /// @brief
     enum Status
     {
         setupStep,
         initSleep,
+        firstWakeUp,
         connectToLoRa,
         collectData,
         sendPackage,
         waitForDownlink,
         adjustClock,
+        sleep,
         error
     };
     /// @brief
@@ -76,7 +78,8 @@ protected:
 
 private:
     static BikeCounter *instance;
-    static std::mutex mutex;
+    // Thread-save Singleton (not needed for Arduino)
+    // static std::mutex mutex_;
 
     int counterInterruptPin;
     int debugSwitchPin;
@@ -94,7 +97,7 @@ private:
     StatusLogger logger = StatusLogger();
 
     // Object to handel all the LoRa stuff
-    LoRaConnector loRaConnector = LoRaConnector();
+    LoRaConnector *loRaConnector = LoRaConnector::getInstance();
 
     // Internal RTC object
     RTCZero rtc;
@@ -152,20 +155,48 @@ private:
     // error messages corresponding to the errorId
     char *errorMsg[2] = {"No error",
                          "SPI Flash not detected"};
+
+    // sleep state variables
+    Status preSleepStatus = setupStep;
+    unsigned long sleepEndMillis = 0UL;
+
     /// @brief
     /// @return
     int setup();
+
+    /// @brief 
+    /// @return 
+    int processInput();
+
+    /// @brief
+    /// @return
+    int sendUplinkMessage();
+
     /// @brief blinks the on-board led
     /// @param times number of times to blink
     void blinkLED(int times);
+
     /// @brief Sets all the unused pins to a defined level (Output and LOW)
     void disableUnusedPins();
+
     /// @brief reads the analog value and calculates the battery voltage.
     /// @return Battery voltage
     float getBatteryVoltage();
+
     /// @brief Blink method prototype
     /// @param times to blink
     void blinkLED(int times = 1);
+
+    /// @brief
+    /// @param millis
+    void sleep(int millis);
+
+    /// @brief 
+    /// @param buffer
+    /// @param length
+    /// @return
+    static int processDownlinkMessage(int* buffer, int length);
+
     /// @brief
     static void onMotionDetected()
     {
@@ -177,6 +208,7 @@ private:
 };
 
 BikeCounter *BikeCounter::instance{nullptr};
-std::mutex BikeCounter::mutex;
+// Thread-save Singleton (not needed for Arduino)
+// std::mutex BikeCounter::mutex_;
 
 #endif // BIKECOUNTER_H
