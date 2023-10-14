@@ -7,7 +7,7 @@
 #include <Adafruit_AM2320.h>
 #include <SPI.h>
 #include <SparkFun_SPI_SerialFlash.h>
-#include <mutex>
+#include "../../config.h"
 #include "../statusLogger/statusLogger.hpp"
 #include "../LoRaConnector/LoRaConnector.hpp"
 #include "../dataPackage/dataPackage.hpp"
@@ -29,13 +29,13 @@ public:
         setupStep,
         initSleep,
         firstWakeUp,
-        connectToLoRa,
+        timeSync,
         collectData,
         sendPackage,
-        waitForDownlink,
+        waitForLoRa,
         adjustClock,
-        sleep,
-        error
+        sleepState,
+        errorState
     };
     /// @brief
     void loop();
@@ -71,6 +71,8 @@ public:
     /// @brief Max. counts between timer calls (to detect a floating interrupt pin)
     /// @param count
     void setMaxCount(int count) { maxCount = count; }
+    /// @brief
+    void correctRTCTime(int32_t timeDrift);
 
 protected:
     BikeCounter() {}
@@ -116,15 +118,13 @@ private:
     // total counts between timer calls
     int totalCounter = 0;
     // motion detected flag (must be volatile as changed in IRS)
-    static volatile bool motionDetected;
+    volatile bool motionDetected;
     // time array size
     static const int timeArraySize = 62;
     // time array
     unsigned int timeArray[timeArraySize];
     // hour of the day for next package
     unsigned int hourOfDay = 0;
-    // Lora data transmission flag (must be volatile as changed in IRS)
-    static volatile bool isSending;
     // Error counter for connection
     int errorCounter = 0;
     // Error counter for pir-sensor
@@ -137,15 +137,12 @@ private:
     unsigned long lastMillis = millis() - 10 * 60 * 1000;
     // default startup date 01.01.2022 (1640995200)
     uint32_t defaultRTCEpoch = 1640995200ul;
-    // Time sync skip flag (Prevents that the time correction is applied multiple times due to network lag and multiple enqueued downlinks with the same timeDrift information)
-    int skipTimeSync = 0;
+    // Keep track of the last RTC correction (Prevents that the time correction is applied multiple times due to network lag and multiple enqueued downlinks with the same timeDrift information)
+    uint32_t lastRTCCorrection = 0ul;
     // SPI serial flash parameter
     const byte PIN_FLASH_CS = 32;
     // SPI serial flash object
     SFE_SPI_FLASH flash;
-    // Flags to trigger the initial sleep period and reset the rtc (prevent rtc bug)
-    int firstLoop = 1;
-    int firstWakeUp = 1;
     // Next wakeup time (epoch)
     std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> nextAlarm{std::chrono::seconds{0}};
     // current state machine state
@@ -153,8 +150,11 @@ private:
     // error code
     int errorId = 0;
     // error messages corresponding to the errorId
-    char *errorMsg[2] = {"No error",
-                         "SPI Flash not detected"};
+    char *errorMsg[5] = {"No error",
+                         "SPI Flash not detected",
+                         "Floating interrupt pin detected.",
+                         "PIR sensor error",
+                         "Error while sending message"};
 
     // sleep state variables
     Status preSleepStatus = setupStep;
@@ -164,8 +164,8 @@ private:
     /// @return
     int setup();
 
-    /// @brief 
-    /// @return 
+    /// @brief
+    /// @return
     int processInput();
 
     /// @brief
@@ -174,7 +174,7 @@ private:
 
     /// @brief blinks the on-board led
     /// @param times number of times to blink
-    void blinkLED(int times);
+    void blinkLED(int times = 1);
 
     /// @brief Sets all the unused pins to a defined level (Output and LOW)
     void disableUnusedPins();
@@ -183,32 +183,30 @@ private:
     /// @return Battery voltage
     float getBatteryVoltage();
 
-    /// @brief Blink method prototype
-    /// @param times to blink
-    void blinkLED(int times = 1);
+    /// @brief
+    /// @param ms
+    void sleep(int ms);
 
     /// @brief
-    /// @param millis
-    void sleep(int millis);
+    void handleError();
 
-    /// @brief 
+    /// @brief
+    unsigned long getRemainingSleepTime(std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> currentTime);
+
+    /// @brief
+    void waitForLoRaModule();
+
+    /// @brief
     /// @param buffer
     /// @param length
     /// @return
-    static int processDownlinkMessage(int* buffer, int length);
+    static int processDownlinkMessage(int *buffer, int length);
 
     /// @brief
     static void onMotionDetected()
     {
-        if (!isSending)
-        {
-            motionDetected = 1;
-        }
+        BikeCounter::getInstance()->motionDetected = 1;
     }
 };
-
-BikeCounter *BikeCounter::instance{nullptr};
-// Thread-save Singleton (not needed for Arduino)
-// std::mutex BikeCounter::mutex_;
 
 #endif // BIKECOUNTER_H

@@ -1,5 +1,9 @@
 #include "bikeCounter.hpp"
 
+BikeCounter *BikeCounter::instance{nullptr};
+// Thread-save Singleton (not needed for Arduino)
+// std::mutex BikeCounter::mutex_;
+
 BikeCounter *BikeCounter::getInstance()
 {
     // Thread-save Singleton (not needed for Arduino)
@@ -13,11 +17,12 @@ BikeCounter *BikeCounter::getInstance()
 
 void BikeCounter::loop()
 {
+    int err = 0;
     switch (currentStatus)
     {
     case Status::setupStep:
-        int err = setup();
-        currentStatus = (!err) ? Status::initSleep : Status::error;
+        err = setup();
+        currentStatus = (!err) ? Status::initSleep : Status::errorState;
         break;
     case Status::initSleep:
         // RTC bug prevention
@@ -28,27 +33,30 @@ void BikeCounter::loop()
         break;
     case Status::firstWakeUp:
         rtc.setEpoch(defaultRTCEpoch);
-        currentStatus = Status::connectToLoRa;
+        currentStatus = Status::timeSync;
         break;
-    case Status::connectToLoRa:
+    case Status::timeSync:
+        // TODO: Implement time sync
         break;
     case Status::collectData:
         processInput();
         break;
     case Status::sendPackage:
-        int err = sendUplinkMessage();
+        err = sendUplinkMessage();
         break;
-    case Status::waitForDownlink:
+    case Status::waitForLoRa:
+        waitForLoRaModule();
         break;
     case Status::adjustClock:
         break;
-    case Status::sleep:
+    case Status::sleepState:
         if (!debugFlag || (debugFlag && (millis() > sleepEndMillis)))
         {
             currentStatus = preSleepStatus;
         }
         break;
-    case Status::error:
+    case Status::errorState:
+        handleError();
         break;
     default:
         break;
@@ -62,7 +70,6 @@ void BikeCounter::reset()
 int BikeCounter::setup()
 {
     // set static fields
-    isSending = 0;
     motionDetected = 0;
 
     // read dip switch states
@@ -108,7 +115,7 @@ int BikeCounter::setup()
     if (flash.begin(PIN_FLASH_CS, 2000000, SPI1) == false)
     {
         errorId = 1;
-        currentStatus = error;
+        currentStatus = errorState;
         return 1;
     }
 
@@ -229,26 +236,137 @@ int BikeCounter::processInput()
 
         // check if the data should be sent.
         int currentThreshold = dataHandler.getMaxCount(timeHandler.getCurrentIntervalMinutes(currentTime));
-        if (counter >= currentThreshold){
+        if (counter >= currentThreshold)
+        {
             currentStatus = Status::sendPackage;
+
+            // check if the floating interrupt pin bug occurred
+            // method 1: check if the totalCount exceeds the maxCount between the timer calls.
+            // method 2: detect if the count goes up very quickly. (faster then the board is able to send)
+            if ((totalCounter >= maxCount) || (counter > (currentThreshold + 10)))
+            {
+                errorId = 2;
+                currentStatus = Status::errorState;
+                return 2;
+            }
         }
     }
     else
     {
         // if no motion was detected it means that the timer caused the wakeup.
+        logger.push("Timer called");
+        logger.loop();
         currentStatus = Status::sendPackage;
+        totalCounter = 0;
+        nextAlarm = timeHandler.getNextIntervalTime(currentTime);
     }
 
+    sleep(getRemainingSleepTime(currentTime));
+
     return 0;
 }
 
-int BikeCounter::sendUplinkMessage(){
+int BikeCounter::sendUplinkMessage()
+{
+    // disable the pir sensor
+    digitalWrite(pirPowerPin, LOW);
 
-    // TODO: Continue here
-    return 0;
+    blinkLED(2);
+
+    dataHandler.setStatus(0);
+    dataHandler.setHwVersion(hwVersion);
+    dataHandler.setSwVersion(swVersion);
+    dataHandler.setMotionCount(counter);
+    dataHandler.setBatteryVoltage(getBatteryVoltage());
+    dataHandler.setTemperature(am2320.readTemperature());
+    dataHandler.setHumidity(am2320.readHumidity());
+    dataHandler.setHourOfTheDay(hourOfDay);
+    dataHandler.setDeviceTime(rtc.getEpoch());
+    dataHandler.setTimeArray(timeArray);
+
+    loRaConnector->loop(5);
+    if (loRaConnector->getStatus() != LoRaConnector::Status::connected)
+    {
+        // TODO: return error and reconnect
+    }
+
+    int err = loRaConnector->sendMessage(dataHandler.getPayload(), dataHandler.getPayloadLength());
+
+    if (!err)
+    {
+        currentStatus = Status::waitForLoRa;
+
+        logger.push(String("Message enqueued for transmission! (count = ") +
+                    String(counter) +
+                    String(" / temperature = ") +
+                    String(dataHandler.getTemperature()) +
+                    String("°C / humidity = ") +
+                    String(dataHandler.getHumidity()) +
+                    String("% / battery voltage = ") +
+                    String(dataHandler.getBatteryVoltage()) +
+                    String(" V / DeviceEpoch = ") +
+                    String(dataHandler.getDeviceTime()) +
+                    String(" )"));
+        logger.loop();
+
+        // reset counter and time array
+        counter = 0;
+        for (int i = 0; i < timeArraySize; ++i)
+        {
+            timeArray[i] = 0;
+        }
+    }
+    else
+    {
+        errorId = 4;
+        currentStatus = Status::errorState;
+    }
+
+    return err;
 }
 
-void BikeCounter::blinkLED(int times = 1)
+void BikeCounter::waitForLoRaModule()
+{
+    loRaConnector->loop();
+
+    switch (loRaConnector->getStatus())
+    {
+    case LoRaConnector::Status::connected:
+        currentStatus = Status::collectData;
+        break;
+    case LoRaConnector::Status::error:
+        switch (loRaConnector->getErrorId())
+        {
+        case 2:
+            // Failed to connect to LoRa network
+            // wait for 30min and try again
+            sleep(30UL * 60UL * 1000UL);
+            break;
+        case 3:
+            // Error sending message
+            // wait for 5min and try again
+            sleep(5UL * 60UL * 1000UL);
+            break;
+        default:
+            loRaConnector->reset();
+            break;
+        }
+        break;
+    case LoRaConnector::Status::fatalError:
+        loRaConnector->reset();
+        break;
+    }
+}
+
+// TODO
+// delay(200);
+
+// enable the pir sensor
+// digitalWrite(pirPowerPin, HIGH);
+
+// delay(200);
+
+void BikeCounter::blinkLED(int times)
 {
     // deactivate the onboard LED after the specified amount of blinks
     static int blinkCount = 0;
@@ -293,22 +411,130 @@ float BikeCounter::getBatteryVoltage()
     return analogRead(batteryVoltagePin) * 3.3f / 1023.0f / 1.2f * (1.2f + 0.33f);
 }
 
-void BikeCounter::sleep(int m)
+void BikeCounter::sleep(int ms)
 {
     preSleepStatus = currentStatus;
-    currentStatus = Status::sleep;
+    currentStatus = Status::sleepState;
     if (debugFlag)
     {
-        sleepEndMillis = millis() + m;
+        sleepEndMillis = millis() + ms;
     }
     else
     {
-        LowPower.deepSleep(m);
+        LowPower.deepSleep(ms);
     }
+}
+
+void BikeCounter::handleError()
+{
+    logger.push(errorMsg[errorId]);
+    logger.loop();
+
+    switch (errorId)
+    {
+    case 0:
+        // Somehow we landed in the error state with no error pending.
+        // This should never happen so we sleep for an hour and restart the device.
+        currentStatus = Status::setupStep;
+        sleep(60UL * 60UL * 1000UL);
+        break;
+
+    case 1:
+        // The SPI Flash memory chip could not be initialized hence we cant read the configuration data.
+        // Lets sleep for an hour and try again.
+        currentStatus = Status::setupStep;
+        sleep(60UL * 60UL * 1000UL);
+        break;
+
+    case 2:
+        // The floating interrupt pin error was detected
+        // Lets reset the PIR power connection and try again
+        if (pirError++ <= 2)
+        {
+            logger.push("Resetting PIR-sensor");
+            logger.loop();
+            digitalWrite(pirPowerPin, LOW);
+            delay(2000);
+            digitalWrite(pirPowerPin, HIGH);
+            totalCounter = 0;
+            currentStatus = collectData;
+            sleep(10UL * 60UL * 1000UL); // 10min
+        }
+        else
+        {
+            logger.push("PIR-sensor error could not be fixed.");
+            logger.loop();
+            // shut down PIR and try it again in 5 hours
+            digitalWrite(pirPowerPin, LOW);
+            errorId = 3;
+            sleep(5UL * 60UL * 60UL * 1000UL); // 5h
+        }
+        break;
+
+    case 3:
+        // Restart the PIR and hope that the floating pin error disappeared
+        digitalWrite(pirPowerPin, HIGH);
+        totalCounter = 0;
+        currentStatus = collectData;
+        sleep(60UL * 1000UL); // 1min
+    }
+}
+
+unsigned long BikeCounter::getRemainingSleepTime(std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> currentTime)
+{
+    // determine the remaining time to sleep
+    int64_t sdt = (nextAlarm.time_since_epoch().count() - currentTime.time_since_epoch().count());
+    uint32_t sleepTime = sdt > 0 ? (uint32_t)sdt : syncTimeInterval;
+    // sanity check
+    sleepTime = Min(sleepTime, (12ul * 60ul * 60ul));
+
+    return sleepTime * 1000UL;
 }
 
 int BikeCounter::processDownlinkMessage(int *buffer, int length)
 {
-    // TODO: Needs to be implemented
+    // decode time drift
+    int32_t timeDrift = 0;
+    timeDrift = buffer[3];
+    timeDrift = (timeDrift << 8) | buffer[2];
+    timeDrift = (timeDrift << 8) | buffer[1];
+    timeDrift = (timeDrift << 8) | buffer[0];
+
+    BikeCounter::getInstance()->correctRTCTime(timeDrift);
+
     return 0;
+}
+
+void BikeCounter::correctRTCTime(int32_t timeDrift)
+{
+    logger.push(String("Received time correction = ") + String(timeDrift));
+    logger.loop();
+
+    uint32_t currentEpoch = rtc.getEpoch();
+
+    // check if the timeDrift should be applied (only if the drift is greater then 10min and only once a day)
+    if ((abs(timeDrift) > (10 * 60)) && ((currentEpoch - lastRTCCorrection) > (24 * 60 * 60)))
+    {
+        // apply time correction
+        rtc.setEpoch(currentEpoch + timeDrift);
+        lastRTCCorrection = rtc.getEpoch();
+
+        logger.push(String("RTC correction applied, current time: ") +
+                    String(rtc.getHours()) +
+                    String(':') +
+                    String(rtc.getMinutes()) +
+                    String(':') +
+                    String(rtc.getSeconds()));
+        logger.push(String("RTC current date: ") +
+                    String(rtc.getDay()) +
+                    String('.') +
+                    String(rtc.getMonth()) +
+                    String('.') +
+                    String(rtc.getYear()));
+        logger.push(String("RTC epoch: ") +
+                    String(rtc.getEpoch()));
+        logger.loop();
+
+        delay(500);
+    }
 }

@@ -1,6 +1,10 @@
 #include "LoRaConnector.hpp"
 #include <sstream>
 
+LoRaConnector *LoRaConnector::instance = nullptr;
+// Thread-save Singleton (not needed for Arduino)
+// std::mutex LoRaConnector::mutex_;
+
 LoRaConnector *LoRaConnector::getInstance()
 {
     // Thread-save Singleton (not needed for Arduino)
@@ -27,125 +31,134 @@ void LoRaConnector::setup(String appEui, String appKey, StatusLogger *statusLogg
     };
 
     logger->push(String("Your module version is: ") +
-                String(modem.version()));
+                 String(modem.version()));
     logger->push(String("Your device EUI is: ") +
-                String(modem.deviceEUI()));
+                 String(modem.deviceEUI()));
     logger->loop();
 }
 
-void LoRaConnector::loop()
+void LoRaConnector::loop(unsigned int times)
 {
-
-    switch (currentStatus)
+    for (int i = 0; i < times; ++i)
     {
-    case disconnected:
-        // try to connect
-        currentStatus = connecting;
-        break;
+        switch (currentStatus)
+        {
+        case disconnected:
+            // try to connect
+            currentStatus = connecting;
+            break;
 
-    case connecting:
-    {
-        int err = connectToNetwork();
-        if (!err)
+        case connecting:
         {
-            errorId = 2;
-            currentStatus = error;
-        }
-        else
-        {
-            currentStatus = connected;
-        }
-        break;
-    }
-
-    case connected: // and ready/idle
-        if (sendRequested)
-        {
-            currentStatus = transmitting;
-        }
-        break;
-
-    case transmitting: // uplink
-    {
-        int err = sendData();
-        if (!err)
-        {
-            currentStatus = error;
-        }
-        else
-        {
-            currentStatus = waiting;
-            t = millis();
-        }
-        break;
-    }
-
-    case waiting: // downlink
-    {
-        if ((millis() - t) > downlinkTimeout)
-        {
-            if (modem.available())
+            int err = connectToNetwork();
+            if (!err)
             {
-                currentStatus = reading;
+                errorId = 2;
+                currentStatus = error;
             }
             else
             {
-                logger->push("No downlink massage received.");
-                logger->loop();
-
                 currentStatus = connected;
             }
-            sendRequested = 0;
+            break;
         }
-        break;
-    }
-    case reading:
-    {
-        int rcv[64] = {0};
-        int i = 0;
-        while (modem.available())
+
+        case connected: // and ready/idle
+            if (sendRequested)
+            {
+                currentStatus = transmitting;
+            }
+            break;
+
+        case transmitting: // uplink
         {
-            rcv[i++] = modem.read();
+            int err = sendData();
+            if (!err)
+            {
+                currentStatus = error;
+            }
+            else
+            {
+                currentStatus = waiting;
+                t = millis();
+            }
+            break;
         }
 
-        std::ostringstream os("Received: ");
-        for (unsigned int j = 0; j < i; j++)
+        case waiting: // downlink
         {
-            os << (rcv[j] >> 4);
-            os << (rcv[j] & 0xF);
-            os << " ";
+            if ((millis() - t) > downlinkTimeout)
+            {
+                if (modem.available())
+                {
+                    currentStatus = reading;
+                }
+                else
+                {
+                    logger->push("No downlink massage received.");
+                    logger->loop();
+
+                    currentStatus = connected;
+                }
+                sendRequested = 0;
+            }
+            break;
         }
-        logger->push(os.str());
-        logger->loop();
-
-        // call the downlink callback function and pass the payload
-        downlinkCallback(rcv, i);
-
-        currentStatus = connected;
-        break;
-    }
-
-    case error:
-    {
-        logger->push(errorMsg[errorId]);
-        logger->loop();
-        ++errorCount;
-
-        if (errorCount < 5)
+        case reading:
         {
-            currentStatus = disconnected;
-        }
-        else
-        {
-            currentStatus = fatalError;
-        }
-        break;
-    }
+            int rcv[64] = {0};
+            int i = 0;
+            while (modem.available())
+            {
+                rcv[i++] = modem.read();
+            }
 
-    case fatalError:
-        break;
+            std::ostringstream os("Received: ");
+            for (unsigned int j = 0; j < i; j++)
+            {
+                os << (rcv[j] >> 4);
+                os << (rcv[j] & 0xF);
+                os << " ";
+            }
+            logger->push(os.str());
+            logger->loop();
+
+            // call the downlink callback function and pass the payload
+            downlinkCallback(rcv, i);
+
+            currentStatus = connected;
+            break;
+        }
+
+        case error:
+        {
+            logger->push(errorMsg[errorId]);
+            logger->loop();
+            ++errorCount;
+
+            if (errorCount < 5)
+            {
+                currentStatus = disconnected;
+            }
+            else
+            {
+                currentStatus = fatalError;
+            }
+            break;
+        }
+
+        case fatalError:
+            break;
+        }
     }
 };
+
+void LoRaConnector::reset()
+{
+    // TODO: Reset the hardware
+    currentStatus = disconnected;
+    errorCount = 0;
+}
 
 /// @brief Tries to connect to the LoRa WAN network
 /// @return error code

@@ -31,7 +31,8 @@ public:
     void setAppEui(String appEui) { eui = appEui; }
     void setAppKey(String appKey) { key = appKey; }
     void setup(String appEui, String appKey, StatusLogger *statusLogger, int (*downlinkCallbackFunction)(int *, int));
-    void loop();
+    void loop(unsigned int times = 1u);
+    void reset();
     /// @brief
     /// @param buffer
     /// @param size
@@ -70,9 +71,5 @@ private:
                          "Failed to connect to LoRa network",
                          "Error sending message"};
 };
-
-LoRaConnector *LoRaConnector::instance{nullptr};
-// Thread-save Singleton (not needed for Arduino)
-// std::mutex LoRaConnector::mutex_;
 
 #endif // LORACONNECTOR_H
