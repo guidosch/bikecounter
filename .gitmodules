@@ -1,0 +1,3 @@
+[submodule "software/libs/mkrwan_v2"]
+	path = software/libs/mkrwan_v2
+	url = https://github.com/MeierTobias/MKRWAN_v2.git
