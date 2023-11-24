@@ -51,7 +51,7 @@ void LoRaConnector::loop(unsigned int times)
         case connecting:
         {
             int err = connectToNetwork();
-            if (!err)
+            if (err)
             {
                 errorId = 2;
                 currentStatus = error;
@@ -59,6 +59,7 @@ void LoRaConnector::loop(unsigned int times)
             else
             {
                 currentStatus = connected;
+                errorCount = 0;
             }
             break;
         }
@@ -164,10 +165,10 @@ void LoRaConnector::reset()
 /// @return error code
 int LoRaConnector::connectToNetwork()
 {
-    int status = modem.joinOTAA(eui, key);
-    if (!status)
+    int join = modem.joinOTAA(eui, key);
+    if (!join)
     {
-        return status;
+        return 1;
     }
 
     modem.minPollInterval(120);

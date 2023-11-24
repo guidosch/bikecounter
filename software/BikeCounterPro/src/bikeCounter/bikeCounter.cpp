@@ -413,6 +413,9 @@ float BikeCounter::getBatteryVoltage()
 
 void BikeCounter::sleep(int ms)
 {
+    logger.push("Going to sleep for " + String(ms) + "ms");
+    logger.loop();
+
     preSleepStatus = currentStatus;
     currentStatus = Status::sleepState;
     if (debugFlag)
