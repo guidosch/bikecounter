@@ -154,7 +154,7 @@ void LoRaConnector::loop(unsigned int times)
 
 void LoRaConnector::reset()
 {
-    // TODO: Reset the hardware
+    modem.restart();
     currentStatus = disconnected;
     errorCount = 0;
 }
@@ -163,6 +163,8 @@ void LoRaConnector::reset()
 /// @return error code
 int LoRaConnector::connectToNetwork()
 {
+    logger.push("Connecting to network.");
+    logger.loop();
     int join = modem.joinOTAA(eui, key);
     if (!join)
     {
@@ -172,6 +174,8 @@ int LoRaConnector::connectToNetwork()
     modem.minPollInterval(120);
     // wait for all data transmission to finish
     delay(500);
+    logger.push("Successfully connected to network.");
+    logger.loop();
     return 0;
 }
 

@@ -58,12 +58,9 @@ public:
     /// @brief PIR power output pin (not implemented in PCB v0.1)
     /// @param pin
     void setPirPowerPin(int pin) { pirPowerPin = pin; }
-    /// @brief Debug sleep interval
-    /// @param ms milliseconds
-    void setDebugSleepTime(uint32_t ms) { debugSleepTime = ms; }
     /// @brief Sync time interval
-    /// @param ms milliseconds
-    void setSyncTimeInterval(uint32_t ms) { syncTimeInterval = ms; }
+    /// @param s seconds
+    void setSyncTimeInterval(uint32_t s) { syncTimeInterval = s; }
     /// @brief Deactivate the onboard LED after the specified amount of blinks
     /// @param count
     void setMaxBlinks(int count) { maxBlinks = count; }
@@ -89,7 +86,6 @@ private:
     int pirPowerPin;
     int usedPins[6] = {LED_BUILTIN, counterInterruptPin, debugSwitchPin, configSwitchPin, batteryVoltagePin, pirPowerPin};
     int usedPinCount = 6;
-    uint32_t debugSleepTime;
     uint32_t syncTimeInterval;
     int maxCount;
     int maxBlinks;
@@ -170,7 +166,7 @@ private:
     int processInput();
 
     /// @brief
-    /// @return
+    /// @return 0=message sent correctly, 1=there was already a message in the queue, 2=error
     int sendUplinkMessage();
 
     /// @brief blinks the on-board led
@@ -186,7 +182,7 @@ private:
 
     /// @brief
     /// @param ms
-    void sleep(int ms);
+    void sleep(int ms, bool noInterrupt = false);
 
     /// @brief
     void handleError();

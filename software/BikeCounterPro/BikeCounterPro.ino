@@ -10,7 +10,6 @@ void setup()
   bc->setConfigSwitchPin(9);
   bc->setBatteryVoltagePin(A0);
   bc->setPirPowerPin(2);
-  bc->setDebugSleepTime(300000ul); // 5*60*1000 ms
   bc->setSyncTimeInterval(120ul);  // 2*60 s
   bc->setMaxBlinks(50);
   bc->setMaxCount(1000);

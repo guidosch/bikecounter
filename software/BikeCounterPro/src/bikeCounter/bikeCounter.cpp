@@ -62,7 +62,7 @@ void BikeCounter::loop()
                 break;
             case 2:
                 timeSyncStat = 0;
-                sleep(2 * 60 * 1000);
+                sleep(syncTimeInterval * 1000UL);
                 break;
             }
         }
@@ -124,6 +124,9 @@ void BikeCounter::loop()
         if (!debugFlag || (debugFlag && (millis() > sleepEndMillis)) || (motionDetected && !(preSleepStatus == Status::timeSync)))
         {
             currentStatus = preSleepStatus;
+
+            // disable the pir sensor
+            digitalWrite(pirPowerPin, LOW);
         }
         break;
 
@@ -222,14 +225,6 @@ int BikeCounter::setup()
 
     // connect to lora network
     loRaConnector->setup(appEui, appKey, &processDownlinkMessage);
-
-    // TODO: This is only temporary to keep the old connection order. This should be removed
-    // and the connection should be attempted in the first normal loop.
-    while (loRaConnector->getStatus() != LoRaConnector::Status::connected)
-    {
-        loRaConnector->loop();
-        delay(100);
-    }
 
     logger.push("Lora setup finished");
     logger.push("RTC setup started");
@@ -336,9 +331,6 @@ int BikeCounter::processInput()
 
 int BikeCounter::sendUplinkMessage()
 {
-    // disable the pir sensor
-    digitalWrite(pirPowerPin, LOW);
-
     blinkLED(2);
 
     dataHandler.setStatus(currentStatus == Status::timeSync ? 7 : 0);
@@ -355,7 +347,7 @@ int BikeCounter::sendUplinkMessage()
     loRaConnector->loop(5);
     if (loRaConnector->getStatus() != LoRaConnector::Status::connected)
     {
-        // TODO: return error and reconnect
+        return 2;
     }
 
     int err = loRaConnector->sendMessage(dataHandler.getPayload(), dataHandler.getPayloadLength());
@@ -402,24 +394,6 @@ int BikeCounter::waitForLoRaModule()
         return 0;
     case LoRaConnector::Status::error:
         return 2;
-        // TODO
-        switch (loRaConnector->getErrorId())
-        {
-        case 2:
-            // Failed to connect to LoRa network
-            // wait for 30min and try again
-            sleep(30UL * 60UL * 1000UL);
-            break;
-        case 3:
-            // Error sending message
-            // wait for 5min and try again
-            sleep(5UL * 60UL * 1000UL);
-            break;
-        default:
-            loRaConnector->reset();
-            break;
-        }
-        break;
     case LoRaConnector::Status::fatalError:
         loRaConnector->reset();
         return 3;
@@ -427,14 +401,6 @@ int BikeCounter::waitForLoRaModule()
         return 1;
     }
 }
-
-// TODO
-// delay(200);
-
-// enable the pir sensor
-// digitalWrite(pirPowerPin, HIGH);
-
-// delay(200);
 
 void BikeCounter::blinkLED(int times)
 {
@@ -481,7 +447,7 @@ float BikeCounter::getBatteryVoltage()
     return analogRead(batteryVoltagePin) * 3.3f / 1023.0f / 1.2f * (1.2f + 0.33f);
 }
 
-void BikeCounter::sleep(int ms)
+void BikeCounter::sleep(int ms, bool noInterrupt)
 {
     logger.push("Going to sleep for " + String(ms) + "ms (" + String((int)(ms / 1000)) + "s / " + String((int)(ms / 60000)) + "min)");
     logger.loop();
@@ -489,6 +455,12 @@ void BikeCounter::sleep(int ms)
     preSleepStatus = currentStatus;
     currentStatus = Status::sleepState;
     motionDetected = false;
+
+    if ((currentStatus == Status::collectData) && !noInterrupt)
+    {
+        // enable the PIR sensor
+        digitalWrite(pirPowerPin, HIGH);
+    }
 
     if (debugFlag)
     {
@@ -552,6 +524,29 @@ void BikeCounter::handleError()
         totalCounter = 0;
         currentStatus = collectData;
         sleep(60UL * 1000UL); // 1min
+    case 4:
+        // Reset the LoRa module or/and wait some time
+        switch (loRaConnector->getErrorId())
+        {
+        case 2:
+            // Failed to connect to LoRa network
+            // wait for 30min and try again
+            loRaConnector->reset();
+            currentStatus = Status::collectData;
+            sleep(30UL * 60UL * 1000UL, true);
+            break;
+        case 3:
+            // Error sending message
+            // wait for 5min and try again
+            currentStatus = Status::collectData;
+            sleep(5UL * 60UL * 1000UL, true);
+            break;
+        default:
+            loRaConnector->reset();
+            currentStatus = Status::collectData;
+            break;
+        }
+        break;
     }
 }
 
