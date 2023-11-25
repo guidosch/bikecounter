@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 #include <MKRWAN.h>
-#include "../statusLogger/statusLogger.hpp"
+#include "../statusLogger/extendedStatusLogger.hpp"
 
 class LoRaConnector
 {
@@ -30,7 +30,7 @@ public:
     String getErrorMsg() { return String(errorMsg[errorId]); }
     void setAppEui(String appEui) { eui = appEui; }
     void setAppKey(String appKey) { key = appKey; }
-    void setup(String appEui, String appKey, StatusLogger *statusLogger, int (*downlinkCallbackFunction)(int *, int));
+    void setup(String appEui, String appKey, int (*downlinkCallbackFunction)(int *, int));
     void loop(unsigned int times = 1u);
     void reset();
     /// @brief
@@ -50,7 +50,7 @@ private:
     // Thread-save Singleton (not needed for Arduino)
     // static std::mutex mutex_;
 
-    StatusLogger *logger{nullptr};
+    ExtendedStatusLogger logger = ExtendedStatusLogger("LoRaConnector:");
     LoRaModem modem = LoRaModem(Serial1);
     Status currentStatus = disconnected;
     String eui;

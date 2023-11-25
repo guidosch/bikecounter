@@ -8,6 +8,12 @@
 class StatusLogger
 {
 public:
+    // Singletons should not be cloneable and not be assignable.
+    StatusLogger(StatusLogger &other) = delete;
+    void operator=(const StatusLogger &) = delete;
+
+    static StatusLogger *getInstance();
+
     enum Output
     {
         noOutput,
@@ -18,10 +24,16 @@ public:
     void setup(Output ot);
     void loop();
     void push(const std::string msg);
-    void push(String &msg);
-    void push(const char * msg);
+
+protected:
+    StatusLogger() {}
+    ~StatusLogger() {}
 
 private:
+    static StatusLogger *instance;
+    // Thread-save Singleton (not needed for Arduino)
+    // static std::mutex mutex_;
+
     enum Status
     {
         notReady,

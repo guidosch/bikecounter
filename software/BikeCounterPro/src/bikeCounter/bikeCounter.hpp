@@ -8,7 +8,7 @@
 #include <SPI.h>
 #include <SparkFun_SPI_SerialFlash.h>
 #include "../../config.h"
-#include "../statusLogger/statusLogger.hpp"
+#include "../statusLogger/extendedStatusLogger.hpp"
 #include "../LoRaConnector/LoRaConnector.hpp"
 #include "../dataPackage/dataPackage.hpp"
 #include "../timerSchedule/timerSchedule.hpp"
@@ -95,7 +95,7 @@ private:
     int maxBlinks;
 
     // Object to log the status of the device
-    StatusLogger logger = StatusLogger();
+    ExtendedStatusLogger logger = ExtendedStatusLogger("BikeCounter:");
 
     // Object to handel all the LoRa stuff
     LoRaConnector *loRaConnector = LoRaConnector::getInstance();

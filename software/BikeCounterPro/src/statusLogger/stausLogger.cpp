@@ -1,5 +1,20 @@
 #include "statusLogger.hpp"
 
+StatusLogger *StatusLogger::instance = nullptr;
+// Thread-save Singleton (not needed for Arduino)
+// std::mutex LoRaConnector::mutex_;
+
+StatusLogger *StatusLogger::getInstance()
+{
+    // Thread-save Singleton (not needed for Arduino)
+    // std::lock_guard<std::mutex> lock(mutex_);
+    if (instance == nullptr)
+    {
+        instance = new StatusLogger();
+    }
+    return instance;
+}
+
 void StatusLogger::setup(Output ot)
 {
     outputType = ot;
@@ -54,18 +69,6 @@ void StatusLogger::loop()
 }
 
 void StatusLogger::push(const std::string msg)
-{   
+{
     msgQueue.push(msg);
-}
-
-void StatusLogger::push(String &msg)
-{
-    std::string str{msg.c_str()};
-    msgQueue.push(str);
-}
-
-void StatusLogger::push(const char *msg)
-{
-    std::string str{msg};
-    msgQueue.push(str);
 }

@@ -175,7 +175,7 @@ int BikeCounter::setup()
 
     // initialize the logging instance
     StatusLogger::Output outputType = debugFlag ? StatusLogger::Output::toSerial : StatusLogger::Output::noOutput;
-    logger.setup(outputType);
+    StatusLogger::getInstance()->setup(outputType);
 
     // load config from flash
     logger.push("Load config from flash");
@@ -221,7 +221,7 @@ int BikeCounter::setup()
     delay(500);
 
     // connect to lora network
-    loRaConnector->setup(appEui, appKey, &logger, &processDownlinkMessage);
+    loRaConnector->setup(appEui, appKey, &processDownlinkMessage);
 
     // TODO: This is only temporary to keep the old connection order. This should be removed
     // and the connection should be attempted in the first normal loop.
