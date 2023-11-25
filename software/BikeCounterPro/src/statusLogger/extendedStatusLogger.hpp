@@ -15,8 +15,7 @@ public:
 
     void push(const std::string msg)
     {
-        std::string str = unitPrefix + msg;
-        logger->push(msg);
+        logger->push(unitPrefix + msg);
     }
 
     void push(String &msg)

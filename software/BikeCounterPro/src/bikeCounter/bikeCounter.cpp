@@ -121,7 +121,7 @@ void BikeCounter::loop()
     break;
 
     case Status::sleepState:
-        if (!debugFlag || (debugFlag && (millis() > sleepEndMillis)))
+        if (!debugFlag || (debugFlag && (millis() > sleepEndMillis)) || (motionDetected && !(preSleepStatus == Status::timeSync)))
         {
             currentStatus = preSleepStatus;
         }
@@ -483,11 +483,12 @@ float BikeCounter::getBatteryVoltage()
 
 void BikeCounter::sleep(int ms)
 {
-    logger.push("Going to sleep for " + String(ms) + "ms (" + String((int)(ms/1000)) + "s / " + String((int)(ms/60000))+ "min)");
+    logger.push("Going to sleep for " + String(ms) + "ms (" + String((int)(ms / 1000)) + "s / " + String((int)(ms / 60000)) + "min)");
     logger.loop();
 
     preSleepStatus = currentStatus;
     currentStatus = Status::sleepState;
+    motionDetected = false;
 
     if (debugFlag)
     {

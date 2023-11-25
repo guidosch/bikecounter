@@ -1,5 +1,4 @@
 #include "LoRaConnector.hpp"
-#include <sstream>
 
 LoRaConnector *LoRaConnector::instance = nullptr;
 // Thread-save Singleton (not needed for Arduino)
@@ -30,9 +29,9 @@ void LoRaConnector::setup(String appEui, String appKey, int (*downlinkCallbackFu
     };
 
     logger.push(String("Module version: ") +
-                 String(modem.version()));
+                String(modem.version()));
     logger.push(String("Device EUI: ") +
-                 String(modem.deviceEUI()));
+                String(modem.deviceEUI()));
     logger.loop();
 }
 
@@ -113,14 +112,14 @@ void LoRaConnector::loop(unsigned int times)
                 rcv[i++] = modem.read();
             }
 
-            std::ostringstream os("Received ");
+            std::string os("Received ");
             for (unsigned int j = 0; j < i; j++)
             {
-                os << (rcv[j] >> 4);
-                os << (rcv[j] & 0xF);
-                os << " ";
+                os.append(std::to_string((rcv[j] >> 4)));
+                os.append(std::to_string((rcv[j] & 0xF)));
+                os.append(" ");
             }
-            logger.push(os.str());
+            logger.push(os);
             logger.loop();
 
             // call the downlink callback function and pass the payload
