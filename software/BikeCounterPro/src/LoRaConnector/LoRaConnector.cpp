@@ -30,9 +30,9 @@ void LoRaConnector::setup(String appEui, String appKey, StatusLogger *statusLogg
         return;
     };
 
-    logger->push(String("Your module version is: ") +
+    logger->push(String("LoRa Connector: Module version: ") +
                  String(modem.version()));
-    logger->push(String("Your device EUI is: ") +
+    logger->push(String("LoRa Connector: Device EUI: ") +
                  String(modem.deviceEUI()));
     logger->loop();
 }
@@ -74,7 +74,7 @@ void LoRaConnector::loop(unsigned int times)
         case transmitting: // uplink
         {
             int err = sendData();
-            if (!err)
+            if (err)
             {
                 currentStatus = error;
             }
@@ -96,7 +96,7 @@ void LoRaConnector::loop(unsigned int times)
                 }
                 else
                 {
-                    logger->push("No downlink massage received.");
+                    logger->push("LoRa Connector: No downlink massage received.");
                     logger->loop();
 
                     currentStatus = connected;
@@ -114,7 +114,7 @@ void LoRaConnector::loop(unsigned int times)
                 rcv[i++] = modem.read();
             }
 
-            std::ostringstream os("Received: ");
+            std::ostringstream os("LoRa Connector: Received ");
             for (unsigned int j = 0; j < i; j++)
             {
                 os << (rcv[j] >> 4);
@@ -183,7 +183,7 @@ int LoRaConnector::sendMessage(const uint8_t *buffer, size_t size)
     {
         return 1;
     }
-    if (currentStatus == connected)
+    if (currentStatus != connected)
     {
         return 2;
     }
@@ -193,17 +193,22 @@ int LoRaConnector::sendMessage(const uint8_t *buffer, size_t size)
         msgBuffer[i] = buffer[i];
     }
     sendRequested = 1;
+    logger->push("LoRa Connector: Message enqueued");
+    logger->loop();
+    return 0;
 }
 
 int LoRaConnector::sendData()
 {
+    logger->push("LoRa Connector: Message transmission started");
+    logger->loop();
     modem.beginPacket();
     modem.write(msgBuffer, msgSize);
     int err = modem.endPacket(false);
 
     if (err > 0)
     {
-        logger->push("Message sent correctly");
+        logger->push("LoRa Connector: Message sent correctly");
         logger->loop();
         return 0;
     }

@@ -22,8 +22,9 @@ void BikeCounter::loop()
     {
     case Status::setupStep:
         err = setup();
-        currentStatus = (!err) ? Status::initSleep : Status::errorState;
+        currentStatus = (err) ? Status::errorState : Status::initSleep;
         break;
+
     case Status::initSleep:
         // RTC bug prevention
         // If the device runs on battery the rtc seems to reinitialize it's register after the first sleep period.
@@ -31,36 +32,109 @@ void BikeCounter::loop()
         currentStatus = Status::firstWakeUp;
         sleep(2000);
         break;
+
     case Status::firstWakeUp:
+        logger.push("First wake-up");
+        logger.loop();
         rtc.setEpoch(defaultRTCEpoch);
+        logger.push("RTC reset");
+        logger.loop();
         currentStatus = Status::timeSync;
+        logger.push("Time sync");
+        logger.loop();
         break;
+
     case Status::timeSync:
-        // TODO: Implement time sync
+        // while rtc time < defaultRTCEpoch + 1 month try to sync
+        if (rtc.getEpoch() < (defaultRTCEpoch + 2678400ul))
+        {
+            switch (timeSyncStat)
+            {
+            case 0:
+                sendUplinkMessage();
+                timeSyncStat = 1;
+                break;
+            case 1:
+                if (!waitForLoRaModule())
+                {
+                    timeSyncStat = 2;
+                }
+                break;
+            case 2:
+                timeSyncStat = 0;
+                sleep(2 * 60 * 1000);
+                break;
+            }
+        }
+        else
+        {
+            currentStatus = Status::collectData;
+        }
         break;
+
     case Status::collectData:
-        processInput();
+    {
+        switch (processInput())
+        {
+        case 0:
+        {
+            std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> currentTime{std::chrono::seconds{rtc.getEpoch()}};
+            sleep(getRemainingSleepTime(currentTime));
+        }
         break;
+        case 1:
+            currentStatus = Status::sendPackage;
+            break;
+        case 2:
+            currentStatus = Status::errorState;
+            break;
+        }
+    }
+    break;
+
     case Status::sendPackage:
         err = sendUplinkMessage();
+        currentStatus = (err) ? Status::errorState : Status::waitForLoRa;
         break;
+
     case Status::waitForLoRa:
-        waitForLoRaModule();
+    {
+        switch (waitForLoRaModule())
+        {
+        case 0:
+        {
+            currentStatus = Status::collectData;
+            std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> currentTime{std::chrono::seconds{rtc.getEpoch()}};
+            sleep(getRemainingSleepTime(currentTime));
+        }
         break;
-    case Status::adjustClock:
-        break;
+        case 1:
+            // wait
+            break;
+        case 2:
+            currentStatus = Status::errorState;
+            break;
+        case 3:
+            break;
+        }
+    }
+    break;
+
     case Status::sleepState:
         if (!debugFlag || (debugFlag && (millis() > sleepEndMillis)))
         {
             currentStatus = preSleepStatus;
         }
         break;
+
     case Status::errorState:
         handleError();
         break;
+
     default:
         break;
     }
+    delay(50);
 }
 
 void BikeCounter::reset()
@@ -115,7 +189,6 @@ int BikeCounter::setup()
     if (flash.begin(PIN_FLASH_CS, 2000000, SPI1) == false)
     {
         errorId = 1;
-        currentStatus = errorState;
         return 1;
     }
 
@@ -195,16 +268,14 @@ int BikeCounter::setup()
     return 0;
 }
 
+/// @brief
+/// @return 0=no action; 1=send package 2=error
 int BikeCounter::processInput()
 {
     // get current time
     std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> currentTime{std::chrono::seconds{rtc.getEpoch()}};
     date::hh_mm_ss<std::chrono::seconds> currentTime_hms = date::make_time(currentTime.time_since_epoch() - date::floor<date::days>(currentTime).time_since_epoch());
     int timerCalled = 0;
-
-    logger.push(String("Device status = ") +
-                String(currentStatus));
-    logger.loop();
 
     // check if a motion was detected.
     if (motionDetected)
@@ -238,17 +309,16 @@ int BikeCounter::processInput()
         int currentThreshold = dataHandler.getMaxCount(timeHandler.getCurrentIntervalMinutes(currentTime));
         if (counter >= currentThreshold)
         {
-            currentStatus = Status::sendPackage;
-
             // check if the floating interrupt pin bug occurred
             // method 1: check if the totalCount exceeds the maxCount between the timer calls.
             // method 2: detect if the count goes up very quickly. (faster then the board is able to send)
             if ((totalCounter >= maxCount) || (counter > (currentThreshold + 10)))
             {
                 errorId = 2;
-                currentStatus = Status::errorState;
                 return 2;
             }
+
+            return 1;
         }
     }
     else
@@ -256,12 +326,10 @@ int BikeCounter::processInput()
         // if no motion was detected it means that the timer caused the wakeup.
         logger.push("Timer called");
         logger.loop();
-        currentStatus = Status::sendPackage;
         totalCounter = 0;
         nextAlarm = timeHandler.getNextIntervalTime(currentTime);
+        return 1;
     }
-
-    sleep(getRemainingSleepTime(currentTime));
 
     return 0;
 }
@@ -273,7 +341,7 @@ int BikeCounter::sendUplinkMessage()
 
     blinkLED(2);
 
-    dataHandler.setStatus(0);
+    dataHandler.setStatus(currentStatus == Status::timeSync ? 7 : 0);
     dataHandler.setHwVersion(hwVersion);
     dataHandler.setSwVersion(swVersion);
     dataHandler.setMotionCount(counter);
@@ -294,8 +362,6 @@ int BikeCounter::sendUplinkMessage()
 
     if (!err)
     {
-        currentStatus = Status::waitForLoRa;
-
         logger.push(String("Message enqueued for transmission! (count = ") +
                     String(counter) +
                     String(" / temperature = ") +
@@ -319,22 +385,24 @@ int BikeCounter::sendUplinkMessage()
     else
     {
         errorId = 4;
-        currentStatus = Status::errorState;
     }
 
     return err;
 }
 
-void BikeCounter::waitForLoRaModule()
+/// @brief
+/// @return 0=connected, 1=busy, 2=error, 3=fatalError
+int BikeCounter::waitForLoRaModule()
 {
-    loRaConnector->loop();
+    loRaConnector->loop(10);
 
     switch (loRaConnector->getStatus())
     {
     case LoRaConnector::Status::connected:
-        currentStatus = Status::collectData;
-        break;
+        return 0;
     case LoRaConnector::Status::error:
+        return 2;
+        // TODO
         switch (loRaConnector->getErrorId())
         {
         case 2:
@@ -354,7 +422,9 @@ void BikeCounter::waitForLoRaModule()
         break;
     case LoRaConnector::Status::fatalError:
         loRaConnector->reset();
-        break;
+        return 3;
+    default:
+        return 1;
     }
 }
 
@@ -413,11 +483,12 @@ float BikeCounter::getBatteryVoltage()
 
 void BikeCounter::sleep(int ms)
 {
-    logger.push("Going to sleep for " + String(ms) + "ms");
+    logger.push("Going to sleep for " + String(ms) + "ms (" + String((int)(ms/1000)) + "s / " + String((int)(ms/60000))+ "min)");
     logger.loop();
 
     preSleepStatus = currentStatus;
     currentStatus = Status::sleepState;
+
     if (debugFlag)
     {
         sleepEndMillis = millis() + ms;

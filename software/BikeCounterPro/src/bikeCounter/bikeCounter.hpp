@@ -33,7 +33,6 @@ public:
         collectData,
         sendPackage,
         waitForLoRa,
-        adjustClock,
         sleepState,
         errorState
     };
@@ -135,10 +134,12 @@ private:
     int configFlag = 0;
     // Last call of main loop in debug mode
     unsigned long lastMillis = millis() - 10 * 60 * 1000;
-    // default startup date 01.01.2022 (1640995200)
-    uint32_t defaultRTCEpoch = 1640995200ul;
+    // default startup date 01.01.2023 (1672531200)
+    uint32_t defaultRTCEpoch = 1672531200ul;
     // Keep track of the last RTC correction (Prevents that the time correction is applied multiple times due to network lag and multiple enqueued downlinks with the same timeDrift information)
     uint32_t lastRTCCorrection = 0ul;
+    // time sync state machine status
+    unsigned timeSyncStat = 0;
     // SPI serial flash parameter
     const byte PIN_FLASH_CS = 32;
     // SPI serial flash object
@@ -194,7 +195,7 @@ private:
     unsigned long getRemainingSleepTime(std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> currentTime);
 
     /// @brief
-    void waitForLoRaModule();
+    int waitForLoRaModule();
 
     /// @brief
     /// @param buffer
