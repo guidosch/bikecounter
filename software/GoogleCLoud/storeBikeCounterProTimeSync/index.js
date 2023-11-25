@@ -1,5 +1,5 @@
 const functions = require("firebase-functions"),
-  admin = require("firebase-admin");
+admin = require("firebase-admin");
 const https = require("https");
 
 const app = admin.initializeApp();
@@ -12,6 +12,7 @@ const auth = app.auth();
 const ttnWebhookId = "google-cloud-function";
 
 exports.storeBikecounterData = (req, res) => {
+  
   let payload = req.body;
   let deviceId;
   const app_id = payload.end_device_ids.application_ids.application_id;
@@ -28,7 +29,6 @@ exports.storeBikecounterData = (req, res) => {
     const hwVersion = devicePayload.hwVersion;
     const timeArray = devicePayload.timeArray;
     const timeDrift = devicePayload.timeDrift;
-    const gateways = payload.uplink_message.rx_metadata[0].gateway_ids;
     let transmissionTime = devicePayload.deviceTransmissionTime;
     if (transmissionTime) {
       //is sent as seconds since 1970 UTC
@@ -46,6 +46,17 @@ exports.storeBikecounterData = (req, res) => {
         map.set(t, map.get(t) + 1);
       }
     });
+
+    // LoRa network informations
+    let gateways = [];
+    for (let gateway of payload.uplink_message.rx_metadata) { 
+      gateways.push({id: gateway.gateway_ids.gateway_id,
+                  eui: gateway.gateway_ids.eui,
+                  rssi: gateway.rssi,
+                  snr: gateway.snr });
+    }
+    const airtime = payload.uplink_message.consumed_airtime;
+
     // statId == 7 is the time sync call
     if (app_id == "bikecounter" && statId != 7) {
       try {
@@ -58,6 +69,7 @@ exports.storeBikecounterData = (req, res) => {
           temperature: temperature,
           stat: stat,
           gateways: gateways,
+          airtime: airtime,
           swVersion: swVersion,
           hwVersion: hwVersion,
         });
