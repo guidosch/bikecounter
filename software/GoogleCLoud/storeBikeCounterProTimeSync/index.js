@@ -61,22 +61,26 @@ exports.storeBikecounterData = (req, res) => {
     }
     const airtime = payload.uplink_message.consumed_airtime;
 
-    // statId == 7 is the time sync call
-    if (app_id == "bikecounter" && statId != 7) {
-      try {
+    // check the time deviation and post the sync downlink if necessary
+    processTimeSync(req, timeDrift);
+
+    if (app_id == "bikecounter" || app_id == "bikecounter-dev") {
+      // statId == 7 is the time sync call
+      if (statId != 7) {
         // get the collection id (trail) from the deviceEUI
         db.collection("internal-deviceId-trail-ct")
           .where("deviceEUI", "==", deviceEUI)
-          .orderBy("validFrom")
+          .orderBy("validFrom", "desc")
           .limit(1)
           .get()
           .then((snapshot) => {
             if (snapshot.empty) {
-              console.log("No trail for device found!");
+              console.warn("No trail for device found!");
+              res.status(404).send(deviceId);
             } else {
               snapshot.forEach((doc) => {
-                console.log(doc.data().collectionID);
                 const collId = doc.data().collectionID;
+                console.log("Device association found: deviceEUI=", deviceEUI, " trail/collection=", collId);
 
                 // store the parsed payload into the trail collection
                 firestore.collection(`${collId}`).add({
@@ -102,70 +106,79 @@ exports.storeBikecounterData = (req, res) => {
                     .add({ counter: map.get(timestamp), timestamp: date });
                   console.log(`Added data for ${collId}`);
                 }
+
+                res.status(200).send(deviceId);
               });
             }
           })
           .catch((err) => {
-            console.error("Error while performing queries! ", err);
+            console.error(
+              "Error while trying to store data for device: ",
+              deviceEUI,
+              " error-msg:",
+              err
+            );
           });
-      } catch (error) {
-        console.error(
-          `error while trying to store data for: ${deviceId}`,
-          error
-        );
+      } else {
+        console.log("TimeSync request");
+        res.status(200).send(deviceId);
       }
+    } else {
+      console.warn("Request does not match the criteria");
+      res.status(401).send(deviceId);
     }
-
-    // send downlink package with timeDrift information
-    if (Math.abs(timeDrift) > 15 * 60) {
-      // create package data
-      const data = JSON.stringify({
-        downlinks: [
-          {
-            decoded_payload: {
-              timeDrift: timeDrift,
-            },
-          },
-        ],
-      });
-
-      // POST request options
-      const replaceURL = req.headers["x-downlink-replace"];
-
-      const options = {
-        hostname: "eu1.cloud.thethings.network",
-        port: 443,
-        path: replaceURL,
-        method: "POST",
-        headers: {
-          Authorization: "Bearer " + req.headers["x-downlink-apikey"],
-          "Content-Type": "application/json",
-          "Content-Length": data.length,
-        },
-      };
-
-      //console.log("options: "+JSON.stringify(options));
-
-      // perform the post request to the ttn webhook
-      const reqDown = https.request(options, (resDown) => {
-        console.log(`statusCode: ${res.statusCode}`);
-
-        resDown.on("data", (d) => {
-          process.stdout.write(d);
-        });
-      });
-
-      reqDown.on("error", (error) => {
-        console.error(error);
-      });
-
-      reqDown.write(data);
-      reqDown.end();
-    }
-
-    res.status(200).send(deviceId);
   } else {
     //console.error("payload not valid: " + JSON.stringify(payload));
-    res.status(404).send(deviceId);
+    console.error("Payload not valid");
+    res.status(400).send(deviceId);
   }
 };
+
+function processTimeSync(req, timeDrift) {
+  // send downlink package with timeDrift information
+  if (Math.abs(timeDrift) > 15 * 60) {
+    // create package data
+    const data = JSON.stringify({
+      downlinks: [
+        {
+          decoded_payload: {
+            timeDrift: timeDrift,
+          },
+        },
+      ],
+    });
+
+    // POST request options
+    const replaceURL = req.headers["x-downlink-replace"];
+
+    const options = {
+      hostname: "eu1.cloud.thethings.network",
+      port: 443,
+      path: replaceURL,
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + req.headers["x-downlink-apikey"],
+        "Content-Type": "application/json",
+        "Content-Length": data.length,
+      },
+    };
+
+    //console.log("options: "+JSON.stringify(options));
+
+    // perform the post request to the ttn webhook
+    const reqDown = https.request(options, (resDown) => {
+      console.log(`statusCode: ${res.statusCode}`);
+
+      resDown.on("data", (d) => {
+        process.stdout.write(d);
+      });
+    });
+
+    reqDown.on("error", (error) => {
+      console.error(error);
+    });
+
+    reqDown.write(data);
+    reqDown.end();
+  }
+}
