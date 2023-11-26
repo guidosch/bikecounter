@@ -64,68 +64,85 @@ exports.storeBikecounterData = (req, res) => {
     // check the time deviation and post the sync downlink if necessary
     processTimeSync(req, timeDrift);
 
-    if (app_id == "bikecounter" || app_id == "bikecounter-dev") {
-      // statId == 7 is the time sync call
-      if (statId != 7) {
-        // get the collection id (trail) from the deviceEUI
-        db.collection("internal-deviceId-trail-ct")
-          .where("deviceEUI", "==", deviceEUI)
-          .orderBy("validFrom", "desc")
-          .limit(1)
-          .get()
-          .then((snapshot) => {
-            if (snapshot.empty) {
-              console.warn("No trail for device found!");
-              res.status(404).send(deviceId);
-            } else {
-              snapshot.forEach((doc) => {
-                const collId = doc.data().collectionID;
-                console.log("Device association found: deviceEUI=", deviceEUI, " trail/collection=", collId);
+    switch (app_id) {
+      case "bikecounter":
+        // statId == 7 is the time sync call
+        if (statId != 7) {
+          // get the collection id (trail) from the deviceEUI
+          db.collection("internal-deviceId-trail-ct")
+            .where("deviceEUI", "==", deviceEUI)
+            .orderBy("validFrom", "desc")
+            .limit(1)
+            .get()
+            .then((snapshot) => {
+              if (snapshot.empty) {
+                console.warn(
+                  "No trail for device found! DeviceEUI=",
+                  deviceEUI
+                );
+                res.status(404).send(deviceId);
+              } else {
+                snapshot.forEach((doc) => {
+                  const collId = doc.data().collectionID;
+                  console.log(
+                    "Device association found: deviceEUI=",
+                    deviceEUI,
+                    " trail/collection=",
+                    collId
+                  );
 
-                // store the parsed payload into the trail collection
-                firestore.collection(`${collId}`).add({
-                  counter: 0,
-                  timestamp: new Date(transmissionTime).toISOString(),
-                  batteryLevel: batteryLevel,
-                  batteryVoltage: batteryVoltage,
-                  humidity: humidity,
-                  temperature: temperature,
-                  stat: stat,
-                  gateways: gateways,
-                  airtime: airtime,
-                  swVersion: swVersion,
-                  hwVersion: hwVersion,
+                  // store the parsed payload into the trail collection
+                  firestore.collection(`${collId}`).add({
+                    counter: 0,
+                    timestamp: new Date(transmissionTime).toISOString(),
+                    batteryLevel: batteryLevel,
+                    batteryVoltage: batteryVoltage,
+                    humidity: humidity,
+                    temperature: temperature,
+                    stat: stat,
+                    gateways: gateways,
+                    airtime: airtime,
+                    swVersion: swVersion,
+                    hwVersion: hwVersion,
+                  });
+                  console.log(`Added health data for ${collId}`);
+
+                  //one more DB entry for every timestamp
+                  for (let timestamp of map.keys()) {
+                    let date = new Date(timestamp).toISOString();
+                    firestore
+                      .collection(`${collId}`)
+                      .add({ counter: map.get(timestamp), timestamp: date });
+                    console.log(`Added data for ${collId}`);
+                  }
+
+                  res.status(200).send(deviceId);
                 });
-                console.log(`Added health data for ${collId}`);
+              }
+            })
+            .catch((err) => {
+              console.error(
+                "Error while trying to store data for device: ",
+                deviceEUI,
+                " error-msg:",
+                err
+              );
+            });
+        } else {
+          console.log("TimeSync request");
+          res.status(200).send(deviceId);
+        }
+        break;
 
-                //one more DB entry for every timestamp
-                for (let timestamp of map.keys()) {
-                  let date = new Date(timestamp).toISOString();
-                  firestore
-                    .collection(`${collId}`)
-                    .add({ counter: map.get(timestamp), timestamp: date });
-                  console.log(`Added data for ${collId}`);
-                }
-
-                res.status(200).send(deviceId);
-              });
-            }
-          })
-          .catch((err) => {
-            console.error(
-              "Error while trying to store data for device: ",
-              deviceEUI,
-              " error-msg:",
-              err
-            );
-          });
-      } else {
-        console.log("TimeSync request");
+      case "bikecounter-dev":
+        console.log("Dev-App request received. (no database update)");
         res.status(200).send(deviceId);
-      }
-    } else {
-      console.warn("Request does not match the criteria");
-      res.status(401).send(deviceId);
+        break;
+
+      default:
+        console.warn("Request does not match the criteria");
+        res.status(401).send(deviceId);
+        break;
     }
   } else {
     //console.error("payload not valid: " + JSON.stringify(payload));
