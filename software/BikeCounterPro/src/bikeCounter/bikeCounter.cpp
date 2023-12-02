@@ -62,7 +62,7 @@ void BikeCounter::loop()
                 break;
             case 2:
                 timeSyncStat = 0;
-                sleep(syncTimeInterval * 1000UL);
+                sleep(syncTimeInterval * 1000UL, true);
                 break;
             }
         }
@@ -74,6 +74,9 @@ void BikeCounter::loop()
 
     case Status::collectData:
     {
+        // enable the PIR sensor
+        digitalWrite(pirPowerPin, HIGH);
+
         switch (processInput())
         {
         case 0:
@@ -84,6 +87,8 @@ void BikeCounter::loop()
         break;
         case 1:
             currentStatus = Status::sendPackage;
+            // disable the PIR sensor
+            digitalWrite(pirPowerPin, LOW);
             break;
         case 2:
             currentStatus = Status::errorState;
@@ -103,6 +108,9 @@ void BikeCounter::loop()
         {
         case 0:
         {
+            // enable the PIR sensor
+            digitalWrite(pirPowerPin, HIGH);
+
             currentStatus = Status::collectData;
             std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> currentTime{std::chrono::seconds{rtc.getEpoch()}};
             sleep(getRemainingSleepTime(currentTime));
@@ -124,9 +132,6 @@ void BikeCounter::loop()
         if (!debugFlag || (debugFlag && (millis() > sleepEndMillis)) || (motionDetected && !(preSleepStatus == Status::timeSync)))
         {
             currentStatus = preSleepStatus;
-
-            // disable the pir sensor
-            digitalWrite(pirPowerPin, LOW);
         }
         break;
 
@@ -254,8 +259,8 @@ int BikeCounter::setup()
     delay(200);
 
     // setup counter interrupt
-    pinMode(counterInterruptPin, INPUT_PULLDOWN);
-    LowPower.attachInterruptWakeup(counterInterruptPin, onMotionDetected, RISING);
+    pinMode(counterInterruptPin, INPUT);
+    LowPower.attachInterruptWakeup(digitalPinToInterrupt(counterInterruptPin), onMotionDetected, RISING);
 
     logger.push("Setup finished");
     logger.loop();
@@ -333,7 +338,10 @@ int BikeCounter::sendUplinkMessage()
 {
     blinkLED(2);
 
-    dataHandler.setStatus(currentStatus == Status::timeSync ? 7 : 0);
+    uint8_t stat = (currentStatus == Status::timeSync ? 7 : recErr);
+    recErr = false;
+
+    dataHandler.setStatus(stat);
     dataHandler.setHwVersion(hwVersion);
     dataHandler.setSwVersion(swVersion);
     dataHandler.setMotionCount(counter);
@@ -456,10 +464,10 @@ void BikeCounter::sleep(int ms, bool noInterrupt)
     currentStatus = Status::sleepState;
     motionDetected = false;
 
-    if ((currentStatus == Status::collectData) && !noInterrupt)
+    if (noInterrupt)
     {
         // enable the PIR sensor
-        digitalWrite(pirPowerPin, HIGH);
+        digitalWrite(pirPowerPin, LOW);
     }
 
     if (debugFlag)
@@ -476,6 +484,7 @@ void BikeCounter::handleError()
 {
     logger.push(errorMsg[errorId]);
     logger.loop();
+    recErr = true;
 
     switch (errorId)
     {
@@ -483,14 +492,14 @@ void BikeCounter::handleError()
         // Somehow we landed in the error state with no error pending.
         // This should never happen so we sleep for an hour and restart the device.
         currentStatus = Status::setupStep;
-        sleep(60UL * 60UL * 1000UL);
+        sleep(60UL * 60UL * 1000UL, true);
         break;
 
     case 1:
         // The SPI Flash memory chip could not be initialized hence we cant read the configuration data.
         // Lets sleep for an hour and try again.
         currentStatus = Status::setupStep;
-        sleep(60UL * 60UL * 1000UL);
+        sleep(60UL * 60UL * 1000UL, true);
         break;
 
     case 2:
@@ -505,7 +514,7 @@ void BikeCounter::handleError()
             digitalWrite(pirPowerPin, HIGH);
             totalCounter = 0;
             currentStatus = collectData;
-            sleep(10UL * 60UL * 1000UL); // 10min
+            sleep(10UL * 60UL * 1000UL, true); // 10min
         }
         else
         {
@@ -514,7 +523,7 @@ void BikeCounter::handleError()
             // shut down PIR and try it again in 5 hours
             digitalWrite(pirPowerPin, LOW);
             errorId = 3;
-            sleep(5UL * 60UL * 60UL * 1000UL); // 5h
+            sleep(5UL * 60UL * 60UL * 1000UL, true); // 5h
         }
         break;
 
@@ -524,16 +533,19 @@ void BikeCounter::handleError()
         totalCounter = 0;
         currentStatus = collectData;
         sleep(60UL * 1000UL); // 1min
+
     case 4:
         // Reset the LoRa module or/and wait some time
         switch (loRaConnector->getErrorId())
         {
+        case 1:
+            // failed to start the module
         case 2:
             // Failed to connect to LoRa network
-            // wait for 30min and try again
+            // wait for 60min and try again
             loRaConnector->reset();
             currentStatus = Status::collectData;
-            sleep(30UL * 60UL * 1000UL, true);
+            sleep(60UL * 60UL * 1000UL, true);
             break;
         case 3:
             // Error sending message
@@ -544,6 +556,8 @@ void BikeCounter::handleError()
         default:
             loRaConnector->reset();
             currentStatus = Status::collectData;
+            // enable the PIR sensor
+            digitalWrite(pirPowerPin, HIGH);
             break;
         }
         break;

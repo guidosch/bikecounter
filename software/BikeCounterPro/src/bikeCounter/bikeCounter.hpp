@@ -120,8 +120,6 @@ private:
     unsigned int timeArray[timeArraySize];
     // hour of the day for next package
     unsigned int hourOfDay = 0;
-    // Error counter for connection
-    int errorCounter = 0;
     // Error counter for pir-sensor
     int pirError = 0;
     // Holds the debug state of the dip switch
@@ -152,7 +150,8 @@ private:
                          "Floating interrupt pin detected.",
                          "PIR sensor error",
                          "Error while sending message"};
-
+    // recovered from error
+    bool recErr = false;
     // sleep state variables
     Status preSleepStatus = setupStep;
     unsigned long sleepEndMillis = 0UL;

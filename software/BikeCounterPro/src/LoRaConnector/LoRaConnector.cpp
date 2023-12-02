@@ -57,7 +57,6 @@ void LoRaConnector::loop(unsigned int times)
             else
             {
                 currentStatus = connected;
-                errorCount = 0;
             }
             break;
         }
@@ -133,16 +132,7 @@ void LoRaConnector::loop(unsigned int times)
         {
             logger.push(errorMsg[errorId]);
             logger.loop();
-            ++errorCount;
-
-            if (errorCount < 5)
-            {
-                currentStatus = disconnected;
-            }
-            else
-            {
-                currentStatus = fatalError;
-            }
+            currentStatus = disconnected;
             break;
         }
 
@@ -156,7 +146,6 @@ void LoRaConnector::reset()
 {
     modem.restart();
     currentStatus = disconnected;
-    errorCount = 0;
 }
 
 /// @brief Tries to connect to the LoRa WAN network

@@ -56,7 +56,6 @@ private:
     String eui;
     String key;
     int errorId = 0;
-    int errorCount = 0;
     int sendRequested = 0;
     uint8_t msgBuffer[51] = {0};
     size_t msgSize = 0;
