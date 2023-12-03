@@ -21,14 +21,6 @@ exports.storeBikecounterData = (req, res) => {
     deviceId = payload.end_device_ids.device_id;
     deviceEUI = payload.end_device_ids.dev_eui;
     const devicePayload = payload.uplink_message.decoded_payload;
-    const batteryLevel = devicePayload.batteryLevel;
-    const batteryVoltage = devicePayload.batteryVoltage;
-    const humidity = devicePayload.humidity;
-    const temperature = devicePayload.temperature;
-    const statId = devicePayload.statId;
-    const stat = devicePayload.stat;
-    const swVersion = devicePayload.swVersion;
-    const hwVersion = devicePayload.hwVersion;
     const timeArray = devicePayload.timeArray;
     const timeDrift = devicePayload.timeDrift;
     let transmissionTime = devicePayload.deviceTransmissionTime;
@@ -67,7 +59,7 @@ exports.storeBikecounterData = (req, res) => {
     switch (app_id) {
       case "bikecounter":
         // statId == 7 is the time sync call
-        if (statId != 7) {
+        if (devicePayload.statId != 7) {
           // get the collection id (trail) from the deviceEUI
           db.collection("internal-deviceId-trail-ct")
             .where("deviceEUI", "==", deviceEUI)
@@ -76,10 +68,7 @@ exports.storeBikecounterData = (req, res) => {
             .get()
             .then((snapshot) => {
               if (snapshot.empty) {
-                console.warn(
-                  "No trail for device found! DeviceEUI=",
-                  deviceEUI
-                );
+                console.warn("No trail for device found! DeviceEUI=", deviceEUI);
                 res.status(404).send(deviceId);
               } else {
                 snapshot.forEach((doc) => {
@@ -90,21 +79,18 @@ exports.storeBikecounterData = (req, res) => {
                     " trail/collection=",
                     collId
                   );
+                  
+                  // Build data document
+                  const dataDoc = devicePayload;
+                  dataDoc.counter = 0;
+                  dataDoc.timestamp = new Date(transmissionTime).toISOString();
+                  dataDoc.gateways = gateways;
+                  dataDoc.airtime = airtime;
+                  dataDoc.deviceEUI = deviceEUI;
+                  dataDoc.deviceId = deviceId;
 
                   // store the parsed payload into the trail collection
-                  firestore.collection(`${collId}`).add({
-                    counter: 0,
-                    timestamp: new Date(transmissionTime).toISOString(),
-                    batteryLevel: batteryLevel,
-                    batteryVoltage: batteryVoltage,
-                    humidity: humidity,
-                    temperature: temperature,
-                    stat: stat,
-                    gateways: gateways,
-                    airtime: airtime,
-                    swVersion: swVersion,
-                    hwVersion: hwVersion,
-                  });
+                  firestore.collection(`${collId}`).add(dataDoc);
                   console.log(`Added health data for ${collId}`);
 
                   //one more DB entry for every timestamp
