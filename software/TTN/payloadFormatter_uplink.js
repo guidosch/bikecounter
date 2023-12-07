@@ -22,12 +22,22 @@ function decodeUplink(input) {
   let batteryIndex = input.bytes[2] >> 3;
   data.batteryVoltage =
     Math.round(((1.5 / (32 - 1)) * batteryIndex + 3) * 100) / 100;
-  let coef = [-35946.107099583, 52310.9370900473, -29962.8071041224, 8431.4105127835, -1164.3507315616, 63.1475757459];
+  let coef = [
+    -35946.107099583, 52310.9370900473, -29962.8071041224, 8431.4105127835,
+    -1164.3507315616, 63.1475757459,
+  ];
   let b = data.batteryVoltage;
-  data.batteryLevel = Math.round(coef[5]*b*b*b*b*b + coef[4]*b*b*b*b + coef[3]*b*b*b + coef[2]*b*b + coef[1]*b + coef[0]);
+  data.batteryLevel = Math.round(
+    coef[5] * b * b * b * b * b +
+      coef[4] * b * b * b * b +
+      coef[3] * b * b * b +
+      coef[2] * b * b +
+      coef[1] * b +
+      coef[0]
+  );
   // temp. fix for batteryLevel undefined
-  if (!data.batteryLevel){
-     data.batteryLevel = 0;
+  if (!data.batteryLevel) {
+    data.batteryLevel = 0;
   }
   // temperature
   let tempIndex = input.bytes[3] & 0x1f;
@@ -38,14 +48,14 @@ function decodeUplink(input) {
   // timer interval
   data.intervalId = input.bytes[4] & 0x07;
   var intervalTime = {
-    0: "< 1h",
-    1: "< 2h",
-    2: "< 4h",
-    3: "< 8h",
-    4: "< 17h",
+    0: 1,
+    1: 2,
+    2: 4,
+    3: 8,
+    4: 17,
   };
   var intervalBitSize = [6, 7, 8, 9, 10];
-  data.selectedInterval = intervalTime[data.intervalId];
+  data.selectedInterval = "< " + intervalTime[data.intervalId] + "h";
   // start hour of day
   data.hourOfDay = input.bytes[4] >> 3;
   if (data.swVersion > 0) {
@@ -107,6 +117,10 @@ function decodeUplink(input) {
   }
   // create output time array
   var ts = new Date(Date.now());
+  // correct the date if it is the first call of the day
+  if (ts.getUTCHours === 0) {
+    ts.setUTCHours(ts.getUTCHours() - 1);
+  }
   ts.setUTCHours(0);
   ts.setUTCMinutes(0);
   ts.setUTCSeconds(0);
