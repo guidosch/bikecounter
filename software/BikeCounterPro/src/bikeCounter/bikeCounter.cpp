@@ -87,8 +87,6 @@ void BikeCounter::loop()
         break;
         case 1:
             currentStatus = Status::sendPackage;
-            // disable the PIR sensor
-            digitalWrite(pirPowerPin, LOW);
             break;
         case 2:
             currentStatus = Status::errorState;
@@ -108,9 +106,6 @@ void BikeCounter::loop()
         {
         case 0:
         {
-            // enable the PIR sensor
-            digitalWrite(pirPowerPin, HIGH);
-
             currentStatus = Status::collectData;
             std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> currentTime{std::chrono::seconds{rtc.getEpoch()}};
             sleep(getRemainingSleepTime(currentTime));
@@ -152,7 +147,7 @@ void BikeCounter::reset()
 int BikeCounter::setup()
 {
     // set static fields
-    motionDetected = 0;
+    motionDetected = false;
 
     // read dip switch states
     pinMode(debugSwitchPin, INPUT);
@@ -280,7 +275,7 @@ int BikeCounter::processInput()
     // check if a motion was detected.
     if (motionDetected)
     {
-        motionDetected = 0;
+        motionDetected = false;
 
         // set hour of the day if this was the first call
         if (counter == 0)
