@@ -8,7 +8,7 @@ on:
 
 env:
   BUILD_TYPE: Release
-  SOURCE_PATH: "software/BikeCounterPro/src/timeSchedule"
+  SOURCE_PATH: "software/BikeCounterPro/src/timerSchedule"
 
 jobs:
   build:
