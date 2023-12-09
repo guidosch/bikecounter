@@ -14,9 +14,14 @@ function encodeDownlink(input) {
 }
 
 function decodeDownlink(input) {
+  var td = input.bytes[3];
+  td = (td << 8) | input.bytes[2];
+  td = (td << 8) | input.bytes[1];
+  td = (td << 8) | input.bytes[0];
   return {
     data: {
       bytes: input.bytes,
+      timeDrift: td,
     },
     warnings: [],
     errors: [],
