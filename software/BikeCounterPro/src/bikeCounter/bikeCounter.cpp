@@ -538,7 +538,7 @@ void BikeCounter::handleError()
         case 2:
             // Failed to connect to LoRa network
             // wait for 60min and try again
-            loRaConnector->reset();
+            // loRaConnector->reset();
             currentStatus = Status::collectData;
             sleep(60UL * 60UL * 1000UL, true);
             break;
@@ -549,7 +549,7 @@ void BikeCounter::handleError()
             sleep(5UL * 60UL * 1000UL, true);
             break;
         default:
-            loRaConnector->reset();
+            // loRaConnector->reset();
             currentStatus = Status::collectData;
             // enable the PIR sensor
             digitalWrite(pirPowerPin, HIGH);
