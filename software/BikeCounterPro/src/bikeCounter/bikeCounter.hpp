@@ -170,7 +170,8 @@ private:
 
     /// @brief blinks the on-board led
     /// @param times number of times to blink
-    void blinkLED(int times = 1);
+    /// @param mode 0=blink, 1=fade-in, 2=fade-out, 3=pulsate
+    void blinkLED(int times = 1, int mode = 0);
 
     /// @brief Sets all the unused pins to a defined level (Output and LOW)
     void disableUnusedPins();
