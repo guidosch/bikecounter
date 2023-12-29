@@ -23,21 +23,11 @@ void BikeCounter::loop()
     switch (currentStatus)
     {
     case Status::setupStep:
-        if constexpr (deepSleepDebug)
-        {
-            blinkLED(1, 0);
-            blinkLED(1, 1);
-        }
         err = setup();
         currentStatus = (err) ? Status::errorState : Status::initSleep;
         break;
 
     case Status::initSleep:
-        if constexpr (deepSleepDebug)
-        {
-            blinkLED(2, 0);
-            blinkLED(1, 1);
-        }
         // RTC bug prevention
         // If the device runs on battery the rtc seems to reinitialize it's register after the first sleep period.
         // To avoid this a sleep is triggered in the first loop and the rtc time will be reset after waking up.
@@ -46,11 +36,6 @@ void BikeCounter::loop()
         break;
 
     case Status::firstWakeUp:
-        if constexpr (deepSleepDebug)
-        {
-            blinkLED(3, 0);
-            blinkLED(1, 1);
-        }
         logger.push("First wake-up");
         logger.loop();
         rtc.setEpoch(defaultRTCEpoch);
@@ -62,47 +47,22 @@ void BikeCounter::loop()
         break;
 
     case Status::timeSync:
-        if constexpr (deepSleepDebug)
-        {
-            blinkLED(4, 0);
-            blinkLED(1, 1);
-        }
         // while rtc time < defaultRTCEpoch + 1 month try to sync
         if (rtc.getEpoch() < (defaultRTCEpoch + 2678400ul))
         {
-            if constexpr (deepSleepDebug)
-            {
-                blinkLED(1, 0);
-                blinkLED(2, 1);
-            }
             switch (timeSyncStat)
             {
             case 0:
-                if constexpr (deepSleepDebug)
-                {
-                    blinkLED(2, 0);
-                    blinkLED(2, 1);
-                }
                 sendUplinkMessage();
                 timeSyncStat = 1;
                 break;
             case 1:
-                if constexpr (deepSleepDebug)
-                {
-                    blinkLED(3, 0);
-                    blinkLED(2, 1);
-                }
                 if (!waitForLoRaModule())
                 {
                     timeSyncStat = 2;
                 }
                 break;
             case 2:
-                if constexpr (deepSleepDebug)
-                {
-                    blinkLED(4, 0);
-                    blinkLED(2, 1);
-                }
                 timeSyncStat = 0;
                 sleep(syncTimeInterval * 1000UL, true);
                 break;
@@ -110,23 +70,12 @@ void BikeCounter::loop()
         }
         else
         {
-            if constexpr (deepSleepDebug)
-            {
-                blinkLED(5, 0);
-                blinkLED(2, 1);
-            }
             currentStatus = Status::collectData;
         }
         break;
 
     case Status::collectData:
     {
-        if constexpr (deepSleepDebug)
-        {
-            blinkLED(5, 0);
-            blinkLED(1, 1);
-        }
-
         // enable the PIR sensor
         digitalWrite(pirPowerPin, HIGH);
 
@@ -134,29 +83,14 @@ void BikeCounter::loop()
         {
         case 0:
         {
-            if constexpr (deepSleepDebug)
-            {
-                blinkLED(6, 0);
-                blinkLED(2, 1);
-            }
             std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> currentTime{std::chrono::seconds{rtc.getEpoch()}};
             sleep(getRemainingSleepTime(currentTime));
         }
         break;
         case 1:
-            if constexpr (deepSleepDebug)
-            {
-                blinkLED(7, 0);
-                blinkLED(2, 1);
-            }
             currentStatus = Status::sendPackage;
             break;
         case 2:
-            if constexpr (deepSleepDebug)
-            {
-                blinkLED(8, 0);
-                blinkLED(2, 1);
-            }
             currentStatus = Status::errorState;
             break;
         }
@@ -164,95 +98,45 @@ void BikeCounter::loop()
     break;
 
     case Status::sendPackage:
-        if constexpr (deepSleepDebug)
-        {
-            blinkLED(6, 0);
-            blinkLED(1, 1);
-        }
         err = sendUplinkMessage();
         currentStatus = (err) ? Status::errorState : Status::waitForLoRa;
         break;
 
     case Status::waitForLoRa:
     {
-        if constexpr (deepSleepDebug)
-        {
-            blinkLED(7, 0);
-            blinkLED(1, 1);
-        }
         switch (waitForLoRaModule())
         {
         case 0:
         {
-            if constexpr (deepSleepDebug)
-            {
-                blinkLED(9, 0);
-                blinkLED(2, 1);
-            }
             currentStatus = Status::collectData;
             std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> currentTime{std::chrono::seconds{rtc.getEpoch()}};
             sleep(getRemainingSleepTime(currentTime));
         }
         break;
         case 1:
-            if constexpr (deepSleepDebug)
-            {
-                blinkLED(10, 0);
-                blinkLED(2, 1);
-            }
             // wait
             break;
         case 2:
-            if constexpr (deepSleepDebug)
-            {
-                blinkLED(11, 0);
-                blinkLED(2, 1);
-            }
             currentStatus = Status::errorState;
             break;
         case 3:
-            if constexpr (deepSleepDebug)
-            {
-                blinkLED(12, 0);
-                blinkLED(2, 1);
-            }
             break;
         }
     }
     break;
 
     case Status::sleepState:
-        if constexpr (deepSleepDebug)
-        {
-            blinkLED(8, 0);
-            blinkLED(1, 1);
-        }
         if (!debugFlag || (debugFlag && (millis() > sleepEndMillis)) || (motionDetected && !(preSleepStatus == Status::timeSync)))
         {
-            if constexpr (deepSleepDebug)
-            {
-                blinkLED(1, 0);
-                blinkLED(1, 2);
-            }
             currentStatus = preSleepStatus;
         }
         break;
 
     case Status::errorState:
-        if constexpr (deepSleepDebug)
-        {
-            blinkLED(9, 0);
-            blinkLED(1, 1);
-        }
         handleError();
         break;
 
     default:
-        if constexpr (deepSleepDebug)
-        {
-            blinkLED(10, 0);
-            blinkLED(1, 1);
-        }
         break;
     }
     delay(50);
@@ -260,11 +144,6 @@ void BikeCounter::loop()
 
 void BikeCounter::reset()
 {
-    if constexpr (deepSleepDebug)
-    {
-        blinkLED(2, 0);
-        blinkLED(1, 2);
-    }
 }
 
 int BikeCounter::setup()
@@ -390,13 +269,6 @@ int BikeCounter::setup()
 /// @return 0=no action; 1=send package 2=error
 int BikeCounter::processInput()
 {
-
-    if constexpr (deepSleepDebug)
-    {
-        blinkLED(3, 0);
-        blinkLED(1, 2);
-    }
-
     // get current time
     std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> currentTime{std::chrono::seconds{rtc.getEpoch()}};
     date::hh_mm_ss<std::chrono::seconds> currentTime_hms = date::make_time(currentTime.time_since_epoch() - date::floor<date::days>(currentTime).time_since_epoch());
@@ -405,13 +277,6 @@ int BikeCounter::processInput()
     // check if a motion was detected.
     if (motionDetected)
     {
-
-        if constexpr (deepSleepDebug)
-        {
-            blinkLED(4, 0);
-            blinkLED(1, 2);
-        }
-
         motionDetected = false;
 
         // set hour of the day if this was the first call
@@ -441,23 +306,11 @@ int BikeCounter::processInput()
         int currentThreshold = dataHandler.getMaxCount(timeHandler.getCurrentIntervalMinutes(currentTime));
         if (counter >= currentThreshold)
         {
-
-            if constexpr (deepSleepDebug)
-            {
-                blinkLED(5, 0);
-                blinkLED(1, 2);
-            }
-
             // check if the floating interrupt pin bug occurred
             // method 1: check if the totalCount exceeds the maxCount between the timer calls.
             // method 2: detect if the count goes up very quickly. (faster then the board is able to send)
             if ((totalCounter >= maxCount) || (counter > (currentThreshold + 10)))
             {
-                if constexpr (deepSleepDebug)
-                {
-                    blinkLED(6, 0);
-                    blinkLED(1, 2);
-                }
                 errorId = 2;
                 return 2;
             }
@@ -467,23 +320,12 @@ int BikeCounter::processInput()
     }
     else
     {
-        if constexpr (deepSleepDebug)
-        {
-            blinkLED(7, 0);
-            blinkLED(1, 2);
-        }
         // if no motion was detected it means that the timer caused the wakeup.
         logger.push("Timer called");
         logger.loop();
         totalCounter = 0;
         nextAlarm = timeHandler.getNextIntervalTime(currentTime);
         return 1;
-    }
-
-    if constexpr (deepSleepDebug)
-    {
-        blinkLED(8, 0);
-        blinkLED(1, 2);
     }
 
     return 0;
@@ -513,12 +355,6 @@ int BikeCounter::sendUplinkMessage()
         return 2;
     }
 
-    if constexpr (deepSleepDebug)
-    {
-        blinkLED(9, 0);
-        blinkLED(1, 2);
-    }
-
     int err = loRaConnector->sendMessage(dataHandler.getPayload(), dataHandler.getPayloadLength());
 
     if (!err)
@@ -538,30 +374,15 @@ int BikeCounter::sendUplinkMessage()
 
         // reset counter and time array
         counter = 0;
+
         for (int i = 0; i < timeArraySize; ++i)
         {
             timeArray[i] = 0;
-        }
-        if constexpr (deepSleepDebug)
-        {
-            blinkLED(10, 0);
-            blinkLED(1, 2);
         }
     }
     else
     {
         errorId = 4;
-        if constexpr (deepSleepDebug)
-        {
-            blinkLED(11, 0);
-            blinkLED(1, 2);
-        }
-    }
-
-    if constexpr (deepSleepDebug)
-    {
-        blinkLED(12, 0);
-        blinkLED(1, 2);
     }
 
     return err;
@@ -573,42 +394,16 @@ int BikeCounter::waitForLoRaModule()
 {
     loRaConnector->loop(10);
 
-    if constexpr (deepSleepDebug)
-    {
-        blinkLED(1, 0);
-        blinkLED(1, 3);
-    }
-
     switch (loRaConnector->getStatus())
     {
     case LoRaConnector::Status::connected:
-        if constexpr (deepSleepDebug)
-        {
-            blinkLED(2, 0);
-            blinkLED(1, 3);
-        }
         return 0;
     case LoRaConnector::Status::error:
-        if constexpr (deepSleepDebug)
-        {
-            blinkLED(3, 0);
-            blinkLED(1, 3);
-        }
         return 2;
     case LoRaConnector::Status::fatalError:
-        if constexpr (deepSleepDebug)
-        {
-            blinkLED(4, 0);
-            blinkLED(1, 3);
-        }
         loRaConnector->reset();
         return 3;
     default:
-        if constexpr (deepSleepDebug)
-        {
-            blinkLED(5, 0);
-            blinkLED(1, 3);
-        }
         return 1;
     }
 }
@@ -692,11 +487,6 @@ void BikeCounter::disableUnusedPins()
 
 float BikeCounter::getBatteryVoltage()
 {
-    if constexpr (deepSleepDebug)
-    {
-        blinkLED(6, 0);
-        blinkLED(1, 3);
-    }
     // read the analog value and calculate the voltage
     return analogRead(batteryVoltagePin) * 3.3f / 1023.0f / 1.2f * (1.2f + 0.33f);
 }
@@ -717,12 +507,6 @@ void BikeCounter::sleep(int ms, bool noInterrupt)
         digitalWrite(pirPowerPin, LOW);
     }
 
-    if constexpr (deepSleepDebug)
-    {
-        blinkLED(7, 0);
-        blinkLED(1, 3);
-    }
-
     if (debugFlag)
     {
         sleepEndMillis = millis() + ms;
@@ -735,12 +519,6 @@ void BikeCounter::sleep(int ms, bool noInterrupt)
 
 void BikeCounter::handleError()
 {
-    if constexpr (deepSleepDebug)
-    {
-        blinkLED(1, 0);
-        blinkLED(2, 3);
-    }
-
     logger.push(errorMsg[errorId]);
     logger.loop();
     recErr = true;
@@ -748,11 +526,6 @@ void BikeCounter::handleError()
     switch (errorId)
     {
     case 0:
-        if constexpr (deepSleepDebug)
-        {
-            blinkLED(2, 0);
-            blinkLED(2, 3);
-        }
         // Somehow we landed in the error state with no error pending.
         // This should never happen so we sleep for an hour and restart the device.
         currentStatus = Status::setupStep;
@@ -760,11 +533,6 @@ void BikeCounter::handleError()
         break;
 
     case 1:
-        if constexpr (deepSleepDebug)
-        {
-            blinkLED(3, 0);
-            blinkLED(2, 3);
-        }
         // The SPI Flash memory chip could not be initialized hence we cant read the configuration data.
         // Lets sleep for an hour and try again.
         currentStatus = Status::setupStep;
@@ -772,11 +540,6 @@ void BikeCounter::handleError()
         break;
 
     case 2:
-        if constexpr (deepSleepDebug)
-        {
-            blinkLED(4, 0);
-            blinkLED(2, 3);
-        }
         // The floating interrupt pin error was detected
         // Lets reset the PIR power connection and try again
         if (pirError++ <= 2)
@@ -788,11 +551,6 @@ void BikeCounter::handleError()
             digitalWrite(pirPowerPin, HIGH);
             totalCounter = 0;
             currentStatus = collectData;
-            if constexpr (deepSleepDebug)
-            {
-                blinkLED(5, 0);
-                blinkLED(2, 3);
-            }
             sleep(10UL * 60UL * 1000UL, true); // 10min
         }
         else
@@ -802,11 +560,6 @@ void BikeCounter::handleError()
             // shut down PIR and try it again in 5 hours
             digitalWrite(pirPowerPin, LOW);
             errorId = 3;
-            if constexpr (deepSleepDebug)
-            {
-                blinkLED(6, 0);
-                blinkLED(2, 3);
-            }
             sleep(5UL * 60UL * 60UL * 1000UL, true); // 5h
         }
         break;
@@ -816,11 +569,6 @@ void BikeCounter::handleError()
         digitalWrite(pirPowerPin, HIGH);
         totalCounter = 0;
         currentStatus = collectData;
-        if constexpr (deepSleepDebug)
-        {
-            blinkLED(7, 0);
-            blinkLED(2, 3);
-        }
         sleep(60UL * 1000UL); // 1min
 
     case 4:
@@ -828,33 +576,18 @@ void BikeCounter::handleError()
         switch (loRaConnector->getErrorId())
         {
         case 1:
-            if constexpr (deepSleepDebug)
-            {
-                blinkLED(8, 0);
-                blinkLED(2, 3);
-            }
             // failed to start the module
         case 2:
             // Failed to connect to LoRa network
             // wait for 60min and try again
             // loRaConnector->reset();
             currentStatus = Status::collectData;
-            if constexpr (deepSleepDebug)
-            {
-                blinkLED(9, 0);
-                blinkLED(2, 3);
-            }
             sleep(60UL * 60UL * 1000UL, true);
             break;
         case 3:
             // Error sending message
             // wait for 5min and try again
             currentStatus = Status::collectData;
-            if constexpr (deepSleepDebug)
-            {
-                blinkLED(10, 0);
-                blinkLED(2, 3);
-            }
             sleep(5UL * 60UL * 1000UL, true);
             break;
         default:
@@ -862,11 +595,6 @@ void BikeCounter::handleError()
             currentStatus = Status::collectData;
             // enable the PIR sensor
             digitalWrite(pirPowerPin, HIGH);
-            if constexpr (deepSleepDebug)
-            {
-                blinkLED(11, 0);
-                blinkLED(2, 3);
-            }
             break;
         }
         break;
@@ -875,21 +603,11 @@ void BikeCounter::handleError()
 
 unsigned long BikeCounter::getRemainingSleepTime(std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> currentTime)
 {
-    if constexpr (deepSleepDebug)
-    {
-        blinkLED(1, 0);
-        blinkLED(3, 1);
-    }
     // determine the remaining time to sleep
     int64_t sdt = (nextAlarm.time_since_epoch().count() - currentTime.time_since_epoch().count());
     uint32_t sleepTime = sdt > 0 ? (uint32_t)sdt : syncTimeInterval;
     // sanity check
     sleepTime = Min(sleepTime, (12ul * 60ul * 60ul));
-    if constexpr (deepSleepDebug)
-    {
-        blinkLED(2, 0);
-        blinkLED(3, 1);
-    }
     return sleepTime * 1000UL;
 }
 
@@ -909,11 +627,6 @@ int BikeCounter::processDownlinkMessage(int *buffer, int length)
 
 void BikeCounter::correctRTCTime(int32_t timeDrift)
 {
-    if constexpr (deepSleepDebug)
-    {
-        blinkLED(3, 0);
-        blinkLED(3, 1);
-    }
     logger.push(String("Received time correction = ") + String(timeDrift));
     logger.loop();
 
@@ -943,10 +656,5 @@ void BikeCounter::correctRTCTime(int32_t timeDrift)
         logger.loop();
 
         delay(500);
-        if constexpr (deepSleepDebug)
-        {
-            blinkLED(4, 0);
-            blinkLED(3, 1);
-        }
     }
 }
