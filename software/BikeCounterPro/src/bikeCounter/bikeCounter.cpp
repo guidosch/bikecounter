@@ -414,8 +414,7 @@ void BikeCounter::blinkLED(int times, int mode)
     static int blinkCount = 0;
     if (blinkCount < maxBlinks)
     {
-        // TODO: remove
-        //++blinkCount;
+        ++blinkCount;
 
         for (int i = 0; i < times; i++)
         {
