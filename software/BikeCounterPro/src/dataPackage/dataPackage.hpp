@@ -65,6 +65,7 @@ public:
     int getPayloadLength() const { return (int)(offsetBits / 8) + (int)ceil(((float)(motionCount * minuteBits[selectedInterval])) / 8.0f); }
     uint8_t *getPayload();
     int getMaxCount(unsigned int intervalTime);
+    void setTimerInterval(unsigned int intervalTime);
 
 private:
     enum TimerInterval
@@ -104,7 +105,6 @@ private:
 
     uint8_t reduceFloat(float value, float min, float max, unsigned int bitCount);
     float expandFloat(uint8_t value, float min, float max, unsigned int bitCount) const;
-    void setTimerInterval(unsigned int intervalTime);
 };
 
 #endif // DATAPACKAGE_H

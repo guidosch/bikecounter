@@ -110,6 +110,7 @@ void BikeCounter::loop()
         {
             currentStatus = Status::collectData;
             std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> currentTime{std::chrono::seconds{rtc.getEpoch()}};
+            dataHandler.setTimerInterval(timeHandler.getCurrentIntervalMinutes(currentTime));
             sleep(getRemainingSleepTime(currentTime));
         }
         break;
