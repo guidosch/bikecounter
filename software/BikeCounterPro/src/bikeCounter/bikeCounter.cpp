@@ -1,5 +1,7 @@
 #include "bikeCounter.hpp"
 
+constexpr bool deepSleepDebug = true;
+
 BikeCounter *BikeCounter::instance{nullptr};
 // Thread-save Singleton (not needed for Arduino)
 // std::mutex BikeCounter::mutex_;
@@ -108,6 +110,7 @@ void BikeCounter::loop()
         {
             currentStatus = Status::collectData;
             std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> currentTime{std::chrono::seconds{rtc.getEpoch()}};
+            dataHandler.setTimerInterval(timeHandler.getCurrentIntervalMinutes(currentTime));
             sleep(getRemainingSleepTime(currentTime));
         }
         break;
@@ -372,6 +375,7 @@ int BikeCounter::sendUplinkMessage()
 
         // reset counter and time array
         counter = 0;
+
         for (int i = 0; i < timeArraySize; ++i)
         {
             timeArray[i] = 0;
@@ -405,20 +409,57 @@ int BikeCounter::waitForLoRaModule()
     }
 }
 
-void BikeCounter::blinkLED(int times)
+void BikeCounter::blinkLED(int times, int mode)
 {
     // deactivate the onboard LED after the specified amount of blinks
     static int blinkCount = 0;
     if (blinkCount < maxBlinks)
     {
         ++blinkCount;
+
         for (int i = 0; i < times; i++)
         {
             delay(100);
-            digitalWrite(LED_BUILTIN, HIGH);
-            delay(100);
-            digitalWrite(LED_BUILTIN, LOW);
+
+            switch (mode)
+            {
+            case 0:
+                // 0=blink
+                analogWrite(LED_BUILTIN, 255);
+                delay(100);
+                break;
+
+            case 3: // 3=pulsate
+
+            case 1: // 1=fade-in
+
+                for (int i = 0; i < 256; i += 15)
+                {
+                    analogWrite(LED_BUILTIN, i);
+                    delay(50);
+                }
+                if (mode == 1)
+                {
+                    break;
+                }
+
+            case 2: // 2=fade-out
+                for (int i = 255; i >= 0; i -= 15)
+                {
+                    analogWrite(LED_BUILTIN, i);
+                    delay(50);
+                }
+                break;
+            }
+
+            analogWrite(LED_BUILTIN, 0);
         }
+    }
+    else
+    {
+        // disable LED pin
+        pinMode(LED_BUILTIN, OUTPUT);
+        digitalWrite(LED_BUILTIN, LOW);
     }
 }
 
@@ -452,6 +493,7 @@ float BikeCounter::getBatteryVoltage()
 
 void BikeCounter::sleep(int ms, bool noInterrupt)
 {
+
     logger.push("Going to sleep for " + String(ms) + "ms (" + String((int)(ms / 1000)) + "s / " + String((int)(ms / 60000)) + "min)");
     logger.loop();
 
@@ -566,7 +608,6 @@ unsigned long BikeCounter::getRemainingSleepTime(std::chrono::time_point<std::ch
     uint32_t sleepTime = sdt > 0 ? (uint32_t)sdt : syncTimeInterval;
     // sanity check
     sleepTime = Min(sleepTime, (12ul * 60ul * 60ul));
-
     return sleepTime * 1000UL;
 }
 
