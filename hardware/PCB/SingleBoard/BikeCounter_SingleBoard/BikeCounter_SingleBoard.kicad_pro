@@ -178,7 +178,8 @@
         }
       ],
       "track_widths": [
-        0.0
+        0.0,
+        2.0
       ],
       "tuning_pattern_settings": {
         "diff_pair_defaults": {
@@ -444,7 +445,7 @@
     "pinned_symbol_libs": []
   },
   "meta": {
-    "filename": "BikeCounter.kicad_pro",
+    "filename": "BikeCounter_SingleBoard.kicad_pro",
     "version": 1
   },
   "net_settings": {
