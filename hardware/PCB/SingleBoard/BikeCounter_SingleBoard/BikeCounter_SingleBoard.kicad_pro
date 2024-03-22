@@ -480,7 +480,7 @@
       "gencad": "",
       "idf": "",
       "netlist": "",
-      "plot": "",
+      "plot": "../GerberFiles/v0.2/",
       "pos_files": "",
       "specctra_dsn": "",
       "step": "",
