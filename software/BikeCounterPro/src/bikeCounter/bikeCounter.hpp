@@ -46,6 +46,9 @@ public:
     /// @brief Counter interrupt pin
     /// @param pin
     void setCounterInterruptPin(int pin) { counterInterruptPin = pin; }
+    /// @brief Power pin of switches
+    /// @param pin 
+    void setSwitchPowerPin(int pin) {switchPowerPin = pin;}
     /// @brief Debug switch pin
     /// @param pin
     void setDebugSwitchPin(int pin) { debugSwitchPin = pin; }
@@ -80,6 +83,7 @@ private:
     // static std::mutex mutex_;
 
     int counterInterruptPin;
+    int switchPowerPin;
     int debugSwitchPin;
     int configSwitchPin;
     int batteryVoltagePin;
