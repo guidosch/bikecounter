@@ -35,23 +35,24 @@ void StatusLogger::setup(Output ot)
 
     case toMemory:
         // not implemented
-        outputType = noOutput;
+        currentStatus = ready;
         break;
 
     default:
         outputType = noOutput;
+        currentStatus = ready;
         break;
     }
 }
 
 void StatusLogger::loop()
 {
-    if (currentStatus == ready && outputType != noOutput)
+    while (!msgQueue.empty())
     {
-        while (!msgQueue.empty())
+        std::string msg = msgQueue.front();
+        msgQueue.pop();
+        if (currentStatus == ready)
         {
-            std::string msg = msgQueue.front();
-
             switch (outputType)
             {
             case toSerial:
@@ -61,9 +62,11 @@ void StatusLogger::loop()
             case toMemory:
                 // not implemented
                 break;
-            }
 
-            msgQueue.pop();
+            case noOutput:
+                // no action needed
+                break;
+            }
         }
     }
 }
