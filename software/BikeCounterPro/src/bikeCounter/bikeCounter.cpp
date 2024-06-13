@@ -153,10 +153,15 @@ int BikeCounter::setup()
     motionDetected = false;
 
     // read dip switch states
+    pinMode(switchPowerPin, OUTPUT);
+    digitalWrite(switchPowerPin, HIGH);
+    delay(100);
     pinMode(debugSwitchPin, INPUT);
     pinMode(configSwitchPin, INPUT);
     debugFlag = digitalRead(debugSwitchPin);
     configFlag = digitalRead(configSwitchPin);
+    digitalWrite(switchPowerPin, LOW);
+    delay(100);
 
     // deactivate the dip switch pins
     pinMode(debugSwitchPin, OUTPUT);
