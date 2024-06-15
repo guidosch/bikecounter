@@ -3,7 +3,6 @@
 
 #include <Arduino.h>
 #include <ArduinoLowPower.h>
-#include <Adafruit_AM2320.h>
 #include <SPI.h>
 #include <SparkFun_SPI_SerialFlash.h>
 #include "../../config.h"
@@ -83,8 +82,9 @@ private:
     // Thread-save Singleton (not needed for Arduino)
     // static std::mutex mutex_;
 
+    // HAL dependency
     HAL *hal;
-
+    
     int counterInterruptPin;
     int switchPowerPin;
     int debugSwitchPin;
@@ -102,9 +102,6 @@ private:
 
     // Object to handel all the LoRa stuff
     LoRaConnector *loRaConnector = LoRaConnector::getInstance();
-
-    // Humidity and temperature sensor object
-    Adafruit_AM2320 am2320 = Adafruit_AM2320();
 
     // DataPackage object to encode the payload
     DataPackage dataHandler = DataPackage();

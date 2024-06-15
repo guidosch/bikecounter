@@ -3,6 +3,7 @@
 
 #include "hal.hpp"
 #include <RTCZero.h>
+#include <Adafruit_AM2320.h>
 
 class HAL_Arduino : public HAL
 {
@@ -23,6 +24,15 @@ public:
     virtual uint8_t rtcGetMonth() { return rtc.getMonth(); }
     virtual uint8_t rtcGetYear() { return rtc.getYear(); }
 
+    // initialize the I2C communication
+    virtual void I2CInit() { Wire.begin(); }
+    // initialize temperature and humidity sensor
+    virtual void AM2320Init() { am2320.begin(); }
+
+    virtual float AM2320ReadTemperature() { return am2320.readTemperature(); }
+
+    virtual float AM2320ReadHumidity() { return am2320.readHumidity(); }
+
 protected:
     HAL_Arduino() {}
     ~HAL_Arduino() {}
@@ -34,6 +44,9 @@ private:
 
     // Internal RTC object
     RTCZero rtc;
+
+    // Humidity and temperature sensor object
+    Adafruit_AM2320 am2320 = Adafruit_AM2320();
 };
 
 #endif // HAL_ARDUINO_H

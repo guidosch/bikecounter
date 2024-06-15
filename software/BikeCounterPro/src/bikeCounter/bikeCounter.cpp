@@ -182,7 +182,7 @@ int BikeCounter::setup()
     analogReference(AR_DEFAULT);
 
     // initialize the I2C communication
-    Wire.begin();
+    hal->I2CInit();
 
     // initialize the logging instance
     StatusLogger::Output outputType = debugFlag ? StatusLogger::Output::toSerial : StatusLogger::Output::noOutput;
@@ -223,7 +223,7 @@ int BikeCounter::setup()
     delay(500);
 
     // initialize temperature and humidity sensor
-    am2320.begin();
+    hal->AM2320Init();
 
     logger.push("Temp. sensor setup finished");
     logger.push("Lora setup started");
@@ -349,8 +349,8 @@ int BikeCounter::sendUplinkMessage()
     dataHandler.setSwVersion(swVersion);
     dataHandler.setMotionCount(counter);
     dataHandler.setBatteryVoltage(getBatteryVoltage());
-    dataHandler.setTemperature(am2320.readTemperature());
-    dataHandler.setHumidity(am2320.readHumidity());
+    dataHandler.setTemperature(hal->AM2320ReadTemperature());
+    dataHandler.setHumidity(hal->AM2320ReadHumidity());
     dataHandler.setHourOfTheDay(hourOfDay);
     dataHandler.setDeviceTime(hal->rtcGetEpoch());
     dataHandler.setTimeArray(timeArray);

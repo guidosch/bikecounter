@@ -15,6 +15,12 @@ public:
     virtual uint8_t rtcGetDay() = 0;
     virtual uint8_t rtcGetMonth() = 0;
     virtual uint8_t rtcGetYear() = 0;
+
+    virtual void I2CInit() = 0;
+    virtual void AM2320Init() = 0;
+
+    virtual float AM2320ReadTemperature() = 0;
+    virtual float AM2320ReadHumidity() = 0;
 };
 
 #endif // HAL_H
