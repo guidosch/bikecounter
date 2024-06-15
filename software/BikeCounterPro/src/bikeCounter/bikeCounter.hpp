@@ -2,7 +2,6 @@
 #define BIKECOUNTER_H
 
 #include <Arduino.h>
-#include <RTCZero.h>
 #include <ArduinoLowPower.h>
 #include <Adafruit_AM2320.h>
 #include <SPI.h>
@@ -13,6 +12,7 @@
 #include "../dataPackage/dataPackage.hpp"
 #include "../timerSchedule/timerSchedule.hpp"
 #include "../timerSchedule/date.h"
+#include "../hal/hal.hpp"
 
 class BikeCounter
 {
@@ -40,6 +40,7 @@ public:
     void loop();
     /// @brief
     void reset();
+    void injectHal(HAL *hal_ptr) { hal = hal_ptr; }
     /// @brief
     /// @return
     Status getStatus() { return currentStatus; }
@@ -47,8 +48,8 @@ public:
     /// @param pin
     void setCounterInterruptPin(int pin) { counterInterruptPin = pin; }
     /// @brief Power pin of switches
-    /// @param pin 
-    void setSwitchPowerPin(int pin) {switchPowerPin = pin;}
+    /// @param pin
+    void setSwitchPowerPin(int pin) { switchPowerPin = pin; }
     /// @brief Debug switch pin
     /// @param pin
     void setDebugSwitchPin(int pin) { debugSwitchPin = pin; }
@@ -82,6 +83,8 @@ private:
     // Thread-save Singleton (not needed for Arduino)
     // static std::mutex mutex_;
 
+    HAL *hal;
+
     int counterInterruptPin;
     int switchPowerPin;
     int debugSwitchPin;
@@ -99,9 +102,6 @@ private:
 
     // Object to handel all the LoRa stuff
     LoRaConnector *loRaConnector = LoRaConnector::getInstance();
-
-    // Internal RTC object
-    RTCZero rtc;
 
     // Humidity and temperature sensor object
     Adafruit_AM2320 am2320 = Adafruit_AM2320();

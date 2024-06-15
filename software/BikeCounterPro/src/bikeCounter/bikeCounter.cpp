@@ -38,7 +38,7 @@ void BikeCounter::loop()
     case Status::firstWakeUp:
         logger.push("First wake-up");
         logger.loop();
-        rtc.setEpoch(defaultRTCEpoch);
+        hal->rtcSetEpoch(defaultRTCEpoch);
         logger.push("RTC reset");
         logger.loop();
         currentStatus = Status::timeSync;
@@ -48,7 +48,7 @@ void BikeCounter::loop()
 
     case Status::timeSync:
         // while rtc time < defaultRTCEpoch + 1 month try to sync
-        if (rtc.getEpoch() < (defaultRTCEpoch + 2678400ul))
+        if (hal->rtcGetEpoch() < (defaultRTCEpoch + 2678400ul))
         {
             switch (timeSyncStat)
             {
@@ -83,7 +83,7 @@ void BikeCounter::loop()
         {
         case 0:
         {
-            std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> currentTime{std::chrono::seconds{rtc.getEpoch()}};
+            std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> currentTime{std::chrono::seconds{hal->rtcGetEpoch()}};
             sleep(getRemainingSleepTime(currentTime));
         }
         break;
@@ -109,7 +109,7 @@ void BikeCounter::loop()
         case 0:
         {
             currentStatus = Status::collectData;
-            std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> currentTime{std::chrono::seconds{rtc.getEpoch()}};
+            std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> currentTime{std::chrono::seconds{hal->rtcGetEpoch()}};
             dataHandler.setTimerInterval(timeHandler.getCurrentIntervalMinutes(currentTime));
             sleep(getRemainingSleepTime(currentTime));
         }
@@ -239,23 +239,23 @@ int BikeCounter::setup()
     logger.loop();
 
     // setup rtc
-    rtc.begin(true);
-    rtc.setEpoch(defaultRTCEpoch);
+    hal->rtcBegin(true);
+    hal->rtcSetEpoch(defaultRTCEpoch);
 
     logger.push(String("RTC current time: ") +
-                String(rtc.getHours()) +
+                String(hal->rtcGetHours()) +
                 String(':') +
-                String(rtc.getMinutes()) +
+                String(hal->rtcGetMinutes()) +
                 String(':') +
-                String(rtc.getSeconds()));
+                String(hal->rtcGetSeconds()));
     logger.push(String("RTC current date: ") +
-                String(rtc.getDay()) +
+                String(hal->rtcGetDay()) +
                 String('.') +
-                String(rtc.getMonth()) +
+                String(hal->rtcGetMonth()) +
                 String('.') +
-                String(rtc.getYear()));
+                String(hal->rtcGetYear()));
     logger.push(String("RTC epoch: ") +
-                String(rtc.getEpoch()));
+                String(hal->rtcGetEpoch()));
     logger.loop();
 
     // delay to avoid interference with interrupt pin setup
@@ -276,7 +276,7 @@ int BikeCounter::setup()
 int BikeCounter::processInput()
 {
     // get current time
-    std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> currentTime{std::chrono::seconds{rtc.getEpoch()}};
+    std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> currentTime{std::chrono::seconds{hal->rtcGetEpoch()}};
     date::hh_mm_ss<std::chrono::seconds> currentTime_hms = date::make_time(currentTime.time_since_epoch() - date::floor<date::days>(currentTime).time_since_epoch());
     int timerCalled = 0;
 
@@ -352,7 +352,7 @@ int BikeCounter::sendUplinkMessage()
     dataHandler.setTemperature(am2320.readTemperature());
     dataHandler.setHumidity(am2320.readHumidity());
     dataHandler.setHourOfTheDay(hourOfDay);
-    dataHandler.setDeviceTime(rtc.getEpoch());
+    dataHandler.setDeviceTime(hal->rtcGetEpoch());
     dataHandler.setTimeArray(timeArray);
 
     loRaConnector->loop(5);
@@ -635,29 +635,29 @@ void BikeCounter::correctRTCTime(int32_t timeDrift)
     logger.push(String("Received time correction = ") + String(timeDrift));
     logger.loop();
 
-    uint32_t currentEpoch = rtc.getEpoch();
+    uint32_t currentEpoch = hal->rtcGetEpoch();
 
     // check if the timeDrift should be applied (only if the drift is greater then 10min and only once a day)
     if ((abs(timeDrift) > (10 * 60)) && ((currentEpoch - lastRTCCorrection) > (24 * 60 * 60)))
     {
         // apply time correction
-        rtc.setEpoch(currentEpoch + timeDrift);
-        lastRTCCorrection = rtc.getEpoch();
+        hal->rtcSetEpoch(currentEpoch + timeDrift);
+        lastRTCCorrection = hal->rtcGetEpoch();
 
         logger.push(String("RTC correction applied, current time: ") +
-                    String(rtc.getHours()) +
+                    String(hal->rtcGetHours()) +
                     String(':') +
-                    String(rtc.getMinutes()) +
+                    String(hal->rtcGetMinutes()) +
                     String(':') +
-                    String(rtc.getSeconds()));
+                    String(hal->rtcGetSeconds()));
         logger.push(String("RTC current date: ") +
-                    String(rtc.getDay()) +
+                    String(hal->rtcGetDay()) +
                     String('.') +
-                    String(rtc.getMonth()) +
+                    String(hal->rtcGetMonth()) +
                     String('.') +
-                    String(rtc.getYear()));
+                    String(hal->rtcGetYear()));
         logger.push(String("RTC epoch: ") +
-                    String(rtc.getEpoch()));
+                    String(hal->rtcGetEpoch()));
         logger.loop();
 
         delay(500);
