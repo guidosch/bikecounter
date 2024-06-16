@@ -27,8 +27,21 @@ public:
     virtual void deepSleep(int ms) = 0;
 
     virtual bool getEuiAndKeyFromFlash(std::string *appEui, std::string *appKey) = 0;
-    
+
     virtual unsigned long getMillis() = 0;
+    virtual void waitHere(unsigned long ms) = 0;
+
+    virtual int LoRaAvailable() = 0;
+    virtual bool LoRaBegin() = 0;
+    virtual std::string LoRaVersion() = 0;
+    virtual std::string LoRaDeviceEUI() = 0;
+    virtual int LoRaRead() = 0;
+    virtual bool LoRaRestart() = 0;
+    virtual int LoRaJoinOTAA(std::string eui, std::string key) = 0;
+    virtual void LoRaSetMinPollInterval(unsigned long secs) = 0;
+    virtual void LoRaBeginPacket() = 0;
+    virtual size_t LoRaWrite(const uint8_t *msgBuffer, size_t msgSize) = 0;
+    virtual int LoRaEndPacket(bool confirmed) = 0;
 };
 
 #endif // HAL_H

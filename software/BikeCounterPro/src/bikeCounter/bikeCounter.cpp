@@ -215,6 +215,7 @@ int BikeCounter::setup()
     delay(500);
 
     // connect to lora network
+    loRaConnector->injectHal(hal);
     loRaConnector->setup(appEui, appKey, &processDownlinkMessage);
 
     logger.push("Lora setup finished");
@@ -595,7 +596,7 @@ unsigned long BikeCounter::getRemainingSleepTime(std::chrono::time_point<std::ch
     int64_t sdt = (nextAlarm.time_since_epoch().count() - currentTime.time_since_epoch().count());
     uint32_t sleepTime = sdt > 0 ? (uint32_t)sdt : syncTimeInterval;
     // sanity check
-    sleepTime = Min(sleepTime, (12ul * 60ul * 60ul));
+    sleepTime = std::min(sleepTime, (12ul * 60ul * 60ul));
     return sleepTime * 1000UL;
 }
 

@@ -8,7 +8,7 @@
 #include "../dataPackage/dataPackage.hpp"
 #include "../timerSchedule/timerSchedule.hpp"
 #include "../timerSchedule/date.h"
-#include "../hal/hal.hpp"
+#include "../hal/hal_interface.hpp"
 
 class BikeCounter
 {
@@ -36,6 +36,8 @@ public:
     void loop();
     /// @brief
     void reset();
+    /// @brief 
+    /// @param hal_ptr 
     void injectHal(HAL *hal_ptr) { hal = hal_ptr; }
     /// @brief
     /// @return

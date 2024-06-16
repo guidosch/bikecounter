@@ -1,10 +1,9 @@
 #ifndef LORACONNECTOR_H
 #define LORACONNECTOR_H
 
-#include <Arduino.h>
-#include <MKRWAN.h>
 #include <string>
 #include "../statusLogger/extendedStatusLogger.hpp"
+#include "../hal/hal_interface.hpp"
 
 class LoRaConnector
 {
@@ -26,6 +25,7 @@ public:
         error,
         fatalError
     };
+    void injectHal(HAL *hal_ptr) { hal = hal_ptr; }
     Status getStatus() { return currentStatus; }
     int getErrorId() { return errorId; }
     String getErrorMsg() { return String(errorMsg[errorId]); }
@@ -52,7 +52,7 @@ private:
     // static std::mutex mutex_;
 
     ExtendedStatusLogger logger = ExtendedStatusLogger("LoRaConnector:");
-    LoRaModem modem = LoRaModem(Serial1);
+    HAL *hal;
     Status currentStatus = disconnected;
     std::string eui;
     std::string key;
