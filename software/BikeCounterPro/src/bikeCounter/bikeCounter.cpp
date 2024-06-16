@@ -77,7 +77,7 @@ void BikeCounter::loop()
     case Status::collectData:
     {
         // enable the PIR sensor
-        digitalWrite(pirPowerPin, HIGH);
+        hal->digitalWrite(pirPowerPin, 1);
 
         switch (processInput())
         {
@@ -127,7 +127,7 @@ void BikeCounter::loop()
     break;
 
     case Status::sleepState:
-        if (!debugFlag || (debugFlag && (millis() > sleepEndMillis)) || (motionDetected && !(preSleepStatus == Status::timeSync)))
+        if (!debugFlag || (debugFlag && (hal->getMillis() > sleepEndMillis)) || (motionDetected && !(preSleepStatus == Status::timeSync)))
         {
             currentStatus = preSleepStatus;
         }
@@ -140,7 +140,7 @@ void BikeCounter::loop()
     default:
         break;
     }
-    delay(50);
+    hal->waitHere(50);
 }
 
 void BikeCounter::reset()
@@ -153,40 +153,39 @@ int BikeCounter::setup()
     motionDetected = false;
 
     // read dip switch states
-    pinMode(switchPowerPin, OUTPUT);
-    digitalWrite(switchPowerPin, HIGH);
-    delay(100);
-    pinMode(debugSwitchPin, INPUT);
-    pinMode(configSwitchPin, INPUT);
-    debugFlag = digitalRead(debugSwitchPin);
-    configFlag = digitalRead(configSwitchPin);
-    digitalWrite(switchPowerPin, LOW);
-    delay(100);
+    hal->pinMode(switchPowerPin, HAL::GPIOPinMode::OUTPUT);
+    hal->digitalWrite(switchPowerPin, 1);
+    hal->waitHere(100);
+    hal->pinMode(debugSwitchPin, HAL::GPIOPinMode::INPUT);
+    hal->pinMode(configSwitchPin, HAL::GPIOPinMode::INPUT);
+    debugFlag = hal->digitalRead(debugSwitchPin);
+    configFlag = hal->digitalRead(configSwitchPin);
+    hal->digitalWrite(switchPowerPin, 0);
+    hal->waitHere(100);
 
     // deactivate the dip switch pins
-    pinMode(debugSwitchPin, OUTPUT);
-    pinMode(configSwitchPin, OUTPUT);
-    digitalWrite(debugSwitchPin, LOW);
-    digitalWrite(configSwitchPin, LOW);
+    hal->pinMode(debugSwitchPin, HAL::GPIOPinMode::OUTPUT);
+    hal->pinMode(configSwitchPin, HAL::GPIOPinMode::OUTPUT);
+    hal->digitalWrite(debugSwitchPin, 0);
+    hal->digitalWrite(configSwitchPin, 0);
 
     // setup pin modes
-    pinMode(LED_BUILTIN, OUTPUT);
-    pinMode(pirPowerPin, OUTPUT);
+    hal->pinMode(ledPin, HAL::GPIOPinMode::OUTPUT);
+    hal->pinMode(pirPowerPin, HAL::GPIOPinMode::OUTPUT);
     disableUnusedPins();
     blinkLED(2);
 
     // disable the pir sensor
-    digitalWrite(pirPowerPin, LOW);
+    hal->digitalWrite(pirPowerPin, 0);
 
-    // The MKR WAN 1310 3.3V reference voltage for battery measurements
-    analogReference(AR_DEFAULT);
+    hal->setAnalogReference();
 
     // initialize the I2C communication
     hal->I2CInit();
 
     // initialize the logging instance
     StatusLogger::Output outputType = debugFlag ? StatusLogger::Output::toSerial : StatusLogger::Output::noOutput;
-    StatusLogger::getInstance()->setup(outputType);
+    StatusLogger::getInstance()->setup(outputType, hal);
 
     // load config from flash
     logger.push("Load config from flash");
@@ -203,7 +202,7 @@ int BikeCounter::setup()
     logger.push("Temp. sensor setup started");
     logger.loop();
 
-    delay(500);
+    hal->waitHere(500);
 
     // initialize temperature and humidity sensor
     hal->AM2320Init();
@@ -212,7 +211,7 @@ int BikeCounter::setup()
     logger.push("Lora setup started");
     logger.loop();
 
-    delay(500);
+    hal->waitHere(500);
 
     // connect to lora network
     loRaConnector->injectHal(hal);
@@ -226,28 +225,28 @@ int BikeCounter::setup()
     hal->rtcBegin(true);
     hal->rtcSetEpoch(defaultRTCEpoch);
 
-    logger.push(String("RTC current time: ") +
-                String(hal->rtcGetHours()) +
-                String(':') +
-                String(hal->rtcGetMinutes()) +
-                String(':') +
-                String(hal->rtcGetSeconds()));
-    logger.push(String("RTC current date: ") +
-                String(hal->rtcGetDay()) +
-                String('.') +
-                String(hal->rtcGetMonth()) +
-                String('.') +
-                String(hal->rtcGetYear()));
-    logger.push(String("RTC epoch: ") +
-                String(hal->rtcGetEpoch()));
+    logger.push("RTC current time: " +
+                std::to_string(hal->rtcGetHours()) +
+                ':' +
+                std::to_string(hal->rtcGetMinutes()) +
+                ':' +
+                std::to_string(hal->rtcGetSeconds()));
+    logger.push("RTC current date: " +
+                std::to_string(hal->rtcGetDay()) +
+                '.' +
+                std::to_string(hal->rtcGetMonth()) +
+                '.' +
+                std::to_string(hal->rtcGetYear()));
+    logger.push("RTC epoch: " +
+                std::to_string(hal->rtcGetEpoch()));
     logger.loop();
 
     // delay to avoid interference with interrupt pin setup
-    delay(200);
+    hal->waitHere(200);
 
     // setup counter interrupt
-    pinMode(counterInterruptPin, INPUT);
-    hal->attachInterruptWakeup(digitalPinToInterrupt(counterInterruptPin), onMotionDetected, RISING);
+    hal->pinMode(counterInterruptPin, HAL::GPIOPinMode::INPUT);
+    hal->attachInterruptWakeup(counterInterruptPin, onMotionDetected, HAL::TriggerMode::RISING);
 
     logger.push("Setup finished");
     logger.loop();
@@ -281,15 +280,15 @@ int BikeCounter::processInput()
 
         blinkLED();
 
-        logger.push(String("Motion detected (current count = ") +
-                    String(counter) +
-                    String(" / time: ") +
-                    String(static_cast<int>(currentTime_hms.hours().count())) +
-                    String(':') +
-                    String(static_cast<int>(currentTime_hms.minutes().count())) +
-                    String(':') +
-                    String(static_cast<int>(currentTime_hms.seconds().count())) +
-                    String(')'));
+        logger.push("Motion detected (current count = " +
+                    std::to_string(counter) +
+                    " / time: " +
+                    std::to_string(static_cast<int>(currentTime_hms.hours().count())) +
+                    ':' +
+                    std::to_string(static_cast<int>(currentTime_hms.minutes().count())) +
+                    ':' +
+                    std::to_string(static_cast<int>(currentTime_hms.seconds().count())) +
+                    ')');
         logger.loop();
 
         // check if the data should be sent.
@@ -349,17 +348,17 @@ int BikeCounter::sendUplinkMessage()
 
     if (!err)
     {
-        logger.push(String("Message enqueued for transmission! (count = ") +
-                    String(counter) +
-                    String(" / temperature = ") +
-                    String(dataHandler.getTemperature()) +
-                    String("°C / humidity = ") +
-                    String(dataHandler.getHumidity()) +
-                    String("% / battery voltage = ") +
-                    String(dataHandler.getBatteryVoltage()) +
-                    String(" V / DeviceEpoch = ") +
-                    String(dataHandler.getDeviceTime()) +
-                    String(" )"));
+        logger.push("Message enqueued for transmission! (count = " +
+                    std::to_string(counter) +
+                    " / temperature = " +
+                    std::to_string(dataHandler.getTemperature()) +
+                    "°C / humidity = " +
+                    std::to_string(dataHandler.getHumidity()) +
+                    "% / battery voltage = " +
+                    std::to_string(dataHandler.getBatteryVoltage()) +
+                    " V / DeviceEpoch = " +
+                    std::to_string(dataHandler.getDeviceTime()) +
+                    " )");
         logger.loop();
 
         // reset counter and time array
@@ -408,14 +407,14 @@ void BikeCounter::blinkLED(int times, int mode)
 
         for (int i = 0; i < times; i++)
         {
-            delay(100);
+            hal->waitHere(100);
 
             switch (mode)
             {
             case 0:
                 // 0=blink
-                analogWrite(LED_BUILTIN, 255);
-                delay(100);
+                hal->analogWrite(ledPin, 255);
+                hal->waitHere(100);
                 break;
 
             case 3: // 3=pulsate
@@ -424,8 +423,8 @@ void BikeCounter::blinkLED(int times, int mode)
 
                 for (int i = 0; i < 256; i += 15)
                 {
-                    analogWrite(LED_BUILTIN, i);
-                    delay(50);
+                    hal->analogWrite(ledPin, i);
+                    hal->waitHere(50);
                 }
                 if (mode == 1)
                 {
@@ -435,20 +434,20 @@ void BikeCounter::blinkLED(int times, int mode)
             case 2: // 2=fade-out
                 for (int i = 255; i >= 0; i -= 15)
                 {
-                    analogWrite(LED_BUILTIN, i);
-                    delay(50);
+                    hal->analogWrite(ledPin, i);
+                    hal->waitHere(50);
                 }
                 break;
             }
 
-            analogWrite(LED_BUILTIN, 0);
+            hal->analogWrite(ledPin, 0);
         }
     }
     else
     {
         // disable LED pin
-        pinMode(LED_BUILTIN, OUTPUT);
-        digitalWrite(LED_BUILTIN, LOW);
+        hal->pinMode(ledPin, HAL::GPIOPinMode::OUTPUT);
+        hal->digitalWrite(ledPin, 0);
     }
 }
 
@@ -468,8 +467,8 @@ void BikeCounter::disableUnusedPins()
         // if not, set the pin to output and low
         if (!isUsed)
         {
-            pinMode(i, OUTPUT);
-            digitalWrite(i, LOW);
+            hal->pinMode(i, HAL::GPIOPinMode::OUTPUT);
+            hal->digitalWrite(i, 0);
         }
     }
 }
@@ -477,13 +476,13 @@ void BikeCounter::disableUnusedPins()
 float BikeCounter::getBatteryVoltage()
 {
     // read the analog value and calculate the voltage
-    return analogRead(batteryVoltagePin) * 3.3f / 1023.0f / 1.2f * (1.2f + 0.33f);
+    return hal->analogRead(batteryVoltagePin) * 3.3f / 1023.0f / 1.2f * (1.2f + 0.33f);
 }
 
 void BikeCounter::sleep(int ms, bool noInterrupt)
 {
 
-    logger.push("Going to sleep for " + String(ms) + "ms (" + String((int)(ms / 1000)) + "s / " + String((int)(ms / 60000)) + "min)");
+    logger.push("Going to sleep for " + std::to_string(ms) + "ms (" + std::to_string((int)(ms / 1000)) + "s / " + std::to_string((int)(ms / 60000)) + "min)");
     logger.loop();
 
     preSleepStatus = currentStatus;
@@ -493,12 +492,12 @@ void BikeCounter::sleep(int ms, bool noInterrupt)
     if (noInterrupt)
     {
         // enable the PIR sensor
-        digitalWrite(pirPowerPin, LOW);
+        hal->digitalWrite(pirPowerPin, 0);
     }
 
     if (debugFlag)
     {
-        sleepEndMillis = millis() + ms;
+        sleepEndMillis = hal->getMillis() + ms;
     }
     else
     {
@@ -535,9 +534,9 @@ void BikeCounter::handleError()
         {
             logger.push("Resetting PIR-sensor");
             logger.loop();
-            digitalWrite(pirPowerPin, LOW);
-            delay(2000);
-            digitalWrite(pirPowerPin, HIGH);
+            hal->digitalWrite(pirPowerPin, 0);
+            hal->waitHere(2000);
+            hal->digitalWrite(pirPowerPin, 1);
             totalCounter = 0;
             currentStatus = collectData;
             sleep(10UL * 60UL * 1000UL, true); // 10min
@@ -547,7 +546,7 @@ void BikeCounter::handleError()
             logger.push("PIR-sensor error could not be fixed.");
             logger.loop();
             // shut down PIR and try it again in 5 hours
-            digitalWrite(pirPowerPin, LOW);
+            hal->digitalWrite(pirPowerPin, 0);
             errorId = 3;
             sleep(5UL * 60UL * 60UL * 1000UL, true); // 5h
         }
@@ -555,7 +554,7 @@ void BikeCounter::handleError()
 
     case 3:
         // Restart the PIR and hope that the floating pin error disappeared
-        digitalWrite(pirPowerPin, HIGH);
+        hal->digitalWrite(pirPowerPin, 1);
         totalCounter = 0;
         currentStatus = collectData;
         sleep(60UL * 1000UL); // 1min
@@ -583,7 +582,7 @@ void BikeCounter::handleError()
             // loRaConnector->reset();
             currentStatus = Status::collectData;
             // enable the PIR sensor
-            digitalWrite(pirPowerPin, HIGH);
+            hal->digitalWrite(pirPowerPin, 1);
             break;
         }
         break;
@@ -616,7 +615,7 @@ int BikeCounter::processDownlinkMessage(int *buffer, int length)
 
 void BikeCounter::correctRTCTime(int32_t timeDrift)
 {
-    logger.push(String("Received time correction = ") + String(timeDrift));
+    logger.push("Received time correction = " + std::to_string(timeDrift));
     logger.loop();
 
     uint32_t currentEpoch = hal->rtcGetEpoch();
@@ -628,22 +627,22 @@ void BikeCounter::correctRTCTime(int32_t timeDrift)
         hal->rtcSetEpoch(currentEpoch + timeDrift);
         lastRTCCorrection = hal->rtcGetEpoch();
 
-        logger.push(String("RTC correction applied, current time: ") +
-                    String(hal->rtcGetHours()) +
-                    String(':') +
-                    String(hal->rtcGetMinutes()) +
-                    String(':') +
-                    String(hal->rtcGetSeconds()));
-        logger.push(String("RTC current date: ") +
-                    String(hal->rtcGetDay()) +
-                    String('.') +
-                    String(hal->rtcGetMonth()) +
-                    String('.') +
-                    String(hal->rtcGetYear()));
-        logger.push(String("RTC epoch: ") +
-                    String(hal->rtcGetEpoch()));
+        logger.push("RTC correction applied, current time: " +
+                    std::to_string(hal->rtcGetHours()) +
+                    ':' +
+                    std::to_string(hal->rtcGetMinutes()) +
+                    ':' +
+                    std::to_string(hal->rtcGetSeconds()));
+        logger.push("RTC current date: " +
+                    std::to_string(hal->rtcGetDay()) +
+                    '.' +
+                    std::to_string(hal->rtcGetMonth()) +
+                    '.' +
+                    std::to_string(hal->rtcGetYear()));
+        logger.push("RTC epoch: " +
+                    std::to_string(hal->rtcGetEpoch()));
         logger.loop();
 
-        delay(500);
+        hal->waitHere(500);
     }
 }

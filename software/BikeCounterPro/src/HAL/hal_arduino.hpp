@@ -35,9 +35,6 @@ public:
     virtual float AM2320ReadTemperature() { return am2320.readTemperature(); }
     virtual float AM2320ReadHumidity() { return am2320.readHumidity(); }
 
-    virtual void attachInterruptWakeup(uint32_t pin, void (*callback)(void), int mode) { LowPower.attachInterruptWakeup(pin, callback, static_cast<PinStatus>(mode)); };
-    virtual void deepSleep(int ms) { LowPower.deepSleep(ms); }
-
     virtual bool getEuiAndKeyFromFlash(std::string *appEui, std::string *appKey);
 
     virtual unsigned long getMillis() { return Arduino_h::millis(); }
@@ -55,8 +52,28 @@ public:
     virtual size_t LoRaWrite(const uint8_t *msgBuffer, size_t msgSize) { return modem.write(msgBuffer, msgSize); }
     virtual int LoRaEndPacket(bool confirmed) { return modem.endPacket(confirmed); }
 
+    virtual void SerialBeginAndWait(unsigned long baudrate)
+    {
+        Serial.begin(baudrate);
+        while (!Serial)
+            ;
+    }
+    virtual size_t SerialPrintLn(std::string msg) { return Serial.println(msg.c_str()); }
+
+    virtual void digitalWrite(uint8_t pinNumber, unsigned int value) { Arduino_h::digitalWrite(pinNumber, static_cast<PinStatus>(value)); }
+    virtual int digitalRead(uint8_t pinNumber) { return Arduino_h::digitalRead(pinNumber); }
+    virtual void pinMode(uint8_t pinNumber, GPIOPinMode pinMode) { Arduino_h::pinMode(pinNumber, static_cast<PinMode>(pinMode)); }
+    virtual void setAnalogReference() { Arduino_h::analogReference(AR_DEFAULT); } // The MKR WAN 1310 3.3V reference voltage for battery measurements
+    virtual void analogWrite(uint8_t pinNumber, int value) { Arduino_h::analogWrite(pinNumber, value); }
+    virtual int analogRead(uint8_t pinNumber) { return Arduino_h::analogRead(pinNumber); }
+
+    virtual void attachInterruptWakeup(uint32_t pin, void (*callback)(void), TriggerMode mode) { LowPower.attachInterruptWakeup(digitalPinToInterrupt(pin), callback, static_cast<PinStatus>(mode)); };
+    virtual void deepSleep(int ms) { LowPower.deepSleep(ms); }
+
 protected:
-    HAL_Arduino() {}
+    HAL_Arduino()
+    {
+    }
     ~HAL_Arduino() {}
 
 private:

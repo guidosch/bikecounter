@@ -7,6 +7,22 @@
 class HAL
 {
 public:
+    typedef enum
+    {
+        INPUT = 0x0,
+        OUTPUT = 0x1,
+        INPUT_PULLUP = 0x2,
+        INPUT_PULLDOWN = 0x3,
+        OUTPUT_OPENDRAIN = 0x4,
+    } GPIOPinMode;
+
+    typedef enum
+    {
+        CHANGE = 2,
+        FALLING = 3,
+        RISING = 4,
+    } TriggerMode;
+
     virtual void rtcBegin(bool resetTime = false) = 0;
     virtual void rtcSetEpoch(uint32_t ts) = 0;
     virtual uint32_t rtcGetEpoch() = 0;
@@ -22,9 +38,6 @@ public:
 
     virtual float AM2320ReadTemperature() = 0;
     virtual float AM2320ReadHumidity() = 0;
-
-    virtual void attachInterruptWakeup(uint32_t pin, void (*callback)(void), int mode) = 0;
-    virtual void deepSleep(int ms) = 0;
 
     virtual bool getEuiAndKeyFromFlash(std::string *appEui, std::string *appKey) = 0;
 
@@ -42,6 +55,19 @@ public:
     virtual void LoRaBeginPacket() = 0;
     virtual size_t LoRaWrite(const uint8_t *msgBuffer, size_t msgSize) = 0;
     virtual int LoRaEndPacket(bool confirmed) = 0;
+
+    virtual void SerialBeginAndWait(unsigned long baudrate) = 0;
+    virtual size_t SerialPrintLn(std::string msg) = 0;
+
+    virtual void digitalWrite(uint8_t pinNumber, unsigned int value) = 0;
+    virtual int digitalRead(uint8_t pinNumber) = 0;
+    virtual void pinMode(uint8_t pinNumber, GPIOPinMode pinMode) = 0;
+    virtual void setAnalogReference() = 0;
+    virtual void analogWrite(uint8_t pinNumber, int value) = 0;
+    virtual int analogRead(uint8_t pinNumber) = 0;
+    
+    virtual void attachInterruptWakeup(uint32_t pin, void (*callback)(void), TriggerMode mode) = 0;
+    virtual void deepSleep(int ms) = 0;
 };
 
 #endif // HAL_H

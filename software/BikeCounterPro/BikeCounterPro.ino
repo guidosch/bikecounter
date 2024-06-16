@@ -15,6 +15,7 @@ void setup()
   bc->setBatteryVoltagePin(A0);
   bc->setPirPowerPin(3);
   bc->setSyncTimeInterval(120ul); // 2*60 s
+  bc->setLedPin(LED_BUILTIN);
   bc->setMaxBlinks(50);
   bc->setMaxCount(1000);
 

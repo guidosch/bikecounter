@@ -36,8 +36,8 @@ public:
     void loop();
     /// @brief
     void reset();
-    /// @brief 
-    /// @param hal_ptr 
+    /// @brief
+    /// @param hal_ptr
     void injectHal(HAL *hal_ptr) { hal = hal_ptr; }
     /// @brief
     /// @return
@@ -63,6 +63,9 @@ public:
     /// @brief Sync time interval
     /// @param s seconds
     void setSyncTimeInterval(uint32_t s) { syncTimeInterval = s; }
+    /// @brief LED for status blinks
+    /// @param pin 
+    void setLedPin(int pin) { ledPin = pin; }
     /// @brief Deactivate the onboard LED after the specified amount of blinks
     /// @param count
     void setMaxBlinks(int count) { maxBlinks = count; }
@@ -83,14 +86,15 @@ private:
 
     // HAL dependency
     HAL *hal;
-    
+
     int counterInterruptPin;
     int switchPowerPin;
     int debugSwitchPin;
     int configSwitchPin;
     int batteryVoltagePin;
     int pirPowerPin;
-    int usedPins[6] = {LED_BUILTIN, counterInterruptPin, debugSwitchPin, configSwitchPin, batteryVoltagePin, pirPowerPin};
+    int ledPin;
+    int usedPins[6] = {ledPin, counterInterruptPin, debugSwitchPin, configSwitchPin, batteryVoltagePin, pirPowerPin};
     int usedPinCount = 6;
     uint32_t syncTimeInterval;
     int maxCount;

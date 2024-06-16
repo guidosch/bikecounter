@@ -28,7 +28,7 @@ public:
     void injectHal(HAL *hal_ptr) { hal = hal_ptr; }
     Status getStatus() { return currentStatus; }
     int getErrorId() { return errorId; }
-    String getErrorMsg() { return String(errorMsg[errorId]); }
+    std::string getErrorMsg() { return std::string(errorMsg[errorId]); }
     void setAppEui(std::string appEui) { eui = appEui; }
     void setAppKey(std::string appKey) { key = appKey; }
     void setup(std::string appEui, std::string appKey, int (*downlinkCallbackFunction)(int *, int));
