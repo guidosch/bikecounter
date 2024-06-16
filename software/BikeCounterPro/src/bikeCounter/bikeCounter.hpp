@@ -2,7 +2,6 @@
 #define BIKECOUNTER_H
 
 #include <Arduino.h>
-#include <ArduinoLowPower.h>
 #include <SPI.h>
 #include <SparkFun_SPI_SerialFlash.h>
 #include "../../config.h"

@@ -263,7 +263,7 @@ int BikeCounter::setup()
 
     // setup counter interrupt
     pinMode(counterInterruptPin, INPUT);
-    LowPower.attachInterruptWakeup(digitalPinToInterrupt(counterInterruptPin), onMotionDetected, RISING);
+    hal->attachInterruptWakeup(digitalPinToInterrupt(counterInterruptPin), onMotionDetected, RISING);
 
     logger.push("Setup finished");
     logger.loop();
@@ -518,7 +518,7 @@ void BikeCounter::sleep(int ms, bool noInterrupt)
     }
     else
     {
-        LowPower.deepSleep(ms);
+        hal->deepSleep(ms);
     }
 }
 

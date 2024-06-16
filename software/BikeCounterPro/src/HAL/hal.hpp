@@ -21,6 +21,9 @@ public:
 
     virtual float AM2320ReadTemperature() = 0;
     virtual float AM2320ReadHumidity() = 0;
+
+    virtual void attachInterruptWakeup(uint32_t pin, void (*callback)(void), int mode) = 0;
+    virtual void deepSleep(int ms) = 0;
 };
 
 #endif // HAL_H
