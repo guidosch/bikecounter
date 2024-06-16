@@ -27,6 +27,8 @@ public:
     virtual void deepSleep(int ms) = 0;
 
     virtual bool getEuiAndKeyFromFlash(std::string *appEui, std::string *appKey) = 0;
+    
+    virtual unsigned long getMillis() = 0;
 };
 
 #endif // HAL_H

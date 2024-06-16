@@ -38,6 +38,8 @@ public:
     virtual void deepSleep(int ms) { LowPower.deepSleep(ms); }
     
     virtual bool getEuiAndKeyFromFlash(std::string *appEui, std::string *appKey);
+    
+    virtual unsigned long getMillis() {return Arduino_h::millis();}
 
 protected:
     HAL_Arduino() {}

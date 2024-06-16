@@ -1,7 +1,7 @@
 #ifndef BIKECOUNTER_H
 #define BIKECOUNTER_H
 
-#include <Arduino.h>
+#include <cstdint>
 #include "../../config.h"
 #include "../statusLogger/extendedStatusLogger.hpp"
 #include "../LoRaConnector/LoRaConnector.hpp"
@@ -125,7 +125,7 @@ private:
     // Holds the config state of the dip switch
     int configFlag = 0;
     // Last call of main loop in debug mode
-    unsigned long lastMillis = millis() - 10 * 60 * 1000;
+    unsigned long lastMillis = hal->getMillis() - 10 * 60 * 1000;
     // default startup date 01.01.2023 (1672531200)
     uint32_t defaultRTCEpoch = 1672531200ul;
     // Keep track of the last RTC correction (Prevents that the time correction is applied multiple times due to network lag and multiple enqueued downlinks with the same timeDrift information)
