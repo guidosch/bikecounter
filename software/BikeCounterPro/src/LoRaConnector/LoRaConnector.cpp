@@ -15,7 +15,7 @@ LoRaConnector *LoRaConnector::getInstance()
     return instance;
 }
 
-void LoRaConnector::setup(String appEui, String appKey, int (*downlinkCallbackFunction)(int *, int))
+void LoRaConnector::setup(std::string appEui, std::string appKey, int (*downlinkCallbackFunction)(int *, int))
 {
     eui = appEui;
     key = appKey;
@@ -154,7 +154,7 @@ int LoRaConnector::connectToNetwork()
 {
     logger.push("Connecting to network.");
     logger.loop();
-    int join = modem.joinOTAA(eui, key);
+    int join = modem.joinOTAA(eui.c_str(), key.c_str());
     if (!join)
     {
         return 1;

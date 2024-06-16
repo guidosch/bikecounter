@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <MKRWAN.h>
+#include <string>
 #include "../statusLogger/extendedStatusLogger.hpp"
 
 class LoRaConnector
@@ -28,9 +29,9 @@ public:
     Status getStatus() { return currentStatus; }
     int getErrorId() { return errorId; }
     String getErrorMsg() { return String(errorMsg[errorId]); }
-    void setAppEui(String appEui) { eui = appEui; }
-    void setAppKey(String appKey) { key = appKey; }
-    void setup(String appEui, String appKey, int (*downlinkCallbackFunction)(int *, int));
+    void setAppEui(std::string appEui) { eui = appEui; }
+    void setAppKey(std::string appKey) { key = appKey; }
+    void setup(std::string appEui, std::string appKey, int (*downlinkCallbackFunction)(int *, int));
     void loop(unsigned int times = 1u);
     void reset();
     /// @brief
@@ -53,8 +54,8 @@ private:
     ExtendedStatusLogger logger = ExtendedStatusLogger("LoRaConnector:");
     LoRaModem modem = LoRaModem(Serial1);
     Status currentStatus = disconnected;
-    String eui;
-    String key;
+    std::string eui;
+    std::string key;
     int errorId = 0;
     int sendRequested = 0;
     uint8_t msgBuffer[51] = {0};

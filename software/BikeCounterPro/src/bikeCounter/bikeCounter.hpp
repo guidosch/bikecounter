@@ -2,8 +2,6 @@
 #define BIKECOUNTER_H
 
 #include <Arduino.h>
-#include <SPI.h>
-#include <SparkFun_SPI_SerialFlash.h>
 #include "../../config.h"
 #include "../statusLogger/extendedStatusLogger.hpp"
 #include "../LoRaConnector/LoRaConnector.hpp"
@@ -134,10 +132,6 @@ private:
     uint32_t lastRTCCorrection = 0ul;
     // time sync state machine status
     unsigned timeSyncStat = 0;
-    // SPI serial flash parameter
-    const byte PIN_FLASH_CS = 32;
-    // SPI serial flash object
-    SFE_SPI_FLASH flash;
     // Next wakeup time (epoch)
     std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> nextAlarm{std::chrono::seconds{0}};
     // current state machine state

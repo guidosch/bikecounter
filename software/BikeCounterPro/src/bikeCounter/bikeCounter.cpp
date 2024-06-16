@@ -191,32 +191,15 @@ int BikeCounter::setup()
     // load config from flash
     logger.push("Load config from flash");
     logger.loop();
-    // LORA reset pin declaration as output
-    pinMode(LORA_RESET, OUTPUT);
-    // turn off LORA module to not interrupt the flash communication
-    digitalWrite(LORA_RESET, LOW);
-    delay(500);
-    // begin flash communication
-    if (flash.begin(PIN_FLASH_CS, 2000000, SPI1) == false)
+    std::string appEui = "";
+    std::string appKey = "";
+    if (hal->getEuiAndKeyFromFlash(&appEui, &appKey))
     {
         errorId = 1;
         return 1;
     }
-
-    // first byte in memory contains the length of the config array
-    uint8_t readSize = flash.readByte(0);
-    // read buffer
-    uint8_t rBuffer[255];
-    // read bytes from flash
-    flash.readBlock(1, rBuffer, readSize);
-    // cast buffer to string array
-    String config = String((char *)rBuffer);
-    // split and assign config string
-    String appEui = config.substring(config.indexOf(':') + 1, config.indexOf(';'));
-    String appKey = config.substring(config.indexOf(';') + 1).substring(config.indexOf(':') + 1);
-    // digitalWrite(LORA_RESET, HIGH);
-    logger.push(String("appEui = ") + appEui);
-    logger.push(String("appKey = ") + appKey);
+    logger.push("appEui = " + appEui);
+    logger.push("appKey = " + appKey);
     logger.push("Temp. sensor setup started");
     logger.loop();
 

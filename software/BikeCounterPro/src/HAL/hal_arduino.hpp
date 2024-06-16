@@ -2,9 +2,12 @@
 #define HAL_ARDUINO_H
 
 #include "hal.hpp"
+#include <string>
 #include <RTCZero.h>
 #include <Adafruit_AM2320.h>
 #include <ArduinoLowPower.h>
+#include <SPI.h>
+#include <SparkFun_SPI_SerialFlash.h>
 
 class HAL_Arduino : public HAL
 {
@@ -33,6 +36,8 @@ public:
 
     virtual void attachInterruptWakeup(uint32_t pin, void (*callback)(void), int mode) { LowPower.attachInterruptWakeup(pin, callback, static_cast<PinStatus>(mode)); };
     virtual void deepSleep(int ms) { LowPower.deepSleep(ms); }
+    
+    virtual bool getEuiAndKeyFromFlash(std::string *appEui, std::string *appKey);
 
 protected:
     HAL_Arduino() {}
@@ -48,6 +53,11 @@ private:
 
     // Humidity and temperature sensor object
     Adafruit_AM2320 am2320 = Adafruit_AM2320();
+
+    // SPI serial flash parameter
+    const byte PIN_FLASH_CS = 32;
+    // SPI serial flash object
+    SFE_SPI_FLASH flash;
 };
 
 #endif // HAL_ARDUINO_H

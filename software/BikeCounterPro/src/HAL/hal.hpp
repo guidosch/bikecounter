@@ -2,6 +2,7 @@
 #define HAL_H
 
 #include <cstdint>
+#include <string>
 
 class HAL
 {
@@ -24,6 +25,8 @@ public:
 
     virtual void attachInterruptWakeup(uint32_t pin, void (*callback)(void), int mode) = 0;
     virtual void deepSleep(int ms) = 0;
+
+    virtual bool getEuiAndKeyFromFlash(std::string *appEui, std::string *appKey) = 0;
 };
 
 #endif // HAL_H
