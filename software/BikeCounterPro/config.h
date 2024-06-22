@@ -3,7 +3,7 @@
 
 #include <cstdint>
 
-const uint8_t hwVersion = 2;
-const uint8_t swVersion = 5;
+const uint8_t hwVersion = 4;
+const uint8_t swVersion = 6;
 
 #endif // BIKECOUNTER_CONFIG_H
