@@ -45,10 +45,10 @@ exports.storeBikecounterData = (req, res) => {
     let gateways = [];
     for (let gateway of payload.uplink_message.rx_metadata) {
       gateways.push({
-        id: gateway.gateway_ids.gateway_id,
-        eui: gateway.gateway_ids.eui,
-        rssi: gateway.rssi,
-        snr: gateway.snr,
+        id: gateway.gateway_ids.gateway_id || "not set",
+        eui: gateway.gateway_ids.eui || "not set",
+        rssi: gateway.rssi || "not set",
+        snr: gateway.snr || "not set",
       });
     }
     const airtime = payload.uplink_message.consumed_airtime;
@@ -113,6 +113,7 @@ exports.storeBikecounterData = (req, res) => {
                 " error-msg:",
                 err
               );
+              res.status(500).send(deviceId);
             });
         } else {
           console.log("TimeSync request");
