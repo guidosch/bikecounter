@@ -21,7 +21,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "platform.h"
 #include "sys_app.h"
-#include "lora_app.h"
+#include "lora_app.hpp"
 #include "stm32_seq.h"
 #include "stm32_timer.h"
 #include "utilities_def.h"
@@ -260,12 +260,13 @@ static LmHandlerCallbacks_t LmHandlerCallbacks =
   .OnStoreContextRequest =        OnStoreContextRequest,
   .OnMacProcess =                 OnMacProcessNotify,
   .OnNvmDataChange =              OnNvmDataChange,
+//  .OnNetworkParametersChange =    nullptr,
   .OnJoinRequest =                OnJoinRequest,
   .OnTxData =                     OnTxData,
   .OnRxData =                     OnRxData,
+  .OnClassChange =                OnClassChange,
   .OnBeaconStatusChange =         OnBeaconStatusChange,
   .OnSysTimeUpdate =              OnSysTimeUpdate,
-  .OnClassChange =                OnClassChange,
   .OnTxPeriodicityChanged =       OnTxPeriodicityChanged,
   .OnTxFrameCtrlChanged =         OnTxFrameCtrlChanged,
   .OnPingSlotPeriodicityChanged = OnPingSlotPeriodicityChanged,

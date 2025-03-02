@@ -19,8 +19,8 @@
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
-#include "app_lorawan.h"
-#include "lora_app.h"
+#include "app_lorawan.hpp"
+#include "lora_app.hpp"
 #include "sys_app.h"
 #include "stm32_seq.h"
 

@@ -96,6 +96,7 @@
 									<listOptionValue builtIn="false" value="../Middlewares/Third_Party/SubGHz_Phy"/>
 									<listOptionValue builtIn="false" value="../Middlewares/Third_Party/SubGHz_Phy/stm32_radio_driver"/>
 									<listOptionValue builtIn="false" value="../Drivers/CMSIS/Include"/>
+									<listOptionValue builtIn="false" value="../Drivers/BSP/STM32WLxx_Nucleo"/>
 								</option>
 								<inputType id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.cpp.compiler.input.cpp.315709499" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.cpp.compiler.input.cpp"/>
 							</tool>

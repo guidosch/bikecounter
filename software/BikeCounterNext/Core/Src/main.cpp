@@ -18,7 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "app_lorawan.h"
+#include "app_lorawan.hpp"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
