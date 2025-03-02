@@ -34,6 +34,8 @@
 #include "CayenneLpp.h"
 #include "sys_sensors.h"
 #include "flash_if.h"
+#include "bikeCounter/bikeCounter.hpp"
+#include "HAL/hal_stm32.hpp"
 
 /* USER CODE BEGIN Includes */
 
@@ -148,7 +150,7 @@ static void OnClassChange(DeviceClass_t deviceClass);
 /**
   * @brief  LoRa store context in Non Volatile Memory
   */
-static void StoreContext(void);
+// static void StoreContext(void);
 
 /**
   * @brief  stop current LoRa execution to switch into non default Activation mode
@@ -215,6 +217,10 @@ static void OnPingSlotPeriodicityChanged(uint8_t pingSlotPeriodicity);
 static void OnSystemReset(void);
 
 /* USER CODE BEGIN PFP */
+
+static void MotionDetected(void);
+static void SendStatusMessage(void);
+static void SendCountMessage(void);
 
 /**
   * @brief  LED Tx timer callback function
@@ -339,6 +345,9 @@ static UTIL_TIMER_Object_t RxLedTimer;
   */
 static UTIL_TIMER_Object_t JoinLedTimer;
 
+BikeCounter *bc = BikeCounter::getInstance();
+HAL *hal = HAL_STM32::getInstance();
+
 /* USER CODE END PV */
 
 /* Exported functions ---------------------------------------------------------*/
@@ -402,8 +411,11 @@ void LoRaWAN_Init(void)
 
   UTIL_SEQ_RegTask((1 << CFG_SEQ_Task_LmHandlerProcess), UTIL_SEQ_RFU, LmHandlerProcess);
 
-  UTIL_SEQ_RegTask((1 << CFG_SEQ_Task_LoRaSendOnTxTimerOrButtonEvent), UTIL_SEQ_RFU, SendTxData);
-  UTIL_SEQ_RegTask((1 << CFG_SEQ_Task_LoRaStoreContextEvent), UTIL_SEQ_RFU, StoreContext);
+  // UTIL_SEQ_RegTask((1 << CFG_SEQ_Task_LoRaSendOnTxTimerOrButtonEvent), UTIL_SEQ_RFU, SendTxData);
+  // UTIL_SEQ_RegTask((1 << CFG_SEQ_Task_LoRaStoreContextEvent), UTIL_SEQ_RFU, StoreContext);
+  UTIL_SEQ_RegTask((1 << CFG_SEQ_Task_MotionDetectedEvent), UTIL_SEQ_RFU, MotionDetected);
+  UTIL_SEQ_RegTask((1 << CFG_SEQ_Task_StatusMessageTimerEvent), UTIL_SEQ_RFU, SendStatusMessage);
+  UTIL_SEQ_RegTask((1 << CFG_SEQ_Task_PeriodicCountMessageTimerEvent), UTIL_SEQ_RFU, SendCountMessage);
   UTIL_SEQ_RegTask((1 << CFG_SEQ_Task_LoRaStopJoinEvent), UTIL_SEQ_RFU, StopJoin);
 
   /* Init Info table used by LmHandler*/
@@ -436,6 +448,20 @@ void LoRaWAN_Init(void)
 
   /* USER CODE BEGIN LoRaWAN_Init_Last */
 
+  	// TODO: Add correct parameters after HAL implementation
+  	bc->injectHal(hal);
+    // bc->setCounterInterruptPin(0);
+    // bc->setSwitchPowerPin(10);
+    // bc->setDebugSwitchPin(7);
+    // bc->setConfigSwitchPin(8);
+    // bc->setBatteryVoltagePin(A0);
+    // bc->setPirPowerPin(3);
+    // bc->setSyncTimeInterval(120ul); // 2*60 s
+    // bc->setLedPin(LED_BUILTIN);
+    // bc->setMaxBlinks(50);
+    // bc->setMaxCount(1000);
+
+    bc->loop();
   /* USER CODE END LoRaWAN_Init_Last */
 }
 
@@ -449,14 +475,14 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
       /* Note: when "EventType == TX_ON_TIMER" this GPIO is not initialized */
       if (EventType == TX_ON_EVENT)
       {
-        UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_LoRaSendOnTxTimerOrButtonEvent), CFG_SEQ_Prio_0);
+        UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_MotionDetectedEvent), CFG_SEQ_Prio_0);
       }
       break;
     case  BUT2_Pin:
-      UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_LoRaStopJoinEvent), CFG_SEQ_Prio_0);
+      // UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_LoRaStopJoinEvent), CFG_SEQ_Prio_0);
       break;
     case  BUT3_Pin:
-      UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_LoRaStoreContextEvent), CFG_SEQ_Prio_0);
+      // UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_LoRaStoreContextEvent), CFG_SEQ_Prio_0);
       break;
     default:
       break;
@@ -669,7 +695,7 @@ static void OnTxTimerEvent(void *context)
   /* USER CODE BEGIN OnTxTimerEvent_1 */
 
   /* USER CODE END OnTxTimerEvent_1 */
-  UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_LoRaSendOnTxTimerOrButtonEvent), CFG_SEQ_Prio_0);
+  UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_PeriodicCountMessageTimerEvent), CFG_SEQ_Prio_0);
 
   /*Wait for next tx slot*/
   UTIL_TIMER_Start(&TxTimer);
@@ -679,6 +705,22 @@ static void OnTxTimerEvent(void *context)
 }
 
 /* USER CODE BEGIN PrFD_LedEvents */
+
+static void MotionDetected(void)
+{
+	// TODO: implement this
+}
+
+static void SendStatusMessage(void)
+{
+	// TODO: implement this
+}
+
+static void SendCountMessage(void)
+{
+	SendTxData();
+}
+
 static void OnTxTimerLedEvent(void *context)
 {
   HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET); /* LED_GREEN */
@@ -927,27 +969,27 @@ static void OnStopJoinTimerEvent(void *context)
   /* USER CODE END OnStopJoinTimerEvent_Last */
 }
 
-static void StoreContext(void)
-{
-  LmHandlerErrorStatus_t status = LORAMAC_HANDLER_ERROR;
-
-  /* USER CODE BEGIN StoreContext_1 */
-
-  /* USER CODE END StoreContext_1 */
-  status = LmHandlerNvmDataStore();
-
-  if (status == LORAMAC_HANDLER_NVM_DATA_UP_TO_DATE)
-  {
-    APP_LOG(TS_OFF, VLEVEL_M, "NVM DATA UP TO DATE\r\n");
-  }
-  else if (status == LORAMAC_HANDLER_ERROR)
-  {
-    APP_LOG(TS_OFF, VLEVEL_M, "NVM DATA STORE FAILED\r\n");
-  }
-  /* USER CODE BEGIN StoreContext_Last */
-
-  /* USER CODE END StoreContext_Last */
-}
+// static void StoreContext(void)
+// {
+//   LmHandlerErrorStatus_t status = LORAMAC_HANDLER_ERROR;
+//
+//   /* USER CODE BEGIN StoreContext_1 */
+//
+//   /* USER CODE END StoreContext_1 */
+//   status = LmHandlerNvmDataStore();
+//
+//   if (status == LORAMAC_HANDLER_NVM_DATA_UP_TO_DATE)
+//   {
+//     APP_LOG(TS_OFF, VLEVEL_M, "NVM DATA UP TO DATE\r\n");
+//   }
+//   else if (status == LORAMAC_HANDLER_ERROR)
+//   {
+//     APP_LOG(TS_OFF, VLEVEL_M, "NVM DATA STORE FAILED\r\n");
+//   }
+//   /* USER CODE BEGIN StoreContext_Last */
+//
+//   /* USER CODE END StoreContext_Last */
+// }
 
 static void OnNvmDataChange(LmHandlerNvmContextStates_t state)
 {
