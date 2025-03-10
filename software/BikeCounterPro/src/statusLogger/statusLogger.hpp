@@ -1,9 +1,9 @@
 #ifndef STATUSLOGGER_H
 #define STATUSLOGGER_H
 
-#include <Arduino.h>
 #include <queue>
 #include <string>
+#include "../hal/hal_interface.hpp"
 
 class StatusLogger
 {
@@ -21,7 +21,7 @@ public:
         toMemory
     };
 
-    void setup(Output ot);
+    void setup(Output ot, HAL *hal_ptr);
     void loop();
     void push(const std::string msg);
 
@@ -34,6 +34,7 @@ private:
     // Thread-save Singleton (not needed for Arduino)
     // static std::mutex mutex_;
 
+    HAL *hal;
     enum Status
     {
         notReady,

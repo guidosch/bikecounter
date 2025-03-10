@@ -15,23 +15,23 @@ LoRaConnector *LoRaConnector::getInstance()
     return instance;
 }
 
-void LoRaConnector::setup(String appEui, String appKey, int (*downlinkCallbackFunction)(int *, int))
+void LoRaConnector::setup(std::string appEui, std::string appKey, int (*downlinkCallbackFunction)(int *, int))
 {
     eui = appEui;
     key = appKey;
     downlinkCallback = downlinkCallbackFunction;
 
-    if (!modem.begin(EU868))
+    if (!hal->LoRaBegin())
     {
         errorId = 1;
         currentStatus = error;
         return;
     };
 
-    logger.push(String("Module version: ") +
-                String(modem.version()));
-    logger.push(String("Device EUI: ") +
-                String(modem.deviceEUI()));
+    logger.push("Module version: " +
+                hal->LoRaVersion());
+    logger.push("Device EUI: " +
+                hal->LoRaDeviceEUI());
     logger.loop();
 }
 
@@ -78,16 +78,16 @@ void LoRaConnector::loop(unsigned int times)
             else
             {
                 currentStatus = waiting;
-                t = millis();
+                t = hal->getMillis();
             }
             break;
         }
 
         case waiting: // downlink
         {
-            if ((millis() - t) > downlinkTimeout)
+            if ((hal->getMillis() - t) > downlinkTimeout)
             {
-                if (modem.available())
+                if (hal->LoRaAvailable())
                 {
                     currentStatus = reading;
                 }
@@ -106,9 +106,9 @@ void LoRaConnector::loop(unsigned int times)
         {
             int rcv[64] = {0};
             int i = 0;
-            while (modem.available())
+            while (hal->LoRaAvailable())
             {
-                rcv[i++] = modem.read();
+                rcv[i++] = hal->LoRaRead();
             }
 
             std::string os("Received ");
@@ -144,7 +144,7 @@ void LoRaConnector::loop(unsigned int times)
 
 void LoRaConnector::reset()
 {
-    modem.restart();
+    hal->LoRaRestart();
     currentStatus = disconnected;
 }
 
@@ -154,15 +154,15 @@ int LoRaConnector::connectToNetwork()
 {
     logger.push("Connecting to network.");
     logger.loop();
-    int join = modem.joinOTAA(eui, key);
+    int join = hal->LoRaJoinOTAA(eui, key);
     if (!join)
     {
         return 1;
     }
 
-    modem.minPollInterval(120);
+    hal->LoRaSetMinPollInterval(120);
     // wait for all data transmission to finish
-    delay(500);
+    hal->waitHere(500);
     logger.push("Successfully connected to network.");
     logger.loop();
     return 0;
@@ -193,9 +193,9 @@ int LoRaConnector::sendData()
 {
     logger.push("Message transmission started");
     logger.loop();
-    modem.beginPacket();
-    modem.write(msgBuffer, msgSize);
-    int err = modem.endPacket(false);
+    hal->LoRaBeginPacket();
+    hal->LoRaWrite(msgBuffer, msgSize);
+    int err = hal->LoRaEndPacket(false);
 
     if (err > 0)
     {

@@ -6,9 +6,9 @@
 class ExtendedStatusLogger
 {
 public:
-    ExtendedStatusLogger(String prefix)
+    ExtendedStatusLogger(std::string prefix)
     {
-        unitPrefix = prefix.c_str();
+        unitPrefix = prefix;
         unitPrefix.append(16 - unitPrefix.length(), ' ');
     }
     void loop() { logger->loop(); }
@@ -16,12 +16,6 @@ public:
     void push(const std::string msg)
     {
         logger->push(unitPrefix + msg);
-    }
-
-    void push(String &msg)
-    {
-        std::string str{msg.c_str()};
-        logger->push(unitPrefix + str);
     }
 
     void push(const char *msg)

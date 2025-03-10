@@ -1,18 +1,14 @@
 #ifndef BIKECOUNTER_H
 #define BIKECOUNTER_H
 
-#include <Arduino.h>
-#include <RTCZero.h>
-#include <ArduinoLowPower.h>
-#include <Adafruit_AM2320.h>
-#include <SPI.h>
-#include <SparkFun_SPI_SerialFlash.h>
+#include <cstdint>
 #include "../../config.h"
 #include "../statusLogger/extendedStatusLogger.hpp"
 #include "../LoRaConnector/LoRaConnector.hpp"
 #include "../dataPackage/dataPackage.hpp"
 #include "../timerSchedule/timerSchedule.hpp"
 #include "../timerSchedule/date.h"
+#include "../hal/hal_interface.hpp"
 
 class BikeCounter
 {
@@ -41,14 +37,17 @@ public:
     /// @brief
     void reset();
     /// @brief
+    /// @param hal_ptr
+    void injectHal(HAL *hal_ptr) { hal = hal_ptr; }
+    /// @brief
     /// @return
     Status getStatus() { return currentStatus; }
     /// @brief Counter interrupt pin
     /// @param pin
     void setCounterInterruptPin(int pin) { counterInterruptPin = pin; }
     /// @brief Power pin of switches
-    /// @param pin 
-    void setSwitchPowerPin(int pin) {switchPowerPin = pin;}
+    /// @param pin
+    void setSwitchPowerPin(int pin) { switchPowerPin = pin; }
     /// @brief Debug switch pin
     /// @param pin
     void setDebugSwitchPin(int pin) { debugSwitchPin = pin; }
@@ -64,6 +63,9 @@ public:
     /// @brief Sync time interval
     /// @param s seconds
     void setSyncTimeInterval(uint32_t s) { syncTimeInterval = s; }
+    /// @brief LED for status blinks
+    /// @param pin 
+    void setLedPin(int pin) { ledPin = pin; }
     /// @brief Deactivate the onboard LED after the specified amount of blinks
     /// @param count
     void setMaxBlinks(int count) { maxBlinks = count; }
@@ -82,13 +84,17 @@ private:
     // Thread-save Singleton (not needed for Arduino)
     // static std::mutex mutex_;
 
+    // HAL dependency
+    HAL *hal;
+
     int counterInterruptPin;
     int switchPowerPin;
     int debugSwitchPin;
     int configSwitchPin;
     int batteryVoltagePin;
     int pirPowerPin;
-    int usedPins[6] = {LED_BUILTIN, counterInterruptPin, debugSwitchPin, configSwitchPin, batteryVoltagePin, pirPowerPin};
+    int ledPin;
+    int usedPins[6] = {ledPin, counterInterruptPin, debugSwitchPin, configSwitchPin, batteryVoltagePin, pirPowerPin};
     int usedPinCount = 6;
     uint32_t syncTimeInterval;
     int maxCount;
@@ -99,12 +105,6 @@ private:
 
     // Object to handel all the LoRa stuff
     LoRaConnector *loRaConnector = LoRaConnector::getInstance();
-
-    // Internal RTC object
-    RTCZero rtc;
-
-    // Humidity and temperature sensor object
-    Adafruit_AM2320 am2320 = Adafruit_AM2320();
 
     // DataPackage object to encode the payload
     DataPackage dataHandler = DataPackage();
@@ -131,17 +131,13 @@ private:
     // Holds the config state of the dip switch
     int configFlag = 0;
     // Last call of main loop in debug mode
-    unsigned long lastMillis = millis() - 10 * 60 * 1000;
+    unsigned long lastMillis = 0;
     // default startup date 01.01.2023 (1672531200)
     uint32_t defaultRTCEpoch = 1672531200ul;
     // Keep track of the last RTC correction (Prevents that the time correction is applied multiple times due to network lag and multiple enqueued downlinks with the same timeDrift information)
     uint32_t lastRTCCorrection = 0ul;
     // time sync state machine status
     unsigned timeSyncStat = 0;
-    // SPI serial flash parameter
-    const byte PIN_FLASH_CS = 32;
-    // SPI serial flash object
-    SFE_SPI_FLASH flash;
     // Next wakeup time (epoch)
     std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> nextAlarm{std::chrono::seconds{0}};
     // current state machine state

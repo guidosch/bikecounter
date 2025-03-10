@@ -15,9 +15,10 @@ StatusLogger *StatusLogger::getInstance()
     return instance;
 }
 
-void StatusLogger::setup(Output ot)
+void StatusLogger::setup(Output ot, HAL *hal_ptr)
 {
     outputType = ot;
+    hal = hal_ptr;
 
     switch (outputType)
     {
@@ -27,9 +28,7 @@ void StatusLogger::setup(Output ot)
 
     case toSerial:
         // open serial connection and wait
-        Serial.begin(115200);
-        while (!Serial)
-            ;
+        hal->SerialBeginAndWait(115200);
         currentStatus = ready;
         break;
 
@@ -56,7 +55,8 @@ void StatusLogger::loop()
             switch (outputType)
             {
             case toSerial:
-                Serial.println(msg.c_str());
+
+                hal->SerialPrintLn(msg);
                 break;
 
             case toMemory:
@@ -74,4 +74,10 @@ void StatusLogger::loop()
 void StatusLogger::push(const std::string msg)
 {
     msgQueue.push(msg);
+    
+    // discard old messages if queue grows to fast
+    if (msgQueue.size() > 20)
+    {
+        msgQueue.pop();
+    }
 }
