@@ -1,10 +1,90 @@
-const https = require("https");
-const crypto = require("crypto");
+const https = require('https');
+const crypto = require('crypto');
 
-const deviceId = "A8610A32314B7505";
+// ----------------------------------
+// INPUT PARAMETERS (Please update them before running this script)
+// ----------------------------------
+
+const DOWNLINK_HOSTNAME = 'portal.lpn.swisscom.ch'
+const DOWNLINK_PATH     = '/thingpark/lrc/rest/v2/downlink'
+
+const AS_KEY              = '9a8e0d4050114bad87019d547477553a'
+const AS_ID               = 'TWA_100055533.77834.AS'
+
+const DevEUI              = 'A8610A32314B7505'
+const FPort               = 1
+const Payload             = '0103'    // Abeeway Position On Demand command
+const Confirmed           = false     // optional, Possible values: Ture|False
+const FlushDownlinkQueue  = false     // optional, Possible values: Ture|False
+const ValidityTime        = undefined // optional, Example: "2018-10-17T16:38:46.882+02:00"
+const CorrelationID       = undefined // optional, Example: "1234"
+
 const timeDrift = -2587261;
-const AS_ID = "TWA_100055533.77834.AS";
+
+// ----------------------------------
+
+
+// ----------------------------------
+// Creating the query_string that is part of the request URL and is used to generate the token
+// ----------------------------------
+
+const payload_hex = encodeDownlink(timeDrift);
+
+// 'DevEUI', 'FPort' and 'Payload' are mandatory part of the query_string
+query_string = 'DevEUI=' + DevEUI + '&FPort=' + FPort.toString() + '&payload=' + payload_hex;
+
+// 'Confirmed', 'FlushDownlinkQueue' and 'ValidityTime' are optional part of the query_string
+if (Confirmed) {
+    query_string += '&Confirmed=1';
+}
+if (FlushDownlinkQueue) {
+    query_string += '&FlushDownlinkQueue=1';
+}
+if (ValidityTime) {
+    query_string += '&ValidityTime=' + ValidityTime;
+}
+
+// 'AS_ID' and 'Time' are mandatory part of the query_string
 const nowIso = new Date().toISOString();
+query_string += '&AS_ID=' + AS_ID + '&Time=' + nowIso; 
+
+// 'CorrelationID' is optional part of the query_string
+if (CorrelationID) {
+    query_string += '&CorrelationID=' + CorrelationID;
+}
+
+// 'Token' is mandatory part of the query_string
+Token = crypto.createHash('sha256').update(query_string + AS_KEY).digest('hex');
+query_string += '&Token=' + Token;
+
+// The 'Time' parameter within the query_string includes ':' and '+' characters that have to be encoded
+query_string = query_string.replace(/\:/gi, '%3A').replace(/\+/gi, '%2B');
+
+// ----------------------------------
+
+// console.log(query_string);
+
+const req = https.request(
+    {
+        hostname: DOWNLINK_HOSTNAME,
+        path: DOWNLINK_PATH + '?' + query_string,
+        method: 'POST',
+    },
+    res => {
+        console.log(`statusCode: ${res.statusCode}`);
+        res.on('data', d => {
+            console.log(d.toString(), '\n');
+        });
+    }
+)
+
+req.on('error', error => {
+    console.error(error)
+})
+  
+req.write('')
+req.end()
+
 
 function encodeDownlink(timeDrift) {
   var seconds = timeDrift >> 0;
@@ -13,76 +93,5 @@ function encodeDownlink(timeDrift) {
   encodedSeconds[1] = (seconds >> 8) & 0xff;
   encodedSeconds[2] = (seconds >> 16) & 0xff;
   encodedSeconds[3] = (seconds >> 24) & 0xff;
-  encodedSecondsHexString = encodedSeconds.map(b => b.toString(16).padStart(2, '0')).join('');
-  
-  console.log("Encoded seconds hex string: " + encodedSecondsHexString);
-
-  return JSON.stringify({
-    "DevEUI_downlink": {
-      "AS_ID": AS_ID,
-      "Time": nowIso,
-      "DevEUI": deviceId,
-      "FPort": 1,
-      "payload_hex": encodedSecondsHexString
-    }
-  });
+  return encodedSeconds.map(b => b.toString(16).padStart(2, '0')).join('');  
 }
-
-const data = encodeDownlink(timeDrift);
-
-console.log("Downlink payload: " + data);
-
-const TIAK = "xxx"; //read from ENV
-
-const fPort = "1";
-
-
-const queryParams = {
-    AS_ID: AS_ID,
-    DevEUI: deviceId,
-    FPort: fPort,
-    Time: nowIso,
-    payload_hex: encodedSecondsHexString
-};
-const sortedKeys = Object.keys(queryParams).sort();
-const queryStringForSig = sortedKeys.map(k => `${k}=${queryParams[k]}`).join('&');
-
-// Build the signature input (body + '&' + query + '&' + key) —
-// exact separators may differ in your tenant’s doc; this is a clear, consistent approach.
-const sigInput = `${data}&${queryStringForSig}&${TIAK}`;
-const token = crypto.createHash('sha256').update(sigInput, 'utf8').digest('hex');
-
-const options = {
-    hostname: "portal.lpn.swisscom.ch",
-    port: 443,
-    path: `/thingpark/lrc/rest/v2/downlink?${queryStringForSig}&Token=${token}`,
-    method: "POST",
-    headers: {
-        //"Content-Type": "application/json",
-        "Content-Type": "application/x-www-form-urlencoded",
-        //"Content-Length": data.length,
-    },
-};
-
-const req = https.request(options, (res) => {
-  console.log(`statusCode: ${res.statusCode}`);
-  console.log("Headers: ", res.headers);
-  
-  let body = "";
-  res.on("data", (d) => {
-    body += d;
-  });
-  
-  res.on("end", () => {
-    console.log("Response body: ", body);
-  });
-  
-});
-
-
-req.on("error", (error) => {
-  console.error(error);
-});
-
-req.write();
-req.end();
