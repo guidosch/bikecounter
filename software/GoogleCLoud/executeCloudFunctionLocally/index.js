@@ -6,8 +6,11 @@ const crypto = require("crypto");
 const app = admin.initializeApp();
 const firestore = app.firestore();
 const db = admin.firestore();
-
 firestore.settings({ timestampsInSnapshots: true });
+
+// ThingPark AS credentials (read from ENV in production)
+const THINKPARK_AS_KEY = "9a8e0d4050114bad87019d547477553a";
+const THINKPARK_AS_ID = "TWA_100055533.77834.AS";
 
 functions.http('processDataSwisscom', (req, res) => {
     
@@ -21,7 +24,7 @@ functions.http('processDataSwisscom', (req, res) => {
 /**
  * Process our custom payload and some metadata and store to firebase
  */
-function processData(payload, devicePayload) {
+function processData(payload, devicePayload, res) {
     const app_id = payload.CustomerData.tags[0]; //todo find correct tag
     const deviceId = payload.DevEUI;
     const deviceEUI = payload.DevEUI;
@@ -144,71 +147,64 @@ function processData(payload, devicePayload) {
 };
 
 /**
- * send the timedrif correction as LORA downlink to the device
+ * send the timedrift correction as LORA downlink to the device
  */
-function processTimeSync(timeDrift) {
+function processTimeSync(payload, timeDrift) {
     // send downlink package with timeDrift information
     if (Math.abs(timeDrift) > 15 * 60) {
-        // create package data
-        const data = JSON.stringify({
-            downlinks: [
-                {
-                    decoded_payload: {
-                        timeDrift: timeDrift,
-                    },
-                },
-            ],
-        });
+        const fPort = 1;
+        const devEUI = payload.DevEUI;
 
-        // POST request options
-        const TIAK = "9a8e0d4050114bad87019d547477553a"; //read from ENV
-        const AS_ID = "TWA_100055533.77834.AS";
-        const fPort = "1";
+        // encode timeDrift as hex payload
+        const payload_hex = encodeDownlinkHex(timeDrift);
         const nowIso = new Date().toISOString();
 
-        const queryParams = {
-            AS_ID: AS_ID,
-            DevEUI: payload.DevEUI,
-            FPort: fPort,
-            Time: nowIso.replace(/\.\d+Z$/, 'Z')
-        };
-        const sortedKeys = Object.keys(queryParams).sort();
-        const queryStringForSig = sortedKeys.map(k => `${k}=${queryParams[k]}`).join('&');
+        // build query string in the exact order expected by ThingPark
+        let queryString = `DevEUI=${devEUI}&FPort=${fPort}&payload=${payload_hex}&AS_ID=${THINKPARK_AS_ID}&Time=${nowIso}`;
 
-        // Build the signature input (body + '&' + query + '&' + key) —
-        // exact separators may differ in your tenant’s doc; this is a clear, consistent approach.
-        const sigInput = `${data}&${queryStringForSig}&${TIAK}`;
-        const token = crypto.createHash('sha256').update(sigInput, 'utf8').digest('hex');
+        // generate SHA256 token for authentication
+        const token = crypto.createHash('sha256').update(queryString + THINKPARK_AS_KEY).digest('hex');
+        queryString += `&Token=${token}`;
 
-        const options = {
-            hostname: "portal.lpn.swisscom.ch",
-            port: 443,
-            path: `/thingpark/lrc/rest/v2/downlink?${queryStringForSig}&Token=${token}`,
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Content-Length": data.length,
+        // URL encode special characters (must be after token generation)
+        queryString = queryString.replace(/:/gi, '%3A').replace(/\+/gi, '%2B');
+
+        // perform the post request to the thingpark webhook
+        const req = https.request(
+            {
+                hostname: "portal.lpn.swisscom.ch",
+                path: `/thingpark/lrc/rest/v2/downlink?${queryString}`,
+                method: "POST",
             },
-        };
+            (resDown) => {
+                console.log(`statusCode: ${resDown.statusCode}`);
+                resDown.on("data", (d) => {
+                    console.log(d.toString());
+                });
+            }
+        );
 
-        //console.log("options: "+JSON.stringify(options));
-
-        // perform the post request to the thinkpark webhook
-        const reqDown = https.request(options, (resDown) => {
-            console.log(`statusCode: ${res.statusCode}`);
-
-            resDown.on("data", (d) => {
-                process.stdout.write(d);
-            });
-        });
-
-        reqDown.on("error", (error) => {
+        req.on("error", (error) => {
             console.error(error);
         });
 
-        reqDown.write(data);
-        reqDown.end();
+        req.write('');
+        req.end();
     }
+}
+
+/**
+ * Encodes time drift value into a hex payload string for downlink
+ */
+function encodeDownlinkHex(timeDrift) {
+    const seconds = timeDrift >> 0;
+    const bytes = [
+        seconds & 0xff,
+        (seconds >> 8) & 0xff,
+        (seconds >> 16) & 0xff,
+        (seconds >> 24) & 0xff
+    ];
+    return bytes.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 /**
