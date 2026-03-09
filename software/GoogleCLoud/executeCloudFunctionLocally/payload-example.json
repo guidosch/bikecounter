@@ -1,0 +1,97 @@
+{
+    "DevEUI_uplink": {
+        "Time": "2026-03-08T22:03:33.866+01:00",
+        "DevEUI": "A8610A32314B7505",
+        "FPort": 2,
+        "FCntUp": 0,
+        "LostUplinksAS": 0,
+        "ADRbit": 1,
+        "MType": 2,
+        "FCntDn": 1,
+        "payload_hex": "0046079500200508",
+        "mic_hex": "33845124",
+        "Lrcid": "00000401",
+        "LrrRSSI": -106,
+        "LrrSNR": -1,
+        "LrrESP": -109.539017,
+        "SpFact": 12,
+        "SubBand": "G1",
+        "Channel": "LC1",
+        "Lrrid": "10004794",
+        "Late": 0,
+        "LrrLAT": 47.392021,
+        "LrrLON": 8.515293,
+        "Lrrs": {
+            "Lrr": [
+                {
+                    "Lrrid": "10004794",
+                    "Chain": 0,
+                    "LrrRSSI": -106,
+                    "LrrSNR": -1,
+                    "LrrESP": -109.539017
+                },
+                {
+                    "Lrrid": "100046DB",
+                    "Chain": 0,
+                    "LrrRSSI": -118,
+                    "LrrSNR": -17,
+                    "LrrESP": -135.0858
+                },
+                {
+                    "Lrrid": "10005969",
+                    "Chain": 0,
+                    "LrrRSSI": -105,
+                    "LrrSNR": -17,
+                    "LrrESP": -122.0858
+                },
+                {
+                    "Lrrid": "1000324A",
+                    "Chain": 0,
+                    "LrrRSSI": -113,
+                    "LrrSNR": -18,
+                    "LrrESP": -131.068298
+                }
+            ]
+        },
+        "DevLrrCnt": 4,
+        "CustomerID": "100055533",
+        "CustomerData": {
+            "loc": {
+                "lat": "47.3768866",
+                "lon": "8.541694"
+            },
+            "alr": {
+                "pro": "ARDU/MK310",
+                "ver": "1"
+            },
+            "tags": [
+                "bikecounter"
+            ],
+            "doms": [],
+            "name": "device-test",
+            "lrrID": null,
+            "rfProbe": null
+        },
+        "ModelCfg": "0",
+        "DriverCfg": {
+            "mod": {
+                "pId": "arduino",
+                "mId": "mkr-wan-1310",
+                "ver": "2"
+            },
+            "app": {
+                "pId": "os1-ardu",
+                "mId": "mkr-wan-1310",
+                "ver": "2"
+            }
+        },
+        "InstantPER": 0,
+        "MeanPER": 0,
+        "DevAddr": "08A865EF",
+        "TxPower": 14,
+        "NbTrans": 1,
+        "Frequency": 868.1,
+        "DynamicClass": "A",
+        "PayloadEncryption": 0
+    }
+}

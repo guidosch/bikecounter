@@ -1,0 +1,14 @@
+{
+	"name": "Node.js 24 Alpine",
+	"image": "node:24-alpine",
+	"workspaceFolder": "/app",
+	"workspaceMount": "source=${localWorkspaceFolder},target=/app,type=bind",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"dbaeumer.vscode-eslint"
+			]
+		}
+	},
+	"postCreateCommand": "node -v && npm -v"
+}
