@@ -16,13 +16,10 @@
 
 3. **Run the function locally:**
    ```bash
-   npm start
+   npm run start
    ```
    The function will be available at `http://localhost:8080/`
 
 4. **Test with a sample request:**
-   ```bash
-   curl -X POST http://localhost:8080 \
-     -H "Content-Type: application/json" \
-     -d @test-payload.json
-   ```
+Use the requests.http file which contains a test request (need vs code plugin: 
+humao.rest-client). May adjust the playload by extacting it from the GCP functions log and paste it into file `payload-example.json`
