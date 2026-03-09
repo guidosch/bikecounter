@@ -13,7 +13,12 @@ const THINKPARK_AS_KEY = "9a8e0d4050114bad87019d547477553a";
 const THINKPARK_AS_ID = "TWA_100055533.77834.AS";
 
 functions.http('processDataSwisscom', (req, res) => {
-    
+
+   
+    if (!req.body || !req.body.DevEUI_uplink) {
+        res.status(400).send('Bad request');
+        return;
+    }
     const hexString = req.body.DevEUI_uplink.payload_hex;
     const byteArray = Uint8Array.from(hexString.match(/.{1,2}/g).map((byte) => parseInt(byte, 16)));
     let devicePayload = decodeUplink({ bytes: byteArray }).data;
@@ -157,6 +162,7 @@ function processTimeSync(payload, timeDrift) {
 
         // encode timeDrift as hex payload
         const payload_hex = encodeDownlinkHex(timeDrift);
+        console.log(`Time drift of ${timeDrift} detected)`);
         const nowIso = new Date().toISOString();
 
         // build query string in the exact order expected by ThingPark
@@ -177,7 +183,7 @@ function processTimeSync(payload, timeDrift) {
                 method: "POST",
             },
             (resDown) => {
-                console.log(`statusCode: ${resDown.statusCode}`);
+                //console.log(`statusCode: ${resDown.statusCode}`);
                 resDown.on("data", (d) => {
                     console.log(d.toString());
                 });
