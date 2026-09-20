@@ -1,0 +1,5 @@
+(fp_lib_table
+	(version 7)
+	(lib (name "LoRazarus") (type "KiCad") (uri "C:/Users/Meier/Documents/repos/bikecounter/hardware/PCB/LoRazarus.pretty") (options "") (descr ""))
+	(lib (name "part_lib") (type "KiCad") (uri "${KIPRJMOD}/part_lib.pretty") (options "") (descr ""))
+)
